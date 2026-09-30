@@ -246,6 +246,7 @@ async function entrar(){
     await sb.auth.signOut(); $("#telaLogin").style.display="block"; return;
   }
   perfil = data;
+  if (perfil.papel === "gerente"){ location.href = "ucs.html"; return; }   // gerentes usam o Cadastro das UCs
   $("#quem").textContent = `${perfil.nome} · ${perfil.papel}`; $("#usuario").hidden=false;
   $("#telaLogin").style.display="none"; $("#app").style.display="block";
   $("#abaListas").hidden = perfil.papel !== "admin";

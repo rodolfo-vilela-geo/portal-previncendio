@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Cadastro das UCs — PIPCIF</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --mudo:#7a7a72; --linha:#dcd8d0;
+    --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --alerta:#b26a00; --erro:#b3261e; --raio:10px; --realce:#eef3e2;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--fundo);color:var(--tinta);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header.topo{background:var(--verde);color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:4px solid var(--verde-esc)}
+  header.topo .inst{font-size:12px;opacity:.9} header.topo .inst a{color:#fff;text-decoration:none}
+  header.topo h1{margin:0;font-size:18px}
+  header.topo .usuario{font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--verde);background:#fff;color:var(--verde);padding:7px 12px;cursor:pointer}
+  .btn:hover{background:var(--realce)} .btn.primario{background:var(--verde);color:#fff} .btn.primario:hover{background:var(--verde-esc)}
+  .btn.peq{padding:4px 9px;font-size:13px} .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .btn.perigo{border-color:var(--erro);color:var(--erro)}
+  header .btn{border-color:#fff;background:transparent;color:#fff} header .btn:hover{background:rgba(255,255,255,.12)}
+  input,select,textarea{width:100%;font:inherit;color:inherit;background:#fff;border:1px solid #c9c5bd;border-radius:7px;padding:7px 8px}
+  input:focus,select:focus,textarea:focus{outline:2px solid #b8cf95;border-color:var(--verde)}
+  input:disabled,select:disabled,textarea:disabled{background:#f4f5ef;color:var(--tinta);border-style:dashed}
+  textarea{min-height:70px;resize:vertical}
+  label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:3px}
+  .grade{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .grade .largo{grid-column:1/-1} .grade .duplo{grid-column:span 2}
+  .dica{font-size:12px;color:var(--suave)}
+  #msg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2000;background:#1f231a;color:#fff;border-radius:8px;padding:9px 14px;font-size:13.5px;max-width:92vw;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  #msg.erro{background:var(--erro)} #msg:empty{display:none}
+
+  #telaLogin{max-width:380px;margin:60px auto;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:24px}
+  #telaLogin h2{margin:0 0 4px;font-size:19px}
+  #app{display:none}
+  .abas{display:flex;gap:4px;padding:10px 16px 0;border-bottom:1px solid var(--linha);background:var(--papel);flex-wrap:wrap}
+  .abas button{font:inherit;font-weight:600;border:0;background:transparent;padding:9px 14px;border-bottom:3px solid transparent;color:var(--suave);cursor:pointer}
+  .abas button[aria-selected=true]{color:var(--verde);border-bottom-color:var(--verde)}
+  .painel{display:none;padding:14px 16px} .painel.ativo{display:block}
+
+  .layout{display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);gap:14px;align-items:start}
+  .lista{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);overflow:hidden;position:sticky;top:10px}
+  .lista .filtros{padding:10px;display:grid;gap:8px;border-bottom:1px solid var(--linha)}
+  .seg{display:inline-flex;border:1px solid #c9c5bd;border-radius:8px;overflow:hidden}
+  .seg button{font:inherit;font-size:13px;font-weight:600;border:0;background:#fff;color:var(--suave);padding:6px 10px;cursor:pointer;flex:1}
+  .seg button[aria-pressed=true]{background:var(--verde);color:#fff}
+  .itens{max-height:calc(100vh - 250px);overflow:auto}
+  .item{padding:9px 12px;border-bottom:1px solid #eee;cursor:pointer}
+  .item:hover{background:#f5f8ef} .item.sel{background:#e3ecd3}
+  .item .n{font-weight:650;display:flex;justify-content:space-between;gap:8px}
+  .item .n .minha{font-size:10.5px;font-weight:700;color:var(--verde);background:var(--realce);border-radius:99px;padding:1px 7px;white-space:nowrap}
+  .item .sub{font-size:12px;color:var(--suave)}
+  .barra-pct{height:5px;background:#e6e6de;border-radius:3px;margin-top:5px;overflow:hidden}
+  .barra-pct i{display:block;height:100%;background:var(--verde)}
+  .barra-pct.baixo i{background:#c46f1a}
+
+  .detalhe{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);padding:16px;min-height:300px;min-width:0}
+  .detalhe h2{margin:0;font-size:21px}
+  .cabec{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+  .selo{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--realce);color:var(--verde)}
+  .selo.ro{background:#f1efe9;color:var(--suave)}
+  fieldset{border:1px solid var(--linha);border-radius:10px;margin:14px 0 0;padding:10px 12px 12px}
+  legend{font-size:12.5px;font-weight:700;color:var(--verde);padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
+  .fixos{display:grid;gap:4px 16px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));font-size:13.5px}
+  .fixos div span{display:block;font-size:11.5px;color:var(--mudo)}
+  .rep{display:grid;gap:6px}
+  .rep .lin{display:grid;gap:6px;align-items:center}
+  .rep .lin button{width:32px;height:32px;padding:0}
+  .meses{display:flex;flex-wrap:wrap;gap:6px}
+  .meses button{font:inherit;font-size:12.5px;font-weight:600;border:1px solid #c9c5bd;background:#fff;border-radius:99px;padding:5px 10px;cursor:pointer;color:var(--suave)}
+  .meses button[aria-pressed=true]{background:#c46f1a;border-color:#c46f1a;color:#fff}
+  .meses button:disabled{cursor:default}
+  #biomas button[aria-pressed=true]{background:var(--verde);border-color:var(--verde)}
+  .coord{display:grid;gap:8px;grid-template-columns:1fr 1fr auto;align-items:end}
+  .coord .res{grid-column:1/-1;font-size:12px;color:var(--suave)}
+  .coord .res.bad{color:var(--erro)}
+  details.utm{grid-column:1/-1;font-size:13px}
+  details.utm summary{cursor:pointer;color:var(--verde);font-weight:600;font-size:12.5px}
+  details.utm .grade{margin-top:6px;grid-template-columns:90px 1fr 1fr auto;align-items:end}
+  #mapaUC{height:360px;border-radius:8px;margin-top:10px;background:#1b1f17}
+  .acoes{position:sticky;bottom:0;background:linear-gradient(transparent, var(--papel) 30%);padding:14px 0 2px;margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .historico{margin-top:16px;border-top:1px solid var(--linha);padding-top:10px}
+  .historico summary{cursor:pointer;font-weight:650}
+  .hist li{margin:0 0 8px;font-size:13px} .hist li .q{color:var(--suave);font-size:12px}
+  .hist .mud{margin:2px 0 0 0;padding:0;list-style:none}
+  .hist .mud li{margin:0;font-size:12.5px}
+  .hist del{color:var(--erro);text-decoration:line-through;opacity:.8} .hist ins{color:var(--ok);text-decoration:none}
+  .vazio{color:var(--suave);padding:30px;text-align:center}
+  table.tab{border-collapse:collapse;width:100%;font-size:13px;background:var(--papel)}
+  table.tab th{background:#e9eddf;text-align:left;padding:7px;white-space:nowrap}
+  table.tab td{padding:6px 7px;border-bottom:1px solid #eee;vertical-align:top}
+  .tab-wrap{overflow:auto;border:1px solid var(--linha);border-radius:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{font-size:11.5px;background:var(--realce);color:var(--verde);border-radius:99px;padding:1px 8px}
+  .cartoes{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .cartao{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);padding:12px}
+  .cartao h3{margin:0 0 8px;font-size:15px}
+  .checklist{max-height:260px;overflow:auto;border:1px solid var(--linha);border-radius:8px;padding:6px 8px;display:grid;gap:2px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+  .checklist label{display:flex;gap:6px;align-items:center;font-weight:500;color:var(--tinta);font-size:13px;margin:0}
+  .checklist input{width:auto}
+  .senha-box{background:#fff8e1;border:1px solid #f0c64a;border-radius:8px;padding:10px 12px;margin:10px 0}
+  .senha-box code{font-size:18px;font-weight:700;letter-spacing:.05em;background:#fff;padding:2px 8px;border-radius:6px;border:1px solid #e8d9a8}
+  dialog{border:0;border-radius:12px;padding:20px;max-width:400px;width:92vw;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  dialog::backdrop{background:rgba(0,0,0,.45)}
+  @media (max-width:880px){ .layout{grid-template-columns:1fr} .lista{position:static} .itens{max-height:300px} .grade .duplo{grid-column:auto} .coord{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio"></a>
+    <div><div class="inst"><a href="index.html">← Portal Previncêndio</a> · GPCIF · IEF-MG</div><h1>Cadastro das UCs · PIPCIF</h1></div></div>
+  <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn peq" id="btnSenha">Trocar senha</button><button class="btn peq" id="sair">Sair</button></div>
+</header>
+
+<section id="telaLogin">
+  <h2>Entrar</h2>
+  <p class="dica" style="margin:0 0 14px">Acesso para os gerentes das UCs e a equipe da GPCIF.</p>
+  <form id="formLogin">
+    <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+    <div style="height:10px"></div>
+    <label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required>
+    <div style="height:14px"></div>
+    <button class="btn primario" style="width:100%">Entrar</button>
+    <p id="erroLogin" class="dica" style="color:var(--erro);min-height:18px"></p>
+    <p class="dica">Esqueceu a senha ou ainda não tem acesso? Fale com a GPCIF, que gera uma senha provisória.</p>
+  </form>
+</section>
+
+<div id="app">
+  <nav class="abas" role="tablist">
+    <button role="tab" data-aba="ucs" aria-selected="true">Unidades de Conservação</button>
+    <button role="tab" data-aba="regionais" aria-selected="false">Regionais (URFBio)</button>
+    <button role="tab" data-aba="usuarios" aria-selected="false" id="abaUsuarios" hidden>Usuários (admin)</button>
+  </nav>
+
+  <section class="painel ativo" id="aba-ucs">
+    <div class="layout">
+      <aside class="lista">
+        <div class="filtros">
+          <div class="seg" role="group" id="segMinhas"><button data-v="minhas" aria-pressed="true">Minhas UCs</button><button data-v="todas" aria-pressed="false">Todas</button></div>
+          <select id="fRegional"><option value="">Todas as regionais</option></select>
+          <input id="fBusca" placeholder="Buscar UC ou gerente">
+          <div class="dica" id="fResumo"></div>
+        </div>
+        <div class="itens" id="itens"></div>
+      </aside>
+      <main class="detalhe" id="detalhe"><div class="vazio">Escolha uma Unidade de Conservação na lista.</div></main>
+    </div>
+  </section>
+
+  <section class="painel" id="aba-regionais">
+    <p class="dica" style="margin-top:0">Dados da Unidade Regional de Florestas e Biodiversidade que aparecem no PIPCIF de todas as UCs da regional. Editados pela GPCIF.</p>
+    <div class="cartoes" id="cartoesRegionais"></div>
+  </section>
+
+  <section class="painel" id="aba-usuarios">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn primario" id="novoUsuario">+ Novo usuário</button>
+      <input id="uBusca" placeholder="Buscar nome, e-mail ou UC" style="max-width:320px">
+      <span class="dica">Gerentes editam só as UCs marcadas; GPCIF e admin editam todas; sala só visualiza. Todos veem todas as UCs.</span>
+    </div>
+    <div id="editorUsuario"></div>
+    <div class="tab-wrap"><table class="tab" id="tabUsuarios"></table></div>
+  </section>
+</div>
+
+<dialog id="dlgSenha">
+  <h3 style="margin:0 0 6px">Defina sua senha</h3>
+  <p class="dica" id="dlgSenhaTxt" style="margin:0 0 12px">Escolha uma senha pessoal, com pelo menos 8 caracteres.</p>
+  <label for="s1">Nova senha</label><input id="s1" type="password" autocomplete="new-password">
+  <div style="height:8px"></div>
+  <label for="s2">Repita a senha</label><input id="s2" type="password" autocomplete="new-password">
+  <p class="dica" id="dlgErro" style="color:var(--erro);min-height:18px"></p>
+  <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="dlgCancelar">Cancelar</button><button class="btn primario" id="dlgSalvar">Salvar senha</button></div>
+</dialog>
+<div id="msg" role="status"></div>
+
+<script>
+const SUPABASE_URL = "https://nhsjsttvxixgfqnweqos.supabase.co";
+const SUPABASE_KEY = "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const txt = v => { const s=(v??"").toString().trim(); return s===""?null:s; };
+const num = v => { const s=String(v??"").trim().replace(/\./g,"").replace(",","."); if(!s) return null; const n=Number(s); return isNaN(n)?NaN:n; };
+const numDec = v => { const s=String(v??"").trim(); if(!s) return null; const n=Number(s.includes(",") ? s.replace(/\./g,"").replace(",",".") : s); return isNaN(n)?NaN:n; };
+const fmtDH = s => s ? new Date(s).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}) : "";
+const fmtNum = (n,d=2) => n==null ? "" : Number(n).toLocaleString("pt-BR",{maximumFractionDigits:d});
+let tMsg; function msg(t, tipo=""){ const m=$("#msg"); m.textContent=t; m.className=tipo; clearTimeout(tMsg); tMsg=setTimeout(()=>{ if (m.textContent===t) m.textContent=""; }, tipo==="erro"?9000:4500); }
+
+const CATS = {PAR:"Parque Estadual", APA:"Área de Proteção Ambiental", MONA:"Monumento Natural", ESEC:"Estação Ecológica", REBIO:"Reserva Biológica",
+              RVS:"Refúgio de Vida Silvestre", FLOE:"Floresta Estadual", RDS:"Reserva de Desenvolvimento Sustentável", APE:"Área de Proteção Especial"};
+const SIGLA = {PAR:"PE", APA:"APA", MONA:"MN", ESEC:"EE", REBIO:"REBIO", RVS:"REVS", FLOE:"FE", RDS:"RDS", APE:"APE"};
+const PAPEIS = {gerente:"Gerente de UC", sala:"Sala de Situação", gpcif:"GPCIF", admin:"Administrador"};
+const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const BIOMAS = ["Cerrado","Mata Atlântica","Caatinga"];
+const ROTULOS = {gerente_nome:"Gerente", gerente_contatos:"Contatos do gerente", func_adm:"Funcionários administrativos", func_oper:"Funcionários operacionais",
+  responsaveis:"Responsáveis na ausência do gerente", decretos:"Decreto(s) de criação", area_decreto_ha:"Área (decreto)", biomas:"Biomas",
+  fitofisionomia:"Fitofisionomia", topografia:"Topografia", clima:"Clima", meses_criticos:"Meses críticos", meses_obs:"Obs. meses críticos",
+  ref_lat:"Latitude (UC)", ref_lon:"Longitude (UC)", altitude_min:"Altitude mínima", altitude_max:"Altitude máxima", fundiaria_pct:"Regularização fundiária (%)",
+  fundiaria_ha:"Regularização fundiária (ha)", fundiaria_obs:"Situação fundiária", sede_municipio:"Município da sede", sede_endereco:"Endereço da sede",
+  sede_lat:"Latitude (sede)", sede_lon:"Longitude (sede)", obs:"Observações", sigla:"Sigla", telefones:"Telefones", coordenador:"Coordenador(a)",
+  coord_contatos:"Contatos do coordenador", endereco:"Endereço"};
+
+let perfil = null, UCS = [], REG = {}, EQUIPE = [], GEO = null, atual = null, filtroMinhas = true, sujo = false;
+
+/* ============================ LOGIN ============================ */
+async function entrar(){
+  const {data:{session}} = await sb.auth.getSession();
+  if (!session){ $("#telaLogin").style.display="block"; $("#app").style.display="none"; $("#usuario").hidden=true; return; }
+  const {data, error} = await sb.rpc("meu_perfil");
+  if (error || !data){ $("#erroLogin").textContent = "Seu e-mail não está cadastrado. Fale com a GPCIF."; await sb.auth.signOut(); $("#telaLogin").style.display="block"; return; }
+  perfil = data;
+  $("#quem").textContent = `${perfil.nome} · ${PAPEIS[perfil.papel]||perfil.papel}`; $("#usuario").hidden = false;
+  $("#telaLogin").style.display = "none"; $("#app").style.display = "block";
+  $("#abaUsuarios").hidden = perfil.papel !== "admin";
+  filtroMinhas = perfil.papel === "gerente" && perfil.ucs.length > 0;
+  $$("#segMinhas button").forEach(b => b.setAttribute("aria-pressed", (b.dataset.v==="minhas") === filtroMinhas));
+  if (perfil.trocar_senha) abrirSenha(true);
+  await Promise.all([carregarUCs(), carregarRegionais(), carregarGeo(), carregarEquipe()]);
+  const q = new URLSearchParams(location.search);
+  if (q.get("uc")) abrirUC(q.get("uc"));
+  else if (perfil.ucs.length === 1) abrirUC(perfil.ucs[0]);
+}
+$("#formLogin").onsubmit = async e => {
+  e.preventDefault(); $("#erroLogin").textContent = "";
+  const {error} = await sb.auth.signInWithPassword({email: $("#email").value.trim().toLowerCase(), password: $("#senha").value});
+  if (error){ $("#erroLogin").textContent = /invalid/i.test(error.message) ? "E-mail ou senha incorretos." : error.message; return; }
+  entrar();
+};
+$("#sair").onclick = async () => { if (sujo && !confirm("Há alterações não salvas. Sair assim mesmo?")) return; await sb.auth.signOut(); location.reload(); };
+
+function abrirSenha(obrigatoria){
+  $("#dlgSenhaTxt").textContent = obrigatoria ? "Você entrou com uma senha provisória. Escolha agora uma senha pessoal, com pelo menos 8 caracteres." : "Escolha uma nova senha, com pelo menos 8 caracteres.";
+  $("#dlgCancelar").hidden = obrigatoria; $("#s1").value = $("#s2").value = ""; $("#dlgErro").textContent = "";
+  $("#dlgSenha").showModal();
+}
+$("#dlgSenha").addEventListener("cancel", e => { if ($("#dlgCancelar").hidden) e.preventDefault(); });
+$("#btnSenha").onclick = () => abrirSenha(false);
+$("#dlgCancelar").onclick = () => $("#dlgSenha").close();
+$("#dlgSalvar").onclick = async () => {
+  const a = $("#s1").value, b = $("#s2").value;
+  if (a.length < 8) return $("#dlgErro").textContent = "Use pelo menos 8 caracteres.";
+  if (a !== b) return $("#dlgErro").textContent = "As senhas não conferem.";
+  const {error} = await sb.auth.updateUser({password: a});
+  if (error) return $("#dlgErro").textContent = error.message;
+  await sb.rpc("senha_trocada"); perfil.trocar_senha = false;
+  $("#dlgSenha").close(); msg("Senha alterada.");
+};
+
+/* ============================ DADOS ============================ */
+async function carregarUCs(){
+  const {data, error} = await sb.from("vw_uc_cadastro").select("*").order("nome_uc");
+  if (error) return msg("Erro ao carregar as UCs: " + error.message, "erro");
+  UCS = data || [];
+  const regs = [...new Set(UCS.map(u => u.ufbio).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  const sel = $("#fRegional").value;
+  $("#fRegional").innerHTML = `<option value="">Todas as regionais</option>` + regs.map(r => `<option ${r===sel?"selected":""}>${esc(r)}</option>`).join("");
+  desenharLista();
+}
+async function carregarRegionais(){
+  const {data} = await sb.from("regional").select("*").order("nome");
+  REG = {}; (data||[]).forEach(r => REG[r.nome] = r);
+}
+async function carregarGeo(){
+  try{ GEO = await fetch("dados/ucs_mg.geojson").then(r => r.json()); }catch(e){ GEO = null; }
+}
+const minhas = () => new Set(perfil?.ucs || []);
+const podeEditar = n => ["gpcif","admin"].includes(perfil.papel) || minhas().has(n);
+const rotuloUC = u => `${SIGLA[u.categoria]||u.categoria||""} ${u.nome_uc}`.trim();
+
+function desenharLista(){
+  const b = $("#fBusca").value.trim().toLowerCase(), reg = $("#fRegional").value, m = minhas();
+  const L = UCS.filter(u => (!filtroMinhas || m.has(u.nome_uc)) && (!reg || u.ufbio === reg) &&
+    (!b || u.nome_uc.toLowerCase().includes(b) || (u.gerente_nome||"").toLowerCase().includes(b)));
+  const media = L.length ? Math.round(L.reduce((s,u)=>s+(+u.completo_pct||0),0)/L.length) : 0;
+  $("#fResumo").textContent = `${L.length} UCs · preenchimento médio da seção 3: ${media}%`;
+  $("#itens").innerHTML = L.length ? L.map(u => `<div class="item ${atual && atual.nome_uc===u.nome_uc ? "sel":""}" data-uc="${esc(u.nome_uc)}">
+      <div class="n"><span>${esc(rotuloUC(u))}</span>${m.has(u.nome_uc) ? `<span class="minha">minha</span>` : ""}</div>
+      <div class="sub">${esc(u.ufbio||"")}${u.gerente_nome ? " · "+esc(u.gerente_nome) : ""}</div>
+      <div class="barra-pct ${u.completo_pct < 50 ? "baixo":""}" title="${u.completo_pct}% da seção 3 preenchida"><i style="width:${u.completo_pct}%"></i></div>
+    </div>`).join("") : `<div class="vazio">${filtroMinhas ? "Nenhuma UC ligada ao seu login. Veja “Todas” ou fale com a GPCIF." : "Nenhuma UC encontrada."}</div>`;
+  $$(".item").forEach(el => el.onclick = () => abrirUC(el.dataset.uc));
+}
+$$("#segMinhas button").forEach(b => b.onclick = () => { filtroMinhas = b.dataset.v === "minhas"; $$("#segMinhas button").forEach(x => x.setAttribute("aria-pressed", x===b)); desenharLista(); });
+$("#fRegional").onchange = desenharLista; $("#fBusca").oninput = desenharLista;
+
+/* ============================ COORDENADAS ============================ */
+// aceita -17.98 · 17,98 · 17°58'32,3"S · -19 47' 14,7” ; em MG latitude S e longitude O
+function lerCoord(v){
+  const s = String(v??"").trim(); if (!s) return null;
+  if (/^-?\d+([.,]\d+)?$/.test(s)){ const d = Number(s.replace(",", ".")); return d > 0 ? -d : d; }
+  const n = s.replace(/(\d),(\d)/g,"$1.$2").match(/\d+(?:\.\d+)?/g); if (!n) return NaN;
+  return -Math.abs(+n[0] + (+(n[1]||0))/60 + (+(n[2]||0))/3600);
+}
+// UTM (SIRGAS 2000 ≈ GRS80), hemisfério sul → lat/lon
+function utmParaGeo(zona, E, N){
+  const a = 6378137, f = 1/298.257222101, k0 = 0.9996, e2 = f*(2-f), ep2 = e2/(1-e2);
+  const x = E - 500000, y = N - 10000000, lon0 = ((zona-1)*6 - 180 + 3) * Math.PI/180;
+  const M = y/k0, mu = M/(a*(1 - e2/4 - 3*e2*e2/64 - 5*e2**3/256));
+  const e1 = (1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  const p1 = mu + (3*e1/2 - 27*e1**3/32)*Math.sin(2*mu) + (21*e1*e1/16 - 55*e1**4/32)*Math.sin(4*mu) + (151*e1**3/96)*Math.sin(6*mu) + (1097*e1**4/512)*Math.sin(8*mu);
+  const C1 = ep2*Math.cos(p1)**2, T1 = Math.tan(p1)**2, N1 = a/Math.sqrt(1-e2*Math.sin(p1)**2), R1 = a*(1-e2)/(1-e2*Math.sin(p1)**2)**1.5, D = x/(N1*k0);
+  const lat = p1 - (N1*Math.tan(p1)/R1)*(D*D/2 - (5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24 + (61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+  const lon = lon0 + (D - (1+2*T1+C1)*D**3/6 + (5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/Math.cos(p1);
+  return [lat*180/Math.PI, lon*180/Math.PI];
+}
+const dentroMG = (la, lo) => la >= -23.5 && la <= -14 && lo >= -51.5 && lo <= -39.5;
+function pontoNoPoligono(lat, lon, geom){
+  if (!geom) return null;
+  const polys = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
+  const dentroAnel = r => { let c = false; for (let i=0, j=r.length-1; i<r.length; j=i++){ const [xi,yi]=r[i], [xj,yj]=r[j];
+    if (((yi>lat)!==(yj>lat)) && (lon < (xj-xi)*(lat-yi)/(yj-yi)+xi)) c = !c; } return c; };
+  return polys.some(p => dentroAnel(p[0]) && !p.slice(1).some(dentroAnel));
+}
+function htmlCoord(pref, lat, lon, ed){
+  return `<div class="coord" data-coord="${pref}">
+    <div><label>Latitude</label><input data-k="${pref}_lat" value="${lat??""}" placeholder="-19.7874 ou 19°47'14&quot;S" ${ed?"":"disabled"}></div>
+    <div><label>Longitude</label><input data-k="${pref}_lon" value="${lon??""}" placeholder="-43.9602 ou 43°57'36&quot;O" ${ed?"":"disabled"}></div>
+    ${ed ? `<button class="btn peq" type="button" data-marcar="${pref}" title="Clique depois no mapa">Marcar no mapa</button>` : "<span></span>"}
+    <div class="res" data-res="${pref}"></div>
+    ${ed ? `<details class="utm"><summary>Tenho a coordenada em UTM</summary><div class="grade">
+      <div><label>Zona</label><select data-utm="z"><option>22</option><option selected>23</option><option>24</option></select></div>
+      <div><label>E (m)</label><input data-utm="e" placeholder="695859,27"></div><div><label>N (m)</label><input data-utm="n" placeholder="8010988,59"></div>
+      <button class="btn peq" type="button" data-utm-conv>Converter</button></div></details>` : ""}
+  </div>`;
+}
+
+/* ============================ CADASTRO DA UC ============================ */
+function repetidor(el, itens, cols, ed, novo){
+  const desenhar = () => {
+    el.innerHTML = itens.map((it,i) => `<div class="lin" style="grid-template-columns:${cols.map(c=>c.w||"1fr").join(" ")} ${ed?"32px":""}">
+      ${cols.map(c => c.opcoes ? `<select data-i="${i}" data-k="${c.k}" ${ed?"":"disabled"} aria-label="${c.rot}">${c.opcoes.map(([v,t])=>`<option value="${v}" ${it[c.k]===v?"selected":""}>${t}</option>`).join("")}</select>`
+                               : `<input data-i="${i}" data-k="${c.k}" value="${esc(it[c.k]||"")}" placeholder="${c.rot}" aria-label="${c.rot}" ${ed?"":"disabled"}>`).join("")}
+      ${ed ? `<button class="btn peq perigo" type="button" data-rm="${i}" title="Remover">×</button>` : ""}</div>`).join("")
+      + (ed ? `<div><button class="btn peq" type="button" data-add>+ adicionar</button></div>` : (itens.length ? "" : `<span class="dica">—</span>`));
+    $$("[data-rm]", el).forEach(b => b.onclick = () => { itens.splice(+b.dataset.rm, 1); desenhar(); marcarSujo(); });
+    $("[data-add]", el)?.addEventListener("click", () => { itens.push({...novo}); desenhar(); marcarSujo(); $$(".lin", el).at(-1)?.querySelector("input")?.focus(); });
+    $$("[data-k]", el).forEach(inp => inp.oninput = inp.onchange = () => { itens[+inp.dataset.i][inp.dataset.k] = inp.value; marcarSujo(); });
+  };
+  desenhar();
+  return () => itens.map(it => Object.fromEntries(Object.entries(it).map(([k,v]) => [k, (v??"").toString().trim()]))).filter(it => cols.some(c => !c.opcoes && it[c.k]));
+}
+const CONTATO = [{k:"tipo", rot:"Tipo", w:"110px", opcoes:[["tel","Telefone"],["email","E-mail"]]}, {k:"valor", rot:"Número ou e-mail", w:"minmax(0,2fr)"}, {k:"obs", rot:"Obs. (ex.: celular institucional)", w:"minmax(0,1.3fr)"}];
+const RESP = [{k:"nome", rot:"Nome", w:"minmax(0,1.6fr)"}, {k:"telefone", rot:"Telefone", w:"minmax(0,1fr)"}, {k:"email", rot:"E-mail", w:"minmax(0,1.4fr)"}];
+
+function marcarSujo(){ if (!sujo){ sujo = true; const s = $("#estadoSalvo"); if (s) s.textContent = "Alterações não salvas"; } }
+addEventListener("beforeunload", e => { if (sujo){ e.preventDefault(); e.returnValue = ""; } });
+
+async function abrirUC(nome){
+  if (sujo && !confirm("Há alterações não salvas nesta UC. Descartar?")) return;
+  sujo = false;
+  const u = UCS.find(x => x.nome_uc === nome); if (!u) return;
+  const [{data: c, error}, {data: hist}] = await Promise.all([
+    sb.from("uc_cadastro").select("*").eq("nome_uc", nome).maybeSingle(),
+    sb.from("auditoria").select("*").eq("tabela","uc_cadastro").eq("chave", nome).order("quando", {ascending:false}).limit(60)
+  ]);
+  if (error) return msg(error.message, "erro");
+  atual = {...u, cad: c || {nome_uc: nome, gerente_contatos: [], responsaveis: []}};
+  history.replaceState(null, "", "?uc=" + encodeURIComponent(nome));
+  desenharLista();
+  const ed = podeEditar(nome), r = REG[u.ufbio] || {}, d = atual.cad;
+  const gerentes = (u.gerentes_login||[]).map(e => EQUIPE.find(x=>x.email===e)?.nome || e);
+  $("#detalhe").innerHTML = `
+    <div class="cabec"><div>
+      <h2>${esc(CATS[u.categoria] ? CATS[u.categoria] + " " + u.nome_uc : u.nome_uc)}</h2>
+      <div class="dica">${esc(u.ufbio||"")} · ${esc((u.municipios||[]).join(", "))}</div></div>
+      <div>${ed ? `<span class="selo">Você pode editar</span>` : `<span class="selo ro">Somente leitura</span>`}</div></div>
+
+    <fieldset><legend>Dados fixos</legend>
+      <div class="fixos">
+        <div><span>Categoria</span>${esc(CATS[u.categoria]||u.categoria||"—")}</div><div><span>Grupo</span>${esc(u.grupo||"—")}</div>
+        <div><span>Bioma (BDG)</span>${esc(u.bioma_uc||"—")}</div><div><span>Regional</span>${esc(u.ufbio||"—")}</div>
+        <div><span>Base operacional</span>${esc(u.base_op||"—")}</div><div><span>Área pelo limite oficial (IDE-Sisema)</span>${u.area_limite_ha ? fmtNum(u.area_limite_ha)+" ha" : "sem limite cadastrado"}</div>
+        <div><span>Login de gerente</span>${gerentes.length ? esc(gerentes.join(", ")) : "nenhum"}</div>
+      </div>
+      <p class="dica" style="margin:8px 0 0">Vêm do cadastro fixo usado no ROI e no BDG. Correções: fale com a GPCIF.</p>
+    </fieldset>
+
+    <fieldset><legend>Gestão</legend>
+      <div class="grade">
+        <div class="duplo"><label>Nome do gerente da UC</label><input data-k="gerente_nome" value="${esc(d.gerente_nome||"")}" ${ed?"":"disabled"}></div>
+        <div><label>Funcionários — administrativo</label><input data-k="func_adm" type="number" min="0" value="${d.func_adm??""}" ${ed?"":"disabled"}></div>
+        <div><label>Funcionários — operacional</label><input data-k="func_oper" type="number" min="0" value="${d.func_oper??""}" ${ed?"":"disabled"}></div>
+      </div>
+      <label style="margin-top:10px">Contatos do gerente</label><div class="rep" id="repContatos"></div>
+      <label style="margin-top:12px">Responsáveis na ausência do gerente <span class="dica" style="font-weight:400">(no mínimo dois funcionários)</span></label><div class="rep" id="repResp"></div>
+    </fieldset>
+
+    <fieldset><legend>Unidade Regional</legend>
+      <div class="fixos">
+        <div><span>Sigla</span>${esc(r.sigla||"—")}</div><div><span>Telefone da URFBio</span>${esc(r.telefones||"—")}</div>
+        <div><span>Coordenador(a) regional</span>${esc(r.coordenador||"—")}</div>
+        <div><span>Contatos do coordenador</span>${(r.coord_contatos||[]).map(x=>esc(x.valor)).join("<br>") || "—"}</div>
+      </div>
+      <p class="dica" style="margin:8px 0 0">Compartilhado por todas as UCs da regional — editado na aba “Regionais”.</p>
+    </fieldset>
+
+    <fieldset><legend>Criação e ambiente</legend>
+      <div class="grade">
+        <div class="largo"><label>Número do(s) decreto(s) com data de criação</label><textarea data-k="decretos" style="min-height:52px" ${ed?"":"disabled"}>${esc(d.decretos||"")}</textarea></div>
+        <div><label>Área pelo decreto (ha)</label><input data-k="area_decreto_ha" inputmode="decimal" value="${d.area_decreto_ha!=null ? String(d.area_decreto_ha).replace(".",",") : ""}" ${ed?"":"disabled"}></div>
+        <div class="duplo"><label>Biomas</label><div class="meses" id="biomas">${BIOMAS.map(b => `<button type="button" data-b="${b}" aria-pressed="${(d.biomas||[]).includes(b)}" ${ed?"":"disabled"}>${b}</button>`).join("")}</div></div>
+        <div class="largo"><label>Fitofisionomia (tipo de vegetação)</label><textarea data-k="fitofisionomia" ${ed?"":"disabled"}>${esc(d.fitofisionomia||"")}</textarea></div>
+        <div class="largo"><label>Topografia</label><textarea data-k="topografia" style="min-height:52px" ${ed?"":"disabled"}>${esc(d.topografia||"")}</textarea></div>
+        <div class="largo"><label>Clima</label><textarea data-k="clima" style="min-height:52px" ${ed?"":"disabled"}>${esc(d.clima||"")}</textarea></div>
+        <div class="largo"><label>Meses mais críticos do ano (ausência de chuva / risco de fogo)</label>
+          <div class="meses" id="meses">${MESES.map((m,i) => `<button type="button" data-m="${i+1}" aria-pressed="${(d.meses_criticos||[]).includes(i+1)}" ${ed?"":"disabled"}>${m}</button>`).join("")}</div></div>
+        <div class="largo"><label>Observação sobre o período crítico</label><input data-k="meses_obs" value="${esc(d.meses_obs||"")}" ${ed?"":"disabled"}></div>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Localização (SIRGAS 2000)</legend>
+      <label>Ponto de referência da UC</label>${htmlCoord("ref", d.ref_lat, d.ref_lon, ed)}
+      <div class="grade" style="margin-top:8px">
+        <div><label>Altitude mínima (m)</label><input data-k="altitude_min" type="number" value="${d.altitude_min??""}" ${ed?"":"disabled"}></div>
+        <div><label>Altitude máxima (m)</label><input data-k="altitude_max" type="number" value="${d.altitude_max??""}" ${ed?"":"disabled"}></div>
+      </div>
+      <label style="margin-top:14px">Sede da UC</label>
+      <div class="grade">
+        <div><label>Município</label><input data-k="sede_municipio" list="munsSede" value="${esc(d.sede_municipio||"")}" ${ed?"":"disabled"}><datalist id="munsSede">${(u.municipios||[]).map(m=>`<option value="${esc(m)}">`).join("")}</datalist></div>
+        <div class="duplo"><label>Endereço</label><input data-k="sede_endereco" value="${esc(d.sede_endereco||"")}" ${ed?"":"disabled"}></div>
+      </div>
+      <div style="margin-top:8px">${htmlCoord("sede", d.sede_lat, d.sede_lon, ed)}</div>
+      <div id="mapaUC"></div>
+      <div class="dica" style="margin-top:4px">Verde: limite oficial da UC · ● ponto de referência · ■ sede.</div>
+    </fieldset>
+
+    <fieldset><legend>Situação fundiária</legend>
+      <div class="grade">
+        <div><label>Regularizado (%)</label><input data-k="fundiaria_pct" inputmode="decimal" value="${d.fundiaria_pct!=null ? String(d.fundiaria_pct).replace(".",",") : ""}" ${ed?"":"disabled"}></div>
+        <div><label>Regularizado (ha)</label><input data-k="fundiaria_ha" inputmode="decimal" value="${d.fundiaria_ha!=null ? String(d.fundiaria_ha).replace(".",",") : ""}" ${ed?"":"disabled"}></div>
+        <div class="largo"><label>Observação</label><input data-k="fundiaria_obs" value="${esc(d.fundiaria_obs||"")}" ${ed?"":"disabled"}></div>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Observações</legend><textarea data-k="obs" ${ed?"":"disabled"}>${esc(d.obs||"")}</textarea></fieldset>
+
+    ${ed ? `<div class="acoes"><button class="btn primario" id="salvarUC">Salvar cadastro</button><span class="dica" id="estadoSalvo">${d.atualizado_em ? `Última alteração: ${esc(nomePor(d.atualizado_por))} em ${fmtDH(d.atualizado_em)}` : ""}</span></div>`
+         : `<p class="dica" style="margin-top:12px">${d.atualizado_em ? `Última alteração: ${esc(nomePor(d.atualizado_por))} em ${fmtDH(d.atualizado_em)}.` : ""} Para editar esta UC, o seu login precisa estar ligado a ela (fale com a GPCIF).</p>`}
+
+    <details class="historico"><summary>Histórico de alterações (${(hist||[]).length})</summary>${htmlHistorico(hist||[])}</details>`;
+
+  const getContatos = repetidor($("#repContatos"), (d.gerente_contatos||[]).map(x=>({...x})), CONTATO, ed, {tipo:"tel", valor:"", obs:""});
+  const getResp = repetidor($("#repResp"), (d.responsaveis||[]).map(x=>({...x})), RESP, ed, {nome:"", telefone:"", email:""});
+  $$("#meses button, #biomas button").forEach(b => b.onclick = () => { b.setAttribute("aria-pressed", b.getAttribute("aria-pressed")!=="true"); marcarSujo(); });
+  $$("#detalhe [data-k]").forEach(el => { if (!el.closest(".rep")) el.addEventListener("input", marcarSujo); });
+  montarMapa(u, d, ed);
+  if (!ed) return;
+  $("#salvarUC").onclick = async () => {
+    const g = k => $(`#detalhe [data-k="${k}"]`)?.value;
+    const o = {gerente_nome: txt(g("gerente_nome")), gerente_contatos: getContatos(), responsaveis: getResp(),
+      decretos: txt(g("decretos")), fitofisionomia: txt(g("fitofisionomia")), topografia: txt(g("topografia")), clima: txt(g("clima")),
+      meses_obs: txt(g("meses_obs")), sede_municipio: txt(g("sede_municipio")), sede_endereco: txt(g("sede_endereco")),
+      fundiaria_obs: txt(g("fundiaria_obs")), obs: txt(g("obs")),
+      biomas: $$("#biomas button[aria-pressed=true]").map(b => b.dataset.b),
+      meses_criticos: $$("#meses button[aria-pressed=true]").map(b => +b.dataset.m)};
+    for (const k of ["func_adm","func_oper","altitude_min","altitude_max"]){ const v = txt(g(k)); o[k] = v===null ? null : Math.round(+v); if (Number.isNaN(o[k])) return msg(`Valor inválido em “${ROTULOS[k]}”.`, "erro"); }
+    for (const k of ["area_decreto_ha","fundiaria_pct","fundiaria_ha"]){ o[k] = numDec(g(k)); if (Number.isNaN(o[k])) return msg(`Valor inválido em “${ROTULOS[k]}”.`, "erro"); }
+    if (o.fundiaria_pct != null && (o.fundiaria_pct < 0 || o.fundiaria_pct > 100)) return msg("O percentual regularizado deve estar entre 0 e 100.", "erro");
+    for (const p of ["ref","sede"]){
+      const la = lerCoord(g(p+"_lat")), lo = lerCoord(g(p+"_lon"));
+      if (Number.isNaN(la) || Number.isNaN(lo)) return msg("Coordenada não reconhecida.", "erro");
+      if ((la===null) !== (lo===null)) return msg("Informe latitude e longitude juntas.", "erro");
+      if (la!==null && !dentroMG(la, lo)) return msg("Coordenada fora de Minas Gerais — confira latitude/longitude.", "erro");
+      o[p+"_lat"] = la===null ? null : +la.toFixed(6); o[p+"_lon"] = lo===null ? null : +lo.toFixed(6);
+    }
+    if (!o.meses_criticos.length) o.meses_criticos = null;
+    if (!o.biomas.length) o.biomas = null;
+    const b = $("#salvarUC"); b.disabled = true;
+    const {error} = await sb.from("uc_cadastro").update(o).eq("nome_uc", nome);
+    b.disabled = false;
+    if (error) return msg("Não foi possível salvar: " + error.message, "erro");
+    sujo = false; msg("Cadastro salvo."); await carregarUCs(); abrirUC(nome);
+  };
+}
+const nomePor = e => !e ? "—" : (EQUIPE.find(x => x.email === e)?.nome || e);
+
+function fmtValor(k, v){
+  if (v == null || v === "" || (Array.isArray(v) && !v.length)) return "vazio";
+  if (k === "meses_criticos") return v.map(m => MESES[m-1]).join(", ");
+  if (k === "gerente_contatos" || k === "coord_contatos") return v.map(x => x.valor + (x.obs ? ` (${x.obs})` : "")).join("; ");
+  if (k === "responsaveis") return v.map(x => [x.nome, x.telefone, x.email].filter(Boolean).join(" · ")).join("; ");
+  if (Array.isArray(v)) return v.join(", ");
+  if (typeof v === "number") return fmtNum(v, 6);
+  const s = String(v); return s.length > 140 ? s.slice(0,140) + "…" : s;
+}
+function htmlHistorico(H){
+  if (!H.length) return `<p class="dica">Sem alterações registradas.</p>`;
+  return `<ul class="hist" style="padding-left:18px;margin-top:8px">${H.map(h => `<li><span class="q">${fmtDH(h.quando)} · ${esc(nomePor(h.quem))}</span>
+    ${h.operacao === "alterar" ? `<ul class="mud">${(h.campos||[]).map(k => `<li><b>${esc(ROTULOS[k]||k)}:</b> <del>${esc(fmtValor(k, h.antes?.[k]))}</del> → <ins>${esc(fmtValor(k, h.depois?.[k]))}</ins></li>`).join("")}</ul>`
+      : ` — ${h.operacao === "incluir" ? "cadastro criado" : "cadastro excluído"}`}</li>`).join("")}</ul>`;
+}
+
+let mapa, marcadores = {}, alvo = null;
+function montarMapa(u, d, ed){
+  if (mapa){ mapa.remove(); mapa = null; }
+  mapa = L.map("mapaUC", {zoomSnap:.25});
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar"}).addTo(mapa);
+  const f = GEO?.features.find(x => x.properties.nome_uc === u.nome_uc);
+  let limites = null;
+  if (f){ limites = L.geoJSON(f, {style:{color:"#8be06b", weight:2, fillColor:"#6fd34a", fillOpacity:.15}, interactive:false}).addTo(mapa); mapa.fitBounds(limites.getBounds(), {padding:[20,20]}); }
+  else mapa.fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);
+  const icone = p => L.divIcon({className:"", html:`<div style="width:14px;height:14px;${p==="ref"?"border-radius:50%;background:#ffcc00":"background:#ff7a1a"};border:2px solid #fff;box-shadow:0 0 3px #000"></div>`, iconSize:[14,14], iconAnchor:[7,7]});
+  const atualizar = p => {
+    const la = lerCoord($(`[data-k="${p}_lat"]`).value), lo = lerCoord($(`[data-k="${p}_lon"]`).value), res = $(`[data-res="${p}"]`);
+    if (marcadores[p]){ mapa.removeLayer(marcadores[p]); delete marcadores[p]; }
+    res.classList.remove("bad");
+    if (la === null || lo === null){ res.textContent = ""; return; }
+    if (Number.isNaN(la) || Number.isNaN(lo) || !dentroMG(la, lo)){ res.textContent = "Coordenada não reconhecida ou fora de MG."; res.classList.add("bad"); return; }
+    const dentro = f ? pontoNoPoligono(la, lo, f.geometry) : null;
+    res.textContent = `${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
+    marcadores[p] = L.marker([la, lo], {icon: icone(p), title: p==="ref" ? "Ponto de referência" : "Sede"}).addTo(mapa);
+  };
+  ["ref","sede"].forEach(p => { atualizar(p); $$(`[data-k^="${p}_"]`).forEach(i => i.addEventListener("change", () => atualizar(p))); });
+  if (!f && (marcadores.ref || marcadores.sede)) mapa.setView((marcadores.sede||marcadores.ref).getLatLng(), 12);
+  if (!ed) return;
+  $$("[data-marcar]").forEach(b => b.onclick = () => { alvo = b.dataset.marcar; $("#mapaUC").style.cursor = "crosshair"; msg(`Clique no mapa para marcar ${alvo==="ref" ? "o ponto de referência" : "a sede"}.`); });
+  mapa.on("click", e => { if (!alvo) return;
+    $(`[data-k="${alvo}_lat"]`).value = e.latlng.lat.toFixed(6); $(`[data-k="${alvo}_lon"]`).value = e.latlng.lng.toFixed(6);
+    atualizar(alvo); marcarSujo(); alvo = null; $("#mapaUC").style.cursor = ""; });
+  $$("[data-utm-conv]").forEach(b => b.onclick = () => {
+    const box = b.closest(".coord"), p = box.dataset.coord, z = +$("[data-utm=z]", box).value;
+    const EE = numDec($("[data-utm=e]", box).value.replace(/[^\d.,]/g,"")), NN = numDec($("[data-utm=n]", box).value.replace(/[^\d.,]/g,""));   // aceita 695859,27 ou 695859.27
+    if (!EE || !NN || EE < 100000 || EE > 900000 || NN < 7000000 || NN > 10000000) return msg("Confira E (6 dígitos) e N (7 dígitos).", "erro");
+    const [la, lo] = utmParaGeo(z, EE, NN);
+    $(`[data-k="${p}_lat"]`).value = la.toFixed(6); $(`[data-k="${p}_lon"]`).value = lo.toFixed(6); atualizar(p); marcarSujo();
+  });
+}
+
+/* ============================ REGIONAIS ============================ */
+function desenharRegionais(){
+  const ed = ["gpcif","admin"].includes(perfil.papel);
+  const nUC = n => UCS.filter(u => u.ufbio === n).length;
+  $("#cartoesRegionais").innerHTML = Object.values(REG).map(r => `<div class="cartao" data-reg="${esc(r.nome)}">
+    <h3>${esc(r.nome)} <span class="dica" style="font-weight:400">· ${nUC(r.nome)} UCs</span></h3>
+    <div class="grade" style="grid-template-columns:1fr 1fr">
+      <div><label>Sigla</label><input data-k="sigla" value="${esc(r.sigla||"")}" ${ed?"":"disabled"}></div>
+      <div><label>Telefone(s) da URFBio</label><input data-k="telefones" value="${esc(r.telefones||"")}" ${ed?"":"disabled"}></div>
+      <div class="largo"><label>Coordenador(a) regional</label><input data-k="coordenador" value="${esc(r.coordenador||"")}" ${ed?"":"disabled"}></div>
+    </div>
+    <label style="margin-top:8px">Contatos do coordenador</label><div class="rep" data-rep></div>
+    <div style="margin-top:8px"><label>Endereço</label><input data-k="endereco" value="${esc(r.endereco||"")}" ${ed?"":"disabled"}></div>
+    <div class="dica" style="margin-top:6px">${r.atualizado_por ? `Última alteração: ${esc(nomePor(r.atualizado_por))} em ${fmtDH(r.atualizado_em)}` : ""}</div>
+    ${ed ? `<button class="btn peq primario" data-salvar style="margin-top:6px">Salvar</button>` : ""}
+  </div>`).join("");
+  $$("#cartoesRegionais .cartao").forEach(card => {
+    const r = REG[card.dataset.reg];
+    const get = repetidor($("[data-rep]", card), (r.coord_contatos||[]).map(x=>({...x})), CONTATO, ed, {tipo:"tel", valor:"", obs:""});
+    $("[data-salvar]", card)?.addEventListener("click", async () => {
+      const g = k => txt($(`[data-k="${k}"]`, card).value);
+      const {error} = await sb.from("regional").update({sigla: g("sigla"), telefones: g("telefones"), coordenador: g("coordenador"), endereco: g("endereco"), coord_contatos: get()}).eq("nome", r.nome);
+      if (error) return msg(error.message, "erro");
+      sujo = false; msg(`Regional ${r.nome} salva.`); await carregarRegionais(); desenharRegionais();
+    });
+  });
+}
+
+/* ============================ USUÁRIOS (admin) ============================ */
+async function carregarEquipe(){
+  const [{data: eq}, {data: vin}] = await Promise.all([sb.from("equipe").select("*").order("nome"), sb.from("usuario_uc").select("*")]);
+  EQUIPE = (eq||[]).map(e => ({...e, ucs: (vin||[]).filter(v => v.email === e.email).map(v => v.nome_uc).sort((a,b)=>a.localeCompare(b,"pt-BR"))}));
+}
+function desenharUsuarios(){
+  const b = $("#uBusca").value.trim().toLowerCase();
+  const L = EQUIPE.filter(e => !b || e.nome.toLowerCase().includes(b) || e.email.includes(b) || e.ucs.some(u => u.toLowerCase().includes(b)));
+  $("#tabUsuarios").innerHTML = `<thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>UCs que edita</th><th>Situação</th><th></th></tr></thead><tbody>` +
+    L.map(e => `<tr><td>${esc(e.nome)}</td><td>${esc(e.email)}</td><td>${esc(PAPEIS[e.papel]||e.papel)}</td>
+      <td>${e.papel === "gerente" ? `<div class="chips">${e.ucs.map(u => `<span class="chip">${esc(u)}</span>`).join("") || `<span class="dica">nenhuma</span>`}</div>` : `<span class="dica">${["gpcif","admin"].includes(e.papel) ? "todas" : "só visualiza"}</span>`}</td>
+      <td>${e.ativo ? (e.trocar_senha ? "aguardando 1º acesso" : "ativo") : "<b>inativo</b>"}</td>
+      <td style="white-space:nowrap"><button class="btn peq" data-ed="${esc(e.email)}">Editar</button> <button class="btn peq" data-senha="${esc(e.email)}">Nova senha</button></td></tr>`).join("") + "</tbody>";
+  $$("#tabUsuarios [data-ed]").forEach(x => x.onclick = () => editarUsuario(EQUIPE.find(e => e.email === x.dataset.ed)));
+  $$("#tabUsuarios [data-senha]").forEach(x => x.onclick = () => novaSenha(x.dataset.senha));
+}
+$("#uBusca").oninput = desenharUsuarios;
+$("#novoUsuario").onclick = () => editarUsuario(null);
+
+async function chamarFuncao(acao, email){
+  const {data, error} = await sb.functions.invoke("usuarios", {body: {acao, email}});
+  if (error){ let m = error.message; try{ m = (await error.context.json()).erro || m; }catch(e){} throw new Error(m); }
+  if (data?.erro) throw new Error(data.erro);
+  return data;
+}
+function caixaSenha(email, senha, extra=""){
+  return `<div class="senha-box"><b>${esc(email)}</b>${extra}<br>Senha provisória: <code>${esc(senha)}</code> <button class="btn peq" type="button" onclick="navigator.clipboard.writeText('${senha}');this.textContent='Copiada'">Copiar</button>
+    <div class="dica" style="margin-top:6px">Envie ao usuário por um canal seguro, com o endereço <b>${esc(location.origin + location.pathname)}</b>. No primeiro acesso ele define a própria senha.</div></div>`;
+}
+async function novaSenha(email){
+  if (!confirm(`Gerar uma nova senha provisória para ${email}? A senha atual deixa de valer.`)) return;
+  try{
+    const r = await chamarFuncao("senha", email);
+    await sb.from("equipe").update({trocar_senha: true}).eq("email", email);
+    $("#editorUsuario").innerHTML = caixaSenha(email, r.senha);
+    await carregarEquipe(); desenharUsuarios();
+  }catch(e){ msg("Não foi possível gerar a senha: " + e.message, "erro"); }
+}
+function editarUsuario(e){
+  const novo = !e; e = e || {nome:"", email:"", papel:"gerente", telefone:"", ativo:true, ucs:[]};
+  const lista = [...UCS].sort((a,b)=>a.nome_uc.localeCompare(b.nome_uc,"pt-BR"));
+  $("#editorUsuario").innerHTML = `<div class="cartao" style="margin-bottom:12px">
+    <h3>${novo ? "Novo usuário" : "Editar " + esc(e.nome)}</h3>
+    <div class="grade">
+      <div class="duplo"><label>Nome</label><input id="uNome" value="${esc(e.nome)}"></div>
+      <div class="duplo"><label>E-mail (login)</label><input id="uEmail" type="email" value="${esc(e.email)}" ${novo?"":"disabled"}></div>
+      <div><label>Papel</label><select id="uPapel">${Object.entries(PAPEIS).map(([k,t])=>`<option value="${k}" ${k===e.papel?"selected":""}>${t}</option>`).join("")}</select></div>
+      <div><label>Telefone</label><input id="uTel" value="${esc(e.telefone||"")}"></div>
+      <div style="display:flex;align-items:flex-end"><label style="display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--tinta)"><input type="checkbox" id="uAtivo" style="width:auto" ${e.ativo?"checked":""}> Ativo</label></div>
+    </div>
+    <div id="uBlocoUCs" style="margin-top:10px">
+      <label>UCs que este gerente edita <span class="dica" style="font-weight:400" id="uContUCs"></span></label>
+      <input id="uFiltroUC" placeholder="Filtrar UCs ou regional" style="margin-bottom:6px;max-width:320px">
+      <div class="checklist" id="uUCs">${lista.map(u => `<label data-busca="${esc((u.nome_uc+" "+(u.ufbio||"")).toLowerCase())}"><input type="checkbox" value="${esc(u.nome_uc)}" ${e.ucs.includes(u.nome_uc)?"checked":""}> ${esc(rotuloUC(u))}</label>`).join("")}</div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn primario" id="uSalvar">${novo ? "Criar login e salvar" : "Salvar"}</button><button class="btn" id="uCancelar">Cancelar</button></div>
+    <div id="uResultado"></div></div>`;
+  const cont = () => $("#uContUCs").textContent = `(${$$("#uUCs input:checked").length} marcadas)`;
+  const papel = () => $("#uBlocoUCs").hidden = $("#uPapel").value !== "gerente";
+  $("#uPapel").onchange = papel; papel(); cont();
+  $$("#uUCs input").forEach(i => i.onchange = cont);
+  $("#uFiltroUC").oninput = () => { const f = $("#uFiltroUC").value.trim().toLowerCase(); $$("#uUCs label").forEach(l => l.hidden = f && !l.dataset.busca.includes(f)); };
+  $("#uCancelar").onclick = () => $("#editorUsuario").innerHTML = "";
+  $("#uSalvar").onclick = async () => {
+    const o = {nome: txt($("#uNome").value), email: (txt($("#uEmail").value)||"").toLowerCase(), papel: $("#uPapel").value, telefone: txt($("#uTel").value), ativo: $("#uAtivo").checked};
+    if (!o.nome || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(o.email)) return msg("Informe nome e e-mail válidos.", "erro");
+    const ucs = o.papel === "gerente" ? $$("#uUCs input:checked").map(i => i.value) : [];
+    const b = $("#uSalvar"); b.disabled = true;
+    try{
+      let senhaHtml = "";
+      if (novo){
+        if (EQUIPE.some(x => x.email === o.email)) throw new Error("Este e-mail já está cadastrado — use Editar.");
+        const r = await chamarFuncao("criar", o.email);
+        const {error} = await sb.from("equipe").insert({...o, trocar_senha: true}); if (error) throw error;
+        senhaHtml = caixaSenha(o.email, r.senha, r.jaExistia ? " (já tinha login no sistema; a senha foi redefinida)" : "");
+      } else {
+        const {error} = await sb.from("equipe").update({nome:o.nome, papel:o.papel, telefone:o.telefone, ativo:o.ativo}).eq("email", o.email); if (error) throw error;
+      }
+      const antes = novo ? [] : e.ucs;
+      const sai = antes.filter(u => !ucs.includes(u)), entra = ucs.filter(u => !antes.includes(u));
+      if (sai.length){ const {error} = await sb.from("usuario_uc").delete().eq("email", o.email).in("nome_uc", sai); if (error) throw error; }
+      if (entra.length){ const {error} = await sb.from("usuario_uc").insert(entra.map(n => ({email:o.email, nome_uc:n}))); if (error) throw error; }
+      await Promise.all([carregarEquipe(), carregarUCs()]); desenharUsuarios();
+      if (senhaHtml) $("#editorUsuario").innerHTML = senhaHtml; else { $("#editorUsuario").innerHTML = ""; msg("Usuário atualizado."); }
+    }catch(err){ msg(err.message || String(err), "erro"); b.disabled = false; }
+  };
+  $("#editorUsuario").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ============================ ABAS ============================ */
+$$(".abas button").forEach(b => b.onclick = async () => {
+  if (sujo && !confirm("Há alterações não salvas. Sair desta tela?")) return;
+  sujo = false;
+  $$(".abas button").forEach(x => x.setAttribute("aria-selected", x===b));
+  $$(".painel").forEach(p => p.classList.toggle("ativo", p.id === "aba-"+b.dataset.aba));
+  if (b.dataset.aba === "regionais"){ await carregarRegionais(); desenharRegionais(); }
+  if (b.dataset.aba === "usuarios"){ await carregarEquipe(); desenharUsuarios(); }
+  if (b.dataset.aba === "ucs" && mapa) setTimeout(() => mapa.invalidateSize(), 50);
+});
+entrar();
+</script>
+</body>
+</html>
