@@ -133,6 +133,7 @@
         <div><label>Número do RI <span class="req">*</span></label><input name="ri" inputmode="numeric" maxlength="4" placeholder="ex.: 125" required></div>
         <div><label>Número do ROI <span class="req">*</span></label><input name="roi_num" inputmode="numeric" maxlength="3" placeholder="ex.: 19" required></div>
         <div><label>Código BDP (automático)</label><span class="codigo" id="codPreview">AAAA-RRRR-OOO</span></div>
+        <div class="largo" id="riInfo"></div>
 
         <div class="largo"><label>Unidade de Conservação <span class="req">*</span></label>
           <select name="nome_uc" required></select>
@@ -328,7 +329,7 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.7</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.8</div>
 <div id="relatorio"></div>
 
 <script>
@@ -497,6 +498,35 @@ function atualizarDerivados(){
   atualizarTotaisEvol();
   if (poligonos.length) mostrarPoligono();
 }
+
+/* RI da Sala de Situação -> pré-preenchimento do ROI */
+let chaveRI = "";
+async function preencherDoRI(){
+  const ano = +F("ano").value, ri = (F("ri").value||"").replace(/\D/g,"");
+  if (!sb || !ano || !ri) { $("#riInfo").innerHTML = ""; chaveRI = ""; return; }
+  const chave = ano + "-" + ri.padStart(4,"0"); if (chave === chaveRI) return; chaveRI = chave;
+  let data = null;
+  try{ const r = await comPrazo(sb.rpc("ri_para_roi", {p_ano: ano, p_ri: ri}), 10000); if (!r.error) data = r.data; }catch(e){ return; }
+  if (chave !== chaveRI) return;
+  if (!data){ $("#riInfo").innerHTML = `<div class="dica" style="color:var(--alerta)">RI ${esc(chave.slice(5))}/${ano} não encontrado no registro da Sala de Situação. Confira o número com a sala.</div>`; return; }
+  const vazio = n => !F(n).value || !String(F(n).value).trim(), feitos = [];
+  if (data.nome_uc && UCS[data.nome_uc] && F("nome_uc").value !== data.nome_uc){
+    if (vazio("nome_uc")){ F("nome_uc").value = data.nome_uc; aplicarUC(true); feitos.push("UC"); }
+  }
+  if (data.local && vazio("local") && [...F("local").options].some(o=>o.value===data.local)){ F("local").value = data.local; feitos.push("localização"); }
+  if (data.municipio && (vazio("municipio") || feitos.includes("UC"))){ F("municipio").value = data.municipio; feitos.push("município"); }
+  [["dat_detec","dat_detec"],["hr_detec","hr_detec"],["dat_final","dat_final"],["hr_final","hr_final"]].forEach(([c,k]) => {
+    if (data[k] && vazio(c)){ F(c).value = String(data[k]).slice(0, c.startsWith("hr") ? 5 : 10); if (!feitos.includes("datas")) feitos.push("datas"); } });
+  if (data.lat!=null && data.lon!=null && vazio("lat_g")){
+    const [g1,m1,s1]=decParaDMS(+data.lat), [g2,m2,s2]=decParaDMS(+data.lon);
+    F("lat_g").value=g1; F("lat_m").value=m1; F("lat_s").value=s1; F("lon_g").value=g2; F("lon_m").value=m2; F("lon_s").value=s2; feitos.push("coordenadas"); }
+  const uc = data.nome_uc ? `${data.nome_uc}${data.municipio ? " · "+data.municipio : ""}` : "";
+  $("#riInfo").innerHTML = `<div class="dica" style="color:var(--ok)">✓ RI ${esc(data.ri)}/${data.ano} da Sala de Situação: ${esc(uc)}${feitos.length ? ` — preenchido: ${esc(feitos.join(", "))}` : ""}.</div>`
+    + (data.status === "andamento" ? `<div class="dica" style="color:var(--alerta)">⚠ Este RI ainda está em andamento na sala. Confirme com a sala o fim do incêndio.</div>` : "")
+    + (data.nome_uc && F("nome_uc").value && F("nome_uc").value !== data.nome_uc ? `<div class="dica" style="color:var(--alerta)">⚠ A UC do RI (${esc(data.nome_uc)}) é diferente da escolhida no formulário.</div>` : "");
+  mudou();
+}
+["ano","ri"].forEach(n => F(n).addEventListener("change", preencherDoRI));
 
 /* Cadastro da UC: preenche e trava os dados fixos */
 function aplicarUC(trocouUC){
@@ -778,6 +808,7 @@ function preencherDoSMC(props){
   if (lista) html += `<details style="margin-top:4px"><summary class="dica" style="cursor:pointer">Todos os atributos do arquivo</summary><pre class="dica" style="white-space:pre-wrap;margin:4px 0">${esc(lista)}</pre></details>`;
   $("#smcAttr").innerHTML = html;
   mudou();
+  preencherDoRI();                                     // completa o que faltar com o RI da sala
 }
 const fmtH = n => fmtHa(n) + " ha";
 
@@ -1243,6 +1274,8 @@ $("#btnPdf").onclick = async () => {
   try{ rasc = JSON.parse(localStorage.getItem(CHAVE_RASCUNHO) || "null"); }catch(e){}
   if (rasc){ aplicar(rasc); $("#avisoRascunho").hidden = false; aplicarUC(false); }
   else { F("ano").value = new Date().getFullYear(); linhaEvol(); }
+  const q = new URLSearchParams(location.search);
+  if (q.get("ri")){ if (q.get("ano")) F("ano").value = q.get("ano"); F("ri").value = q.get("ri"); atualizarDerivados(); preencherDoRI(); }
   $("#form").addEventListener("input", e => { e.target.classList?.remove("invalido"); mudou(); });
   $("#form").addEventListener("change", mudou);
   $("#addEvol").onclick = () => { linhaEvol(); mudou(); };
