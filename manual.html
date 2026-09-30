@@ -48,13 +48,20 @@
   .titulo h1{margin:2px 0 0;font-size:26px;line-height:1.15;font-weight:750;color:var(--marca-2)}
   .titulo p{margin:2px 0 0;color:var(--suave);font-size:14px;max-width:620px}
   /* menu institucional */
-  nav.menu{background:var(--marca)}
-  nav.menu ul{max-width:1040px;margin:0 auto;padding:0 8px;list-style:none;display:flex;flex-wrap:wrap}
-  nav.menu a{display:block;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 12px;border-bottom:3px solid transparent}
-  nav.menu a:hover,nav.menu a[aria-current=page]{background:rgba(255,255,255,.1);border-bottom-color:var(--laranja)}
-  nav.menu a .ext{opacity:.7;font-size:11px;margin-left:3px}
-  nav.menu .pend{opacity:.72}
-  .faixa{background:linear-gradient(90deg,var(--marca) 0 60%,var(--laranja) 60% 80%,var(--amarelo) 80%);height:4px}
+  nav.menu{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--papel) 90%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(12px);backdrop-filter:saturate(1.6) blur(12px);border-bottom:1px solid var(--linha);box-shadow:0 1px 0 rgba(0,0,0,.02),0 6px 18px -14px rgba(0,0,0,.35)}
+  nav.menu ul{max-width:1040px;margin:0 auto;padding:9px 12px;list-style:none;display:flex;gap:2px;align-items:center}
+  nav.menu li.fim{margin-left:auto}
+  nav.menu li.div{width:1px;height:18px;background:var(--linha);margin:0 8px}
+  nav.menu a{display:flex;align-items:center;gap:5px;color:var(--tinta);text-decoration:none;font-weight:560;font-size:14px;letter-spacing:.005em;padding:7px 14px;border-radius:999px;transition:background .15s,color .15s;white-space:nowrap}
+  nav.menu a:hover{background:var(--realce);color:var(--marca-2)}
+  nav.menu a:focus-visible{outline:2px solid var(--marca-2);outline-offset:1px}
+  nav.menu a[aria-current=page]{background:var(--realce);color:var(--marca-2);font-weight:680}
+  nav.menu a.fora{color:var(--suave);font-weight:500;font-size:13.5px}
+  nav.menu a.fora:hover{color:var(--marca-2)}
+  nav.menu a .ext{width:11px;height:11px;opacity:.6}
+  nav.menu .pend{color:var(--suave)}
+  .faixa{display:none}
+  header.inst{border-bottom:0}
   main,footer{max-width:1040px;margin:0 auto}
   main{padding:8px 16px 10px}
   section{margin-top:26px}
@@ -114,10 +121,10 @@
     .fluxo{grid-template-columns:1fr} .seta{height:30px} .seta svg{transform:rotate(90deg)}
     .modulos{grid-template-columns:1fr}
   }
-  @media (max-width:600px){ .prev{height:64px} .ief{height:22px} .selos{gap:8px} .selos .prog{height:26px} .titulo{display:none} .titulo .org{display:none} .titulo p{display:none} .titulo h1{font-size:21px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
+  @media (max-width:600px){ .prev{height:64px} .ief{height:22px} .selos{gap:8px} .selos .prog{height:26px} .titulo{display:none} .titulo .org{display:none} .titulo p{display:none} .titulo h1{font-size:21px} nav.menu a{padding:6px 12px;font-size:13.5px} nav.menu ul{overflow-x:auto;scrollbar-width:none;padding:7px 8px} nav.menu li.fim{margin-left:0} nav.menu li.div{margin:0 4px} .gov nav{display:none} }
 
   main.manual{max-width:1040px;margin:0 auto;padding:22px 16px 10px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start}
-  .sumario{position:sticky;top:12px;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:14px 14px 10px}
+  .sumario{position:sticky;top:72px;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:14px 14px 10px}
   .sum-tit{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--suave);margin-bottom:6px}
   .sumario ol{list-style:none;margin:0;padding:0}
   .sumario a{display:block;padding:5px 8px;border-radius:7px;color:inherit;text-decoration:none;font-size:14px}
@@ -125,7 +132,7 @@
   .conteudo{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:22px 26px 26px;min-width:0}
   .conteudo h1{margin:0;font-size:26px;color:var(--marca-2)}
   .conteudo .lead{color:var(--suave);margin:6px 0 0}
-  .conteudo section{margin-top:26px;padding-top:18px;border-top:1px solid var(--linha);scroll-margin-top:14px}
+  .conteudo section{margin-top:26px;padding-top:18px;border-top:1px solid var(--linha);scroll-margin-top:76px}
   .conteudo h2{font-size:20px;margin:0 0 6px;color:var(--tinta);text-transform:none;letter-spacing:0}
   .conteudo h3{font-size:15.5px;margin:16px 0 6px}
   .conteudo p,.conteudo li{font-size:15px;line-height:1.6}
@@ -173,13 +180,13 @@
   </div>
 </div></header>
 <nav class="menu" aria-label="Menu institucional"><ul>
-  <li><a href="index.html">Início</a></li>
+<li><a href="index.html">Início</a></li>
   <li><a href="#" class="pend" title="Página em construção">O Previncêndio</a></li>
-  <li><a href="https://www.ief.mg.gov.br/unidades-de-conservação" target="_blank" rel="noopener">UCs estaduais<span class="ext">↗</span></a></li>
   <li><a href="#" class="pend" title="Página em construção">Legislação</a></li>
   <li><a href="#" class="pend" title="Página em construção">Documentos técnicos</a></li>
   <li><a href="manual.html" aria-current="page">Manual</a></li>
-  <li><a href="https://www.ief.mg.gov.br/fale-conosco" target="_blank" rel="noopener">Fale conosco<span class="ext">↗</span></a></li>
+  <li class="fim"><a href="https://www.ief.mg.gov.br/unidades-de-conservação" target="_blank" rel="noopener" class="fora">UCs estaduais<svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5h5.5V8M9.2 2.8L2.8 9.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></a></li>
+  <li><a href="https://www.ief.mg.gov.br/fale-conosco" target="_blank" rel="noopener" class="fora">Fale conosco<svg class="ext" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5h5.5V8M9.2 2.8L2.8 9.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></a></li>
 </ul></nav>
 <div class="faixa" aria-hidden="true"></div>
 <main class="manual">
