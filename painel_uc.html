@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="icones_mapa.js"></script>
 <style>
   :root{
     color-scheme: light;
@@ -102,7 +103,7 @@
 </head>
 <body>
 <header class="topo">
-  <div class="marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio"></a>
+  <div class="marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_portal_selo.png" alt="Previncêndio"></a>
     <div><div class="inst"><a href="index.html">← Portal Previncêndio</a> · GPCIF · IEF-MG</div><h1>Painel da Unidade de Conservação</h1></div></div>
   <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn" id="sair">Sair</button></div>
 </header>
@@ -175,7 +176,7 @@ async function carregar(){
   $("#btnCadastro").href = "ucs.html?uc=" + encodeURIComponent(nome);
   $("#conteudo").innerHTML = `<div class="carregando">Carregando o painel de ${esc(nome)}…</div>`;
   const [{data, error}, {data: infra}] = await Promise.all([sb.rpc("painel_uc", {p_nome_uc: nome}),
-    sb.from("vw_uc_ponto").select("tipo,nome,lat,lon,situacao,dist_uc_km").eq("nome_uc", nome)]);
+    sb.from("vw_uc_ponto").select("tipo,nome,lat,lon,situacao,dist_uc_km,atributos").eq("nome_uc", nome)]);
   if (data) data.infra = infra || [];
   if (error){ $("#conteudo").innerHTML = `<div class="carregando" style="color:var(--erro)">${esc(error.message)}</div>`; return; }
   D = data; desenhar();
@@ -308,21 +309,24 @@ function montarMapa(){
   }
   const ris = (D.atual.ris||[]).filter(r => r.lat != null && r.lon != null);
   if (ris.length){
-    cam[`RIs de ${D.ano_atual}`] = L.featureGroup(ris.map(r => L.circleMarker([r.lat, r.lon], {radius:6, color:"#fff", weight:1.5, fillColor: r.status==="andamento" ? "#ff1f1f" : "#ff7a1a", fillOpacity:1})
+    cam[`RIs de ${D.ano_atual}`] = L.featureGroup(ris.map(r => (r.status === "andamento"
+        ? L.marker([r.lat, r.lon], {icon: iconeMapa("fogo", {tam:30}), zIndexOffset:900})
+        : L.circleMarker([r.lat, r.lon], {radius:6, color:"#fff", weight:1.5, fillColor:"#ff7a1a", fillOpacity:1}))
       .bindTooltip(`RI ${r.ri} · ${fmtD(r.data)} · ${esc(r.status)}`))).addTo(mapa);
+    if (ris.some(r => r.status === "andamento")) leg.push(`${iconeLegenda("fogo", 16)}Incêndio em andamento`);
     leg.push(`<i style="background:#ff7a1a;border-radius:50%;width:10px"></i>RIs de ${D.ano_atual} (${ris.length})`);
   }
   const inf = (D.infra||[]).filter(x => x.lat != null);
   if (inf.length){
-    cam["Infraestrutura"] = L.featureGroup(inf.map(x => L.circleMarker([x.lat, x.lon], {radius:6, color:"#1d1d1f", weight:1.5, fillColor:INFRA[x.tipo][1], fillOpacity:1})
+    cam["Infraestrutura"] = L.featureGroup(inf.map(x => L.marker([x.lat, x.lon], {icon: iconeMapa(tipoIcone(x.tipo, x.atributos), {tam:24, situacao:x.situacao}), zIndexOffset:500})
       .bindTooltip(`${INFRA[x.tipo][0]}: ${esc(x.nome)}${x.situacao && x.situacao !== "operante" ? " · " + x.situacao : ""}`))).addTo(mapa);
-    [...new Set(inf.map(x => x.tipo))].forEach(t => leg.push(`<i style="background:${INFRA[t][1]};border-radius:50%;width:10px;border:1px solid #1d1d1f"></i>${INFRA[t][0]}`));
+    [...new Set(inf.map(x => tipoIcone(x.tipo, x.atributos)))].forEach(t => leg.push(`${iconeLegenda(t, 16)}${ICONES_ROTULO[t]}`));
   }
   const pts = [];
-  if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: L.divIcon({className:"", html:`<div style="width:13px;height:13px;background:#fff;border:3px solid #1f6feb;box-shadow:0 0 3px #000"></div>`, iconSize:[13,13], iconAnchor:[6,6]})}).bindTooltip("Sede da UC")); leg.push(`<i style="background:#fff;border:3px solid #1f6feb;width:10px;height:10px"></i>Sede`); }
+  if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: iconeMapa("sede", {tam:26}), zIndexOffset:600}).bindTooltip("Sede da UC")); leg.push(`${iconeLegenda("sede", 16)}Sede`); }
   if (pts.length) cam["Sede"] = L.featureGroup(pts).addTo(mapa);
   L.control.layers({"Satélite": sat, "Mapa": ruas}, cam, {collapsed: innerWidth < 700}).addTo(mapa);
-  L.control.scale({imperial:false, maxWidth:140}).addTo(mapa);
+  L.control.scale({imperial:false, maxWidth:140, position:"bottomright"}).addTo(mapa);
   $("#legenda").innerHTML = leg.join("<br>") || "—";
   const alvo = lim || cam["RIs de " + D.ano_atual];
   if (alvo) mapa.fitBounds(alvo.getBounds(), {padding:[24,24]}); else mapa.fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);

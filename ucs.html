@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="pipcif_modulos.js"></script>
+<script src="icones_mapa.js"></script>
 <style>
   :root{
     --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --mudo:#7a7a72; --linha:#dcd8d0;
@@ -137,7 +138,7 @@
 </head>
 <body>
 <header class="topo">
-  <div class="marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio"></a>
+  <div class="marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_portal_selo.png" alt="Previncêndio"></a>
     <div><div class="inst"><a href="index.html">← Portal Previncêndio</a> · GPCIF · IEF-MG</div><h1>Cadastro das UCs · PIPCIF</h1></div></div>
   <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn peq" id="btnSenha">Trocar senha</button><button class="btn peq" id="sair">Sair</button></div>
 </header>
@@ -462,7 +463,7 @@ async function abrirUC(nome){
       </div>
       <div style="margin-top:8px">${htmlCoord("sede", d.sede_lat, d.sede_lon, ed)}</div>
       <div id="mapaUC"></div>
-      <div class="dica" style="margin-top:4px">Verde: limite oficial da UC · ● ponto de referência · ■ sede.</div>
+      <div class="dica" style="margin-top:4px">Verde: limite oficial da UC · ● ponto de referência · ícone da casa: sede.</div>
     </fieldset>
 
     <fieldset><legend>Situação fundiária</legend>
@@ -548,7 +549,7 @@ function montarMapa(u, d, ed){
   let limites = null;
   if (f){ limites = L.geoJSON(f, {style:{color:"#8be06b", weight:2, fillColor:"#6fd34a", fillOpacity:.15}, interactive:false}).addTo(mapa); mapa.fitBounds(limites.getBounds(), {padding:[20,20]}); }
   else mapa.fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);
-  const icone = p => L.divIcon({className:"", html:`<div style="width:14px;height:14px;${p==="ref"?"border-radius:50%;background:#ffcc00":"background:#ff7a1a"};border:2px solid #fff;box-shadow:0 0 3px #000"></div>`, iconSize:[14,14], iconAnchor:[7,7]});
+  const icone = p => p === "sede" ? iconeMapa("sede", {tam:26}) : L.divIcon({className:"", html:`<div style="width:14px;height:14px;border-radius:50%;background:#ffcc00;border:2px solid #fff;box-shadow:0 0 3px #000"></div>`, iconSize:[14,14], iconAnchor:[7,7]});
   const atualizar = p => {
     const la = lerCoord($(`[data-k="${p}_lat"]`).value), lo = lerCoord($(`[data-k="${p}_lon"]`).value), res = $(`[data-res="${p}"]`);
     if (marcadores[p]){ mapa.removeLayer(marcadores[p]); delete marcadores[p]; }
@@ -665,7 +666,7 @@ function desenharPontos(){
   const ed = INF.ed, np = new Set(INF.inf.nao_possui || []);
   $("#listaPts").innerHTML = Object.entries(TIPOS_PONTO).map(([t, T]) => {
     const L = INF.pts.filter(p => p.tipo === t);
-    return `<div class="tipo-bloco"><div class="th"><span class="cor" style="background:${T.cor}"></span><span class="sp">${T.s} ${esc(T.rot)} <span class="dica">(${L.length})</span></span>
+    return `<div class="tipo-bloco"><div class="th">${iconeLegenda(t, 22)}<span class="sp">${T.s} ${esc(T.rot)} <span class="dica">(${L.length})</span></span>
       ${!L.length ? `<label title="Marque se a UC não possui este tipo — conta como informado"><input type="checkbox" data-np="${t}" ${np.has(t)?"checked":""} ${ed?"":"disabled"}> não possui</label>` : ""}
       ${ed ? `<button class="btn peq" type="button" data-add="${t}">+ adicionar</button>` : ""}</div>
       ${L.map(p => `<div class="pt ${editando && editando.id === p.id ? "sel" : ""}" data-id="${p.id}"><span><b>${esc(p.nome)}</b></span>${T.sit && p.situacao ? `<span class="sit ${p.situacao}">${esc(SITUACOES[p.situacao])}</span>` : "<span></span>"}
@@ -756,7 +757,7 @@ function montarMapaInfra(){
   mapaInf.on("click", e => { if (!alvoInf || !editando) return;
     $('[data-k="pt_lat"]').value = e.latlng.lat.toFixed(6); $('[data-k="pt_lon"]').value = e.latlng.lng.toFixed(6);
     $('[data-k="pt_lat"]').dispatchEvent(new Event("change")); marcarSujo(); alvoInf = false; $("#mapaInfra").style.cursor = ""; });
-  $("#legInfra").innerHTML = Object.values(TIPOS_PONTO).map(T => `<span style="white-space:nowrap;margin-right:10px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${T.cor};border:1px solid #666;vertical-align:-1px"></span> ${esc(T.curto)}</span>`).join("") + ` <span style="white-space:nowrap">· verde: limite da UC</span>`;
+  $("#legInfra").innerHTML = [...Object.entries(TIPOS_PONTO).map(([t,T]) => [t, T.curto]), ["camera","Câmera"]].map(([t, r]) => `<span style="white-space:nowrap;margin-right:10px;display:inline-block;margin-bottom:3px">${iconeLegenda(t)}${esc(r)}</span>`).join("") + ` <span style="white-space:nowrap">· × inoperante · ! parcialmente operante · verde: limite da UC</span>`;
   pintarInfra(null, true);
 }
 function pintarInfra(provisorio=null, enquadrar=false){
@@ -764,10 +765,10 @@ function pintarInfra(provisorio=null, enquadrar=false){
   if (camadaInf) mapaInf.removeLayer(camadaInf);
   const itens = INF.pts.filter(p => p.lat != null).map(p => {
     const sel = editando && editando.id === p.id;
-    return L.circleMarker([p.lat, p.lon], {radius: sel ? 10 : 7, color: sel ? "#000" : "#fff", weight: sel ? 3 : 2, fillColor: TIPOS_PONTO[p.tipo].cor, fillOpacity: 1})
-      .bindTooltip(`${esc(TIPOS_PONTO[p.tipo].curto)}: ${esc(p.nome)}`).on("click", () => editarPt(p));
+    return L.marker([p.lat, p.lon], {icon: iconeMapa(tipoIcone(p.tipo, p.atributos), {sel, situacao: p.situacao}), zIndexOffset: sel ? 1000 : 0})
+      .bindTooltip(`${esc(TIPOS_PONTO[p.tipo].curto)}: ${esc(p.nome)}${p.situacao && p.situacao !== "operante" ? " · " + esc(SITUACOES[p.situacao]).toLowerCase() : ""}`).on("click", () => editarPt(p));
   });
-  if (provisorio) itens.push(L.circleMarker([provisorio.lat, provisorio.lon], {radius:10, color:"#000", weight:3, fillColor: TIPOS_PONTO[editando.tipo].cor, fillOpacity:1}));
+  if (provisorio) itens.push(L.marker([provisorio.lat, provisorio.lon], {icon: iconeMapa(tipoIcone(editando.tipo, editando.atributos), {sel:true}), zIndexOffset: 2000}));
   camadaInf = L.featureGroup(itens).addTo(mapaInf);
   if (enquadrar){
     const b = INF.lim ? INF.lim.getBounds() : null, bp = itens.length ? camadaInf.getBounds() : null;
