@@ -7,20 +7,20 @@
 <style>
   :root{
     color-scheme: light;
-    --fundo:#f5f3ef; --papel:#ffffff; --linha:#e3e0da; --tinta:#1d1d1f; --suave:#5f6368;
-    --marca:#7a1f1f; --marca-2:#a32b2b; --realce:#fbeeee;
+    --fundo:#eef0e6; --papel:#ffffff; --linha:#e3e0da; --tinta:#1d1d1f; --suave:#5f6368;
+    --marca:#2e5603; --marca-2:#3f6b12; --realce:#e6eed8;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       color-scheme: dark;
       --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --tinta:#f3f2ee; --suave:#b5b4ab;
-      --marca:#5a1414; --marca-2:#e66767; --realce:#2a1a19;
+      --marca:#1e3a02; --marca-2:#9cc46a; --realce:#1d2614;
     }
   }
   :root[data-theme="dark"]{
     color-scheme: dark;
     --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --tinta:#f3f2ee; --suave:#b5b4ab;
-    --marca:#5a1414; --marca-2:#e66767; --realce:#2a1a19;
+    --marca:#1e3a02; --marca-2:#9cc46a; --realce:#1d2614;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--fundo);color:var(--tinta);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -59,11 +59,11 @@
 <main>
   <h2>Ocorrência de incêndio</h2>
   <div class="cards">
-    <a class="card" href="https://area-queimada-previncendio.projects.earthengine.app/view/cicatrizes-previncendio" target="_blank" rel="noopener">
+    <a class="card" href="smc.html">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></div>
       <h3>1. Mapear a área queimada</h3>
       <p>SMC — Sistema de Mapeamento de Cicatrizes. Delimite a cicatriz em imagens Sentinel-2 e exporte o KML.</p>
-      <span class="ir">Abrir o SMC ↗</span>
+      <span class="ir">Abrir o SMC →</span>
     </a>
     <a class="card" href="roi.html">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg></div>

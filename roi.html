@@ -7,8 +7,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --vinho:#7a1f1f; --vinho-esc:#5a1414; --tinta:#1d1d1f; --suave:#5f6368;
-    --linha:#d9d6d0; --fundo:#f5f3ef; --papel:#ffffff; --ok:#1e7a46; --alerta:#b26a00; --erro:#b3261e;
+    --vinho:#2e5603; --vinho-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368;
+    --linha:#d9d6d0; --fundo:#eef0e6; --papel:#ffffff; --ok:#1e7a46; --alerta:#b26a00; --erro:#b3261e;
     --raio:10px;
   }
   *{box-sizing:border-box}
@@ -21,33 +21,33 @@
   .aviso{background:#fff7e6;border:1px solid #f0d49a;border-radius:var(--raio);padding:10px 12px;margin:0 0 14px;font-size:14px}
   .aviso button{margin-left:8px}
   section.bloco{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);margin:0 0 16px;overflow:hidden}
-  section.bloco>h2{margin:0;background:#111;color:#fff;font-size:14px;letter-spacing:.03em;text-transform:uppercase;padding:8px 14px}
+  section.bloco>h2{margin:0;background:var(--vinho-esc);color:#fff;font-size:14px;letter-spacing:.03em;text-transform:uppercase;padding:8px 14px}
   .corpo{padding:14px}
   .grade{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
   .grade .largo{grid-column:1/-1}
   label{display:block;font-size:12.5px;font-weight:600;color:var(--suave);margin-bottom:4px}
   label .req{color:var(--erro)}
   input,select,textarea{width:100%;font:inherit;color:inherit;background:#fff;border:1px solid #c9c5bd;border-radius:7px;padding:8px 9px}
-  input:focus,select:focus,textarea:focus{outline:2px solid #e2b4b4;border-color:var(--vinho)}
+  input:focus,select:focus,textarea:focus{outline:2px solid #b8cf95;border-color:var(--vinho)}
   textarea{min-height:120px;resize:vertical}
-  select:disabled{background:#f1ece6;color:var(--tinta);opacity:1;border-style:dashed;cursor:not-allowed}
+  select:disabled{background:#e9eddf;color:var(--tinta);opacity:1;border-style:dashed;cursor:not-allowed}
   .cadeado{font-size:12px;color:var(--suave);margin-top:6px}
   .invalido{border-color:var(--erro)!important;background:#fff5f4}
   .dica{font-size:12px;color:var(--suave);margin-top:4px}
-  .codigo{font:600 18px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;padding:8px 10px;background:#f1ece6;border-radius:7px;display:inline-block}
+  .codigo{font:600 18px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;padding:8px 10px;background:#e9eddf;border-radius:7px;display:inline-block}
   .linha-radio{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding-top:4px}
   .linha-radio label{display:flex;gap:6px;align-items:center;font-weight:500;color:var(--tinta);margin:0;font-size:14.5px}
   .linha-radio input{width:auto}
   .dms{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px}
   .tabela-wrap{overflow-x:auto;border:1px solid var(--linha);border-radius:8px}
   table.din{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
-  table.din th{background:#f1ece6;font-size:12px;text-align:left;padding:6px;border-bottom:1px solid var(--linha);white-space:nowrap}
+  table.din th{background:#e9eddf;font-size:12px;text-align:left;padding:6px;border-bottom:1px solid var(--linha);white-space:nowrap}
   table.din td{padding:4px;border-bottom:1px solid #eee}
   table.din input{padding:6px}
   table.din input[type=number]{min-width:56px}
   table.din td.total{font-weight:700;text-align:center;min-width:52px}
   .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--vinho);background:#fff;color:var(--vinho);padding:8px 14px;cursor:pointer}
-  .btn:hover{background:#f8eeee}
+  .btn:hover{background:#eef3e2}
   .btn.primario{background:var(--vinho);color:#fff}
   .btn.primario:hover{background:var(--vinho-esc)}
   .btn.peq{padding:4px 9px;font-size:13px}
@@ -68,7 +68,7 @@
   .desativado{opacity:.45;pointer-events:none}
   #relatorio{display:none}
   .poli{display:grid;grid-template-columns:minmax(260px,480px) 1fr;gap:14px;align-items:start;margin-top:12px}
-  .poli svg{width:100%;height:auto;background:#f1ece6;border:1px solid var(--linha);border-radius:8px}
+  .poli svg{width:100%;height:auto;background:#e9eddf;border:1px solid var(--linha);border-radius:8px}
   .poli .dados div{margin-bottom:4px}
   @media (max-width:560px){ .poli{grid-template-columns:1fr} }
 
@@ -329,7 +329,7 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.9</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.10</div>
 <div id="relatorio"></div>
 
 <script>
