@@ -22,15 +22,15 @@ window.PIPCIF_MODULOS = [
     {s:"7", t:"Prestadores de serviço", d:"alimentação, unidades de saúde, abastecimento e outros", mapa:true},
     {s:"8", t:"Colaboradores e moradores", d:"propriedades, atividade e tipo de apoio", mapa:true},
     {s:"9", t:"Brigadistas voluntários", d:"nome, município e contato"}]},
-  {n:5, ic:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>', id:"prevencao", nome:"Prevenção e plano anual", blocos:[
+  {n:5, ic:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>', id:"prevencao", sintese:"Aceiros, estradas e trilhas no mapa, cronograma de ações preventivas, projetos no entorno e atuação dos brigadistas.", nome:"Prevenção e plano anual", blocos:[
     {s:"10", t:"Aceiros, estradas e trilhas", d:"construção e manutenção, com traçado no mapa", mapa:true},
     {s:"11", t:"Elementos favoráveis e adversos", d:"à prevenção e ao combate"},
     {s:"12", t:"Cronograma de ações preventivas", d:"capacitação e sensibilização — período, local e público"},
     {s:"13", t:"Projetos de sustentabilidade", d:"dentro e no entorno da UC", mapa:true},
     {s:"16", t:"Atuação dos brigadistas contratados", d:"rondas, escala, plantão e pontos estratégicos"}]},
-  {n:6, ic:'<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>', id:"risco", nome:"Mapa de risco", blocos:[
+  {n:6, ic:'<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>', id:"risco", sintese:"Setores de risco da UC, com fatores favoráveis e adversos e o histórico de cicatrizes do BDG.", nome:"Mapa de risco", blocos:[
     {s:"14", t:"Setores de risco", d:"fatores favoráveis e adversos por setor, com o histórico de cicatrizes do BDG", mapa:true}]},
-  {n:7, ic:'<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.3-3.7 1.5-5.5 1.2 1 2 2.2 2.5 2.5.2-2.4-.3-4.6 1-7z"/>', id:"operacional", nome:"Plano operacional", blocos:[
+  {n:7, ic:'<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.3-3.7 1.5-5.5 1.2 1 2 2.2 2.5 2.5.2-2.4-.3-4.6 1-7z"/>', id:"operacional", sintese:"Procedimentos de combate: inicial, grandes incêndios, parceiros e pós-incêndio.", nome:"Plano operacional", blocos:[
     {s:"15", t:"Plano operacional de combate", d:"procedimentos iniciais, intermediários (grandes incêndios), dos parceiros e pós-incêndio"}]}
 ];
 

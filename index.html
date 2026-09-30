@@ -116,7 +116,7 @@
   .mod.relatorio .num{background:var(--laranja)}
   .pip-grade{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
   .mod{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
-  .mod.breve{border-style:dashed}
+  .mod.breve{border-style:dashed} .mod.breve .sint{color:var(--suave)}
   .mod .cab{display:flex;align-items:center;gap:10px}
   .mod .num{width:34px;height:34px;border-radius:9px;background:var(--realce);color:var(--marca-2);display:grid;place-items:center;flex:none}
   .mod.breve .num{background:var(--fundo);color:var(--suave)}
@@ -280,7 +280,7 @@
     <div><a href="sala.html" style="color:inherit">Acesso da equipe</a> · <a href="manual.html" style="color:inherit">Manual</a> · <a href="https://www.ief.mg.gov.br/acessibilidade" target="_blank" rel="noopener" style="color:inherit">Acessibilidade</a></div>
   </div>
 </footer>
-<script src="pipcif_modulos.js"></script>
+<script src="pipcif_modulos.js?v=20260930c"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -290,7 +290,7 @@ const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
   const nb = M.reduce((t,m) => t + m.blocos.length, 0), ng = M.reduce((t,m) => t + m.blocos.filter(b => b.mapa).length, 0);
   document.getElementById("pipGrade").innerHTML = M.map(m => `<div class="mod ${m.pronto ? "" : "breve"}">
     <div class="cab"><span class="num" title="Módulo ${m.n}">${iconeModulo(m)}</span><h3>${esc(m.nome)}</h3><span class="st ${m.pronto ? "ok" : "em"}">${m.pronto ? "disponível" : "em breve"}</span></div>
-    ${m.pronto && m.sintese ? `<p class="sint">${esc(m.sintese)}</p>
+    ${m.sintese ? `<p class="sint">${esc(m.sintese)}</p>
       <div class="secs">${m.blocos.map(b => `<span title="${esc(b.t)}">${esc(b.s)}${b.mapa ? `<i title="com mapa">◉</i>` : ""}</span>`).join("")}</div>`
     : `<ul>${m.blocos.map(b => `<li><span class="s">${esc(b.s)}</span><span>${esc(b.t)}${b.mapa ? `<span class="geo" title="dados georreferenciados">◉ mapa</span>` : ""}</span>${b.d ? `<small>${esc(b.d)}</small>` : ""}</li>`).join("")}</ul>`}
     <div class="rod"><span>${m.blocos.length} ${m.blocos.length === 1 ? "bloco" : "blocos"}</span>${m.pronto ? `<a href="ucs.html?mod=${m.id}">Abrir →</a>` : ""}</div>
