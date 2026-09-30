@@ -4,153 +4,192 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="img/favicon.png">
-<title>Painel Informativo da Força Tarefa Previncêndio</title>
+<title>Boletim da Força Tarefa Previncêndio</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     color-scheme: light;
-    --verde:#2e5603; --verde-2:#3f6b12; --oliva:#6b8a3a; --oliva-esc:#56722c; --creme:#f1f2e6; --cinza-linha:#d9dad2;
-    --fundo:#eef0e6; --papel:#fbfbf6; --tinta:#1f231a; --suave:#55594d; --mudo:#77796f;
-    --and:#c0392b; --and-fundo:#f8d6cf; --deb:#2e6b1a; --deb-fundo:#d3ead0;
-    --s2026:#c46f1a; --smedia:#3a3a3a; --alerta-fundo:#fff4cc; --alerta-borda:#f0c64a; --alerta-tinta:#8a5a00;
+    --fundo:#eef0e6; --surface-1:#fcfcfb; --linha:#e3e0da; --grade:#ecebe7;
+    --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#6f6e69;
+    --marca:#2e5603; --marca-esc:#1e3a02;
+    --and:#c62828; --and-fundo:#fdecea; --deb:#2e6b1a; --deb-fundo:#e3f0dc;
+    --s2026:#c46f1a; --smedia:#3a3a3a; --barra-base:#9a9990;
+    --raio:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --fundo:#111110; --surface-1:#1a1a19; --linha:#2e2e2b; --grade:#262624;
+      --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#9c9b92;
+      --marca:#1e3a02; --marca-esc:#142801;
+      --and:#ef6b63; --and-fundo:#3a1a18; --deb:#8fce75; --deb-fundo:#1c2a15;
+      --s2026:#e08a38; --smedia:#bdbcb3; --barra-base:#6f6e69;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --fundo:#111110; --surface-1:#1a1a19; --linha:#2e2e2b; --grade:#262624;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#9c9b92;
+    --marca:#1e3a02; --marca-esc:#142801;
+    --and:#ef6b63; --and-fundo:#3a1a18; --deb:#8fce75; --deb-fundo:#1c2a15;
+    --s2026:#e08a38; --smedia:#bdbcb3; --barra-base:#6f6e69;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--fundo);color:var(--tinta);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
-  a{color:inherit}
-  .topo{background:var(--verde);color:#fff;border-bottom:4px solid #1e3a02}
-  .topo .dentro{max-width:1180px;margin:0 auto;padding:10px 16px;display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
-  .topo .sala{font-size:12px;line-height:1.25} .topo .sala b{font-size:15px;display:block}
-  .topo .gov{text-align:center;font-size:10.5px;line-height:1.35;opacity:.92}
-  .topo .ief{justify-self:end;font:800 26px/1 "Segoe UI",system-ui,sans-serif;letter-spacing:.02em}
-  .topo .ief small{display:block;font-size:8px;font-weight:600;letter-spacing:.06em;text-align:right}
-  main{max-width:1180px;margin:0 auto;padding:14px 16px 30px}
-  h1{color:var(--verde);text-align:center;font-size:24px;margin:6px 0 2px}
-  .subtitulo{text-align:center;font-weight:600;font-size:13.5px;margin:0 0 12px}
-  .aviso{background:var(--alerta-fundo);border:1px solid var(--alerta-borda);color:var(--alerta-tinta);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;display:flex;gap:10px;align-items:center;margin-bottom:16px}
-  .aviso .ic{background:var(--alerta-borda);color:#5a3a00;border-radius:4px;width:22px;height:22px;display:grid;place-items:center;font-weight:800;flex:none}
-  h2{color:var(--verde);font-size:15px;margin:0 0 10px;padding-bottom:5px;border-bottom:2px solid var(--verde)}
-  .nota{font-size:12.5px;color:var(--suave);margin:-4px 0 10px}
-  .duas{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:22px;margin-bottom:22px}
-  .caixa{background:var(--papel);border:1px solid var(--cinza-linha);border-radius:8px;padding:10px 12px}
-  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-  .tile{border-radius:8px;padding:10px;text-align:center;border:1px solid}
-  .tile .n{font-size:44px;font-weight:300;line-height:1.05;font-variant-numeric:tabular-nums}
-  .tile .r{font-size:12.5px;font-weight:600}
-  .tile.and{background:var(--and-fundo);border-color:#e8a598;color:var(--and)}
-  .tile.deb{background:var(--deb-fundo);border-color:#9fca97;color:var(--deb)}
-  .kv{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid var(--cinza-linha);font-variant-numeric:tabular-nums}
-  .kv:last-child{border-bottom:0}
-  .kv .rot{font-size:13px}
-  .kv b{font-weight:700}
-  .caixa h3{font-size:12.5px;font-weight:600;margin:0 0 4px;color:var(--suave)}
-  .bases{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .rodape-nota{font-size:11.5px;font-weight:600;margin-top:8px}
-  table.t{border-collapse:collapse;width:100%;font-size:13px;background:var(--papel)}
-  table.t th{background:var(--oliva);color:#fff;font-weight:600;text-align:left;padding:7px 8px;white-space:nowrap}
-  table.t td{padding:6px 8px;border-bottom:1px solid var(--cinza-linha);vertical-align:top}
-  table.t tbody tr:nth-child(odd){background:var(--creme)}
-  table.t tbody tr:nth-child(even){background:#e3e4dc}
-  table.t td.num,table.t th.num{text-align:right;font-variant-numeric:tabular-nums}
-  table.t td.cen,table.t th.cen{text-align:center}
-  table.t td.rec{white-space:pre-line;font-size:12.5px;line-height:1.35;min-width:220px}
-  table.t tfoot td{font-weight:700;background:var(--papel)}
-  .tab-wrap{overflow-x:auto;border:1px solid var(--cinza-linha);border-radius:8px}
-  .selo{font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.03em}
-  .selo.andamento{color:var(--and);background:var(--and-fundo)} .selo.debelado{color:var(--deb);background:var(--deb-fundo)}
-  .mensal{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:16px;align-items:start;margin-bottom:22px}
-  .grafico{background:var(--papel);border:1px solid var(--cinza-linha);border-radius:8px;padding:10px 12px;position:relative}
-  .grafico svg{display:block;width:100%;overflow:visible}
-  .grafico svg text{font-family:inherit}
-  .legenda{display:flex;gap:16px;font-size:12.5px;margin:0 0 6px}
-  .legenda span{display:inline-flex;align-items:center;gap:6px}
-  .legenda i{width:14px;height:10px;border-radius:2px;display:inline-block}
-  .kpis{display:grid;gap:12px}
-  .kpi{border-radius:8px;padding:10px 12px;border:1px solid var(--cinza-linha)}
-  .kpi .r{font-size:12.5px;font-weight:600} .kpi .n{font-size:42px;font-weight:300;text-align:center;line-height:1.1;font-variant-numeric:tabular-nums}
-  .kpi.ano{background:#f3c98f;border-color:#d99a4a;color:#3b2303}
-  .kpi.media{background:#d8d9d0;color:#1f231a}
-  .mais{margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--suave)}
-  .btn{font:inherit;font-weight:600;border-radius:7px;border:1px solid var(--oliva-esc);background:var(--papel);color:var(--oliva-esc);padding:5px 11px;cursor:pointer}
-  .btn:hover{background:var(--creme)}
-  #tip{position:fixed;pointer-events:none;background:#fff;border:1px solid var(--cinza-linha);border-radius:7px;padding:6px 9px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.15);display:none;z-index:9}
-  #tip b{font-size:15px;display:block}
-  footer{max-width:1180px;margin:0 auto;padding:10px 16px 30px;font-size:12px;color:var(--suave);line-height:1.6}
-  footer b{color:var(--tinta)}
-  .vazio{padding:16px;color:var(--suave);text-align:center}
-  .atual{font-size:12px;color:var(--suave);text-align:center;margin:-6px 0 12px}
-  .duas>section,.mensal>div{min-width:0}
-  table.mini{border-collapse:collapse;width:100%;font-size:11.5px;margin-top:8px;font-variant-numeric:tabular-nums}
-  table.mini td,table.mini th{padding:2px 3px;text-align:center;border-bottom:1px solid var(--cinza-linha)}
-  table.mini th{font-weight:600;color:var(--suave)}
-  @media (max-width:520px){ .topo .ief{display:none} }
-  @media (max-width:860px){ .duas,.mensal{grid-template-columns:minmax(0,1fr)} .topo .dentro{grid-template-columns:1fr auto} .topo .gov{display:none} .kpis{grid-template-columns:1fr 1fr} h1{font-size:20px} }
-  @media print{ body{background:#fff} .mais .btn,#ano{display:none} .tab-wrap{overflow:visible} }
+  body{margin:0;background:var(--fundo);color:var(--text-primary);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--marca);color:#fff;padding:12px 16px;border-bottom:4px solid var(--marca-esc)}
+  header .dentro{max-width:1280px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  header .inst{font-size:12px;opacity:.85} header .inst a{color:#fff;text-decoration:none}
+  header h1{margin:2px 0 0;font-size:20px;font-weight:650}
+  header .atual{font-size:12px;opacity:.85;margin-top:2px}
   .marca{display:flex;align-items:center;gap:12px;min-width:0}
   .logo img{height:58px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .vivo{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;background:rgba(255,255,255,.14);border-radius:99px;padding:5px 11px}
+  .vivo i{width:8px;height:8px;border-radius:50%;background:#ff6b5e;box-shadow:0 0 0 0 rgba(255,107,94,.7);animation:pulso 2s infinite}
+  @keyframes pulso{70%{box-shadow:0 0 0 7px rgba(255,107,94,0)}100%{box-shadow:0 0 0 0 rgba(255,107,94,0)}}
+  @media (prefers-reduced-motion: reduce){ .vivo i{animation:none} }
+  main{max-width:1280px;margin:0 auto;padding:16px}
+  .aviso{font-size:12.5px;color:var(--text-secondary);margin:0 0 14px}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+  .tile{background:var(--surface-1);border:1px solid var(--linha);border-radius:var(--raio);padding:12px 14px}
+  .tile .rot{font-size:12px;color:var(--text-secondary)}
+  .tile .val{font-size:28px;font-weight:700;letter-spacing:-.01em;margin-top:2px;font-variant-numeric:tabular-nums}
+  .tile .sub{font-size:12px;color:var(--text-muted)}
+  .tile.and{border-left:4px solid var(--and)} .tile.and .val{color:var(--and)}
+  .tile.deb{border-left:4px solid var(--deb)}
+
+  .card{background:var(--surface-1);border:1px solid var(--linha);border-radius:var(--raio);padding:14px;min-width:0}
+  .card h2{margin:0;font-size:15px;display:flex;gap:8px;align-items:center}
+  .card .nota{font-size:12px;color:var(--text-muted);margin:2px 0 10px}
+  .topo-mapa{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;margin-bottom:14px}
+  .card.mapa{padding:0;overflow:hidden;position:relative}
+  #mapa{height:600px;background:#1b1f17}
+  .card.lista{display:flex;flex-direction:column;max-height:600px}
+  .card.lista .itens{overflow:auto;margin:0 -14px -14px;border-top:1px solid var(--linha)}
+  .oc{padding:10px 14px;border-bottom:1px solid var(--grade);cursor:pointer}
+  .oc:hover,.oc:focus-visible{background:var(--and-fundo);outline:none}
+  .oc .uc{font-weight:650;display:flex;gap:8px;align-items:baseline;justify-content:space-between}
+  .oc .uc small{font-weight:600;color:var(--text-muted);font-size:11.5px;white-space:nowrap}
+  .oc .meta{font-size:12px;color:var(--text-secondary)}
+  .oc .rec{font-size:12px;color:var(--text-secondary);white-space:pre-line;margin-top:4px;border-left:2px solid var(--linha);padding-left:8px}
+  .vazio{padding:22px 14px;color:var(--text-muted);text-align:center}
+  .selo{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:99px}
+  .selo.and{color:var(--and);background:var(--and-fundo)} .selo.deb{color:var(--deb);background:var(--deb-fundo)}
+
+  .legenda-mapa{position:absolute;left:10px;bottom:24px;z-index:500;background:rgba(20,22,18,.82);color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.7;pointer-events:none}
+  .legenda-mapa i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .base-sel{position:absolute;right:10px;top:10px;z-index:500;display:inline-flex;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .base-sel button{font:inherit;font-size:12px;font-weight:600;border:0;background:#fff;color:#333;padding:6px 10px;cursor:pointer}
+  .base-sel button[aria-pressed=true]{background:#1f231a;color:#fff}
+  .leaflet-container{font:inherit}
+  .leaflet-popup-content{margin:10px 12px;font-size:12.5px;line-height:1.45;min-width:220px;color:#1f231a}
+  .leaflet-popup-content b.t{font-size:14px;display:block;margin-bottom:4px}
+  .leaflet-popup-content .ri{border-top:1px solid #e3e0da;margin-top:6px;padding-top:6px}
+  .leaflet-popup-content .rec{white-space:pre-line;color:#52514e;margin-top:2px}
+  .leaflet-popup-content .selo.and{color:#c62828;background:#fdecea} .leaflet-popup-content .selo.deb{color:#2e6b1a;background:#e3f0dc}
+  .leaflet-tooltip{font:600 12px system-ui,sans-serif}
+
+  .grade{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px;margin-bottom:14px}
+  .coluna{display:grid;gap:14px;align-content:start}
+  .legenda{display:flex;gap:16px;font-size:12.5px;color:var(--text-secondary);margin-bottom:4px;flex-wrap:wrap}
+  .legenda i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .grafico svg{display:block;width:100%;overflow:visible}
+  .grafico svg text{fill:var(--text-secondary);font-size:11px}
+  .grafico text.rotval{fill:var(--text-primary);font-weight:700;font-size:10.5px}
+  .grafico .grid{stroke:var(--grade)} .grafico .eixo{stroke:var(--linha)}
+  table.mini{border-collapse:collapse;font-size:11.5px;margin-top:6px}
+  table.mini th,table.mini td{padding:2px 5px;text-align:right;border-bottom:1px solid var(--grade)}
+  .hbar{display:grid;grid-template-columns:minmax(80px,40%) 1fr;gap:6px 10px;align-items:center}
+  .hbar .r{font-size:12.5px;color:var(--text-secondary);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbar .t{display:flex;align-items:center;gap:6px;min-width:0}
+  .hbar .b{height:14px;border-radius:0 4px 4px 0;min-width:2px;background:var(--barra-base);position:relative;overflow:hidden}
+  .hbar .b i{position:absolute;right:0;top:0;bottom:0;background:var(--and)}
+  .hbar .v{font-size:12px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .hbar .v span{color:var(--and);font-weight:700}
+
+  .tab-wrap{overflow:auto;margin:0 -14px -14px}
+  table.t{border-collapse:collapse;width:100%;font-size:12.5px}
+  table.t th{text-align:left;font-size:11.5px;color:var(--text-secondary);font-weight:600;padding:7px 8px;border-bottom:1px solid var(--linha);background:var(--surface-1);white-space:nowrap}
+  table.t td{padding:7px 8px;border-bottom:1px solid var(--grade);vertical-align:top}
+  table.t td.rec{white-space:pre-line;color:var(--text-secondary);min-width:220px}
+  table.t td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .mais{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:10px;font-size:12.5px;color:var(--text-muted);flex-wrap:wrap}
+  .btn{font:inherit;font-weight:600;border:1px solid var(--linha);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:6px 12px;cursor:pointer}
+  footer{max-width:1280px;margin:0 auto;padding:12px 16px 28px;color:var(--text-muted);font-size:12px;line-height:1.6}
+  #tip{position:fixed;pointer-events:none;z-index:1000;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--linha);
+       box-shadow:0 4px 18px rgba(0,0,0,.15);border-radius:8px;padding:7px 10px;font-size:12.5px;display:none;max-width:260px}
+  #tip b{font-size:15px;display:block}
+
+  @media (max-width:980px){ .topo-mapa{grid-template-columns:1fr} .card.lista{max-height:none} .card.lista .itens{max-height:420px} .grade{grid-template-columns:1fr} }
+  @media (max-width:600px){ .legenda-mapa{bottom:34px;font-size:11px;padding:5px 8px} #mapa{height:440px} header h1{font-size:17px} .logo img{height:46px} .tile .val{font-size:24px} .vivo{display:none} }
+  @media print{ .base-sel,.mais .btn,.vivo{display:none!important} #mapa{height:520px} .topo-mapa,.grade{grid-template-columns:1fr} .card.lista{max-height:none} .card.lista .itens{overflow:visible;max-height:none} }
 </style>
 </head>
 <body>
-<header class="topo"><div class="dentro">
-  <div class="sala marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a><div><a href="index.html" style="text-decoration:none">← Portal</a> · Sala de Situação<b>Força Tarefa Previncêndio</b></div></div>
-  <div class="gov">Governo do Estado de Minas Gerais<br>Sistema Estadual de Meio Ambiente e Recursos Hídricos – SISEMA<br>Instituto Estadual de Florestas – IEF-MG<br>Diretoria de Unidades de Conservação – DIUC<br>Gerência de Prevenção e Combate a Incêndios Florestais – PREVINCÊNDIO</div>
-  <div class="ief">IEF<small>INSTITUTO ESTADUAL DE FLORESTAS</small></div>
+<header><div class="dentro">
+  <div class="marca">
+    <a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
+    <div>
+      <div class="inst"><a href="index.html">← Portal Previncêndio</a> · Sala de Situação · IEF-MG</div>
+      <h1>Boletim da Força Tarefa Previncêndio <span id="tAno"></span></h1>
+      <div class="atual" id="atual">Carregando…</div>
+    </div>
+  </div>
+  <span class="vivo"><i></i>Atualização automática a cada 5 min</span>
 </div></header>
 
 <main>
-  <h1>Painel Informativo da Força Tarefa Previncêndio <span id="tAno"></span></h1>
-  <p class="subtitulo">Incêndios Florestais em Unidades de Conservação Estaduais de Minas Gerais</p>
-  <p class="atual" id="atual">Carregando…</p>
-  <div class="aviso"><span class="ic">!</span><span>Os dados vêm diretamente do registro da Sala de Situação e são atualizados em tempo real. As informações são consolidadas diariamente às 19h; até esse horário, são provisórias e podem sofrer alterações.</span></div>
+  <p class="aviso">Incêndios florestais em Unidades de Conservação estaduais de Minas Gerais, direto do registro da Sala de Situação. As informações são consolidadas diariamente às 19h; até esse horário, são provisórias.</p>
 
-  <div class="duas">
-    <section>
-      <h2>Situação geral</h2>
-      <div class="tiles">
-        <div class="tile and"><div class="n" id="kAnd">–</div><div class="r">Em andamento</div></div>
-        <div class="tile deb"><div class="n" id="kDeb">–</div><div class="r">Debelados</div></div>
-      </div>
-      <div class="caixa" style="margin-bottom:16px"><h3>Localização das ocorrências</h3><div id="kLocal"></div></div>
-      <h2>Bases operacionais FTP</h2>
-      <div class="bases">
-        <div class="caixa"><h3>Em andamento</h3><div id="kBaseAnd"></div></div>
-        <div class="caixa"><h3>Debelados</h3><div id="kBaseDeb"></div></div>
-      </div>
-      <p class="rodape-nota">*BOCUR: Base Operacional de Curvelo; SBJAN: Sub Base Operacional de Januária; SBBH: Sub Base Belo Horizonte.</p>
-    </section>
-    <section>
-      <h2>UCs com ocorrências em andamento</h2>
-      <div class="tab-wrap"><table class="t" id="tUCs"></table></div>
-    </section>
+  <div class="tiles">
+    <div class="tile and"><div class="rot">Em andamento agora</div><div class="val" id="kAnd">–</div><div class="sub" id="kAndSub"></div></div>
+    <div class="tile deb"><div class="rot">Debelados no ano</div><div class="val" id="kDeb">–</div><div class="sub" id="kDebSub"></div></div>
+    <div class="tile"><div class="rot">Ocorrências em <span id="kAnoRot"></span></div><div class="val" id="kTotal">–</div><div class="sub" id="kTotalSub"></div></div>
+    <div class="tile"><div class="rot">Média anual <span id="kMediaRot"></span></div><div class="val" id="kMedia">–</div><div class="sub">ROIs do histórico (BDG)</div></div>
+    <div class="tile"><div class="rot">UCs com ocorrência no ano</div><div class="val" id="kUCs">–</div><div class="sub" id="kUCsSub"></div></div>
   </div>
 
-  <h2>Registros mensais</h2>
-  <p class="nota" id="notaMensal"></p>
-  <div class="mensal">
-    <div class="grafico">
+  <div class="topo-mapa">
+    <div class="card mapa">
+      <div id="mapa" role="region" aria-label="Mapa das Unidades de Conservação estaduais de Minas Gerais"></div>
+      <div class="base-sel" role="group" aria-label="Mapa de fundo"><button data-base="sat" aria-pressed="true">Satélite</button><button data-base="mapa" aria-pressed="false">Mapa</button></div>
+      <div class="legenda-mapa"><div><i style="background:#ff3b30"></i>UC com incêndio em andamento</div><div><i style="background:#6fd34a"></i>Demais UCs estaduais</div></div>
+    </div>
+    <div class="card lista">
+      <h2>Em andamento agora <span class="selo and" id="nAnd">0</span></h2>
+      <p class="nota">Recursos da última atualização da Sala de Situação. Clique para ver no mapa.</p>
+      <div class="itens" id="listaAnd"></div>
+    </div>
+  </div>
+
+  <div class="grade">
+    <div class="card">
+      <h2>Ocorrências por mês</h2>
+      <p class="nota" id="notaMensal"></p>
       <div class="legenda"><span><i style="background:var(--s2026)"></i><b id="legAno"></b></span><span><i style="background:var(--smedia)"></i><span id="legMedia"></span></span></div>
-      <div id="gMensal"></div>
+      <div class="grafico" id="gMensal"></div>
     </div>
-    <div class="kpis">
-      <div class="kpi ano"><div class="r">Total <span id="kAnoRot"></span></div><div class="n" id="kTotal">–</div></div>
-      <div class="kpi media"><div class="r">Média anual (<span id="kMediaRot"></span>)</div><div class="n" id="kMedia">–</div></div>
+    <div class="coluna">
+      <div class="card"><h2>Bases operacionais</h2><p class="nota">Ocorrências no ano · <span style="color:var(--and);font-weight:700">em andamento</span></p><div class="hbar" id="gBase"></div></div>
+      <div class="card"><h2>Localização</h2><p class="nota">Início do incêndio em relação à UC</p><div class="hbar" id="gLocal"></div></div>
     </div>
   </div>
 
-  <h2>Ocorrências de Incêndios Florestais em Andamento — Recursos atuais</h2>
-  <p class="nota">Recursos da última atualização registrada pela Sala de Situação.</p>
-  <div class="tab-wrap" style="margin-bottom:22px"><table class="t" id="tAnd"></table></div>
-
-  <h2>Ocorrências de Incêndios Florestais Debeladas</h2>
-  <p class="nota">Recursos com o último quantitativo de pessoas e meios que atuaram até o fechamento da ocorrência.</p>
-  <div class="tab-wrap"><table class="t" id="tDeb"></table></div>
-  <div class="mais"><span id="contDeb"></span><button class="btn" id="maisDeb">Mostrar mais</button><button class="btn" onclick="print()">Imprimir</button></div>
+  <div class="card">
+    <h2>Ocorrências debeladas</h2>
+    <p class="nota">Recursos com o último quantitativo de pessoas e meios que atuaram até o fechamento da ocorrência.</p>
+    <div class="tab-wrap"><table class="t" id="tDeb"></table></div>
+  </div>
+  <div class="mais"><span id="contDeb"></span><span><button class="btn" id="maisDeb">Mostrar mais</button> <button class="btn" onclick="print()">Imprimir</button></span></div>
 </main>
 
 <footer>
-  <b>FONTE:</b> Sala de Situação da Força Tarefa Previncêndio — Curvelo/MG · Telefone: 0800.283.23.23<br>
-  <b>ELABORAÇÃO:</b> Coordenação de Informações — Gerência de Prevenção e Combate a Incêndios Florestais — Previncêndio<br>
-  Diretoria de Unidades de Conservação / Instituto Estadual de Florestas – IEF · Sistema Estadual de Meio Ambiente e Recursos Hídricos – SISEMA<br>
-  Histórico (média mensal e anual): Banco de Dados Georreferenciado de ocorrências (ROIs) do Previncêndio.
+  <b>Fonte:</b> Sala de Situação da Força Tarefa Previncêndio — Curvelo/MG · 0800 283 23 23 ·
+  <b>Elaboração:</b> Gerência de Prevenção e Combate a Incêndios Florestais — Previncêndio / DIUC / IEF-MG.<br>
+  Média histórica: Banco de Dados Georreferenciado de ocorrências (ROIs) do Previncêndio. Limites das UCs: IDE-Sisema; limite estadual: IBGE.
+  Imagem de satélite: Esri World Imagery (Esri, Maxar, Earthstar Geographics).
 </footer>
 <div id="tip" role="status"></div>
 
@@ -159,87 +198,189 @@ const SUPABASE_URL = "https://nhsjsttvxixgfqnweqos.supabase.co";
 const SUPABASE_KEY = "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtN = (n,d=0) => (n??0).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmtD = d => d ? d.slice(0,10).split("-").reverse().join("/") : "";
+const fmtDc = d => d ? d.slice(8,10)+"/"+d.slice(5,7) : "";
 const fmtH = h => h ? h.slice(0,5) : "";
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const SIGLA_BASE = {"Base Operacional de Curvelo":"BOCUR","Sub Base de Januária":"SBJAN","Sub Base Belo Horizonte":"SBBH"};
-const SIGLA_UC = {PAR:"PQ", APA:"APA", MONA:"MN", RVS:"REVS", ESEC:"EE", REBIO:"REBIO", FLOE:"FE", APE:"APE", RDS:"RDS"};
+const NOME_BASE = {BOCUR:"Curvelo (BOCUR)", SBJAN:"Januária (SBJAN)", SBBH:"Belo Horizonte (SBBH)"};
+const SIGLA_UC = {PAR:"PE", APA:"APA", MONA:"MN", RVS:"REVS", ESEC:"EE", REBIO:"REBIO", FLOE:"FE", APE:"APE", RDS:"RDS"};
 const REC = [["comb_uc","Funcionários da UC"],["comb_ftp","Brigadistas FTP/Previncêndio"],["comb_sm","Brigadistas CFM"],["comb_par","Brigadistas/Parceiros"],
   ["comb_vol","Voluntários"],["comb_bm","Bombeiros Militares"],["comb_pm","Policiais Militares"],["comb_out","Outros"],
   ["vc_4x4","Veículos 4x4"],["vc_4x2","Veículos 4x2"],["vc_pipa","Caminhões pipa/ABT"],["vc_moto","Motocicletas"],["vc_trator","Tratores"],["vc_out","Outros veículos"],
   ["a_helicop","Helicópteros"],["a_air_tr","Air Tractor"],["a_drone","Drones"]];
-const uc = r => `${SIGLA_UC[r.categoria] || r.categoria || ""} ${r.nome_uc || ""}`.trim();
+const rotUC = (nome, cat) => `${SIGLA_UC[cat] || cat || ""} ${nome || ""}`.trim();
+const uc = r => rotUC(r.nome_uc, r.categoria);
 const base = r => SIGLA_BASE[r.base_op] || r.base_op || "—";
 function recursos(r){
-  const linhas = REC.filter(([k]) => r.rec && r.rec[k]).map(([k,t]) => `${String(r.rec[k]).padStart(2,"0")} ${t};`);
-  if (r.fonte === "atuacoes" && r.recursos_txt) return esc(r.recursos_txt);   // atuações: nomes padronizados por instituição
-  if (r.importado && r.recursos_txt) return esc(r.recursos_txt.replace(/\s*\n\s*/g,"\n").trim());   // texto original da planilha
+  if (r.fonte === "atuacoes" && r.recursos_txt) return esc(r.recursos_txt);
+  if (r.importado && r.recursos_txt) return esc(r.recursos_txt.replace(/\s*\n\s*/g,"\n").trim());
+  const linhas = REC.filter(([k]) => r.rec && r.rec[k]).map(([k,t]) => `${String(r.rec[k]).padStart(2,"0")} ${t}`);
   return esc([...linhas, r.recursos_txt || ""].filter(Boolean).join("\n"));
 }
-let D = null, mostrarDeb = 30;
+const pessoas = r => ["comb_uc","comb_ftp","comb_sm","comb_par","comb_vol","comb_bm","comb_pm","comb_out"].reduce((s,k)=>s+((r.rec||{})[k]||0),0);
 
+/* ============================ MAPA ============================ */
+const COR = {and:{color:"#ff3b30", weight:2.2, fillColor:"#ff3b30", fillOpacity:.55},
+             ok: {color:"#8be06b", weight:1.1, fillColor:"#6fd34a", fillOpacity:.2}};
+let mapa, camadaUCs, GEO = null, porUC = {}, camadas = {}, fundo;
+const bases = {
+  sat: () => L.layerGroup([
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {maxZoom:18, attribution:"Imagem © Esri, Maxar, Earthstar Geographics"}),
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      {maxZoom:18, opacity:.85})]),
+  mapa: () => L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+      {maxZoom:18, subdomains:"abcd", attribution:"© OpenStreetMap · © CARTO"})
+};
+function trocarBase(k){
+  if (!bases[k]) k = "sat";
+  if (fundo) mapa.removeLayer(fundo);
+  fundo = bases[k](); fundo.addTo(mapa);
+  $$(".base-sel button").forEach(b => b.setAttribute("aria-pressed", b.dataset.base===k));
+  try{ localStorage.setItem("boletim_base", k); }catch(e){}
+}
+async function iniciarMapa(){
+  mapa = L.map("mapa", {zoomSnap:.25, minZoom:5, maxBounds:[[-27,-56],[-11,-36]]}).fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);
+  mapa.createPane("mascara"); mapa.getPane("mascara").style.zIndex = 350;
+  let b = "sat"; try{ b = localStorage.getItem("boletim_base") || "sat"; }catch(e){}
+  trocarBase(b);
+  $$(".base-sel button").forEach(x => x.onclick = () => trocarBase(x.dataset.base));
+  const [mg, ucs] = await Promise.all([fetch("dados/mg.geojson").then(r=>r.json()), fetch("dados/ucs_mg.geojson").then(r=>r.json())]);
+  // escurece o entorno de Minas e contorna o estado
+  const anel = c => c.map(([x,y]) => [y,x]);
+  const polys = mg.geometry.type === "Polygon" ? [mg.geometry.coordinates] : mg.geometry.coordinates;
+  L.polygon([[[-89,-179],[-89,179],[89,179],[89,-179]], ...polys.map(p => anel(p[0]))],
+    {pane:"mascara", stroke:false, fillColor:"#0b0d09", fillOpacity:.5, interactive:false}).addTo(mapa);
+  L.geoJSON(mg, {pane:"mascara", style:{color:"#fff", weight:2, opacity:.9, fill:false}, interactive:false}).addTo(mapa);
+  GEO = ucs;
+  if (D) desenhar();
+}
+function pintarUCs(){
+  if (!mapa || !GEO) return;
+  if (camadaUCs) mapa.removeLayer(camadaUCs);
+  camadas = {};
+  const ativa = f => porUC[f.properties.nome_uc]?.and.length ? 1 : 0;
+  camadaUCs = L.geoJSON({...GEO, features: [...GEO.features].sort((a,b) => ativa(a) - ativa(b))}, {
+    style: f => ativa(f) ? COR.and : COR.ok,
+    onEachFeature: (f, lyr) => {
+      const n = f.properties.nome_uc, s = porUC[n];
+      camadas[n] = lyr;
+      lyr.bindTooltip(esc(rotUC(n, f.properties.categoria)) + (s?.and.length ? ` · ${s.and.length} em andamento` : ""), {sticky:true, direction:"top", opacity:.95});
+      lyr.bindPopup(() => popupUC(n, f.properties.categoria), {maxWidth:320});
+      lyr.on("mouseover", () => lyr.setStyle({weight: s?.and.length ? 3.5 : 2.5}));
+      lyr.on("mouseout", () => camadaUCs.resetStyle(lyr));
+    }
+  }).addTo(mapa);
+}
+function popupUC(n, cat){
+  const s = porUC[n] || {and:[], todas:[]};
+  let h = `<b class="t">${esc(rotUC(n, cat))}</b>`;
+  if (s.and.length){
+    h += `<span class="selo and">${s.and.length} ${s.and.length>1?"incêndios":"incêndio"} em andamento</span>`;
+    h += s.and.map(r => `<div class="ri"><b>RI ${r.ri}</b> · ${esc(r.municipio||"")}${r.local ? " · "+esc(r.local.toLowerCase()) : ""}<br>
+      Detecção ${fmtD(r.dat_detec)} ${fmtH(r.hr_detec)} · ${esc(base(r))}<div class="rec">${recursos(r) || "Recursos ainda não informados."}</div></div>`).join("");
+  } else h += `<span class="selo deb">Sem incêndio em andamento</span>`;
+  const deb = s.todas.filter(r => r.status === "debelado");
+  h += `<div class="ri">${s.todas.length ? `${s.todas.length} ${s.todas.length>1?"ocorrências":"ocorrência"} em ${D.ano}` + (deb.length ? ` · última debelada em ${fmtD(deb.map(r=>r.dat_final||r.dat_detec).sort().pop())}` : "") : `Nenhuma ocorrência em ${D.ano}.`}</div>`;
+  return h;
+}
+function focarUC(n){
+  const l = camadas[n]; if (!l) return;
+  if (innerWidth < 980) $("#mapa").scrollIntoView({behavior:"smooth", block:"center"});
+  mapa.flyToBounds(l.getBounds(), {maxZoom:11, padding:[30,30], duration:.8});
+  mapa.once("moveend", () => l.openPopup(l.getBounds().getCenter()));
+}
+
+/* ============================ DADOS ============================ */
+let D = null, mostrarDeb = 30;
 async function carregar(){
   const ano = +new URLSearchParams(location.search).get("ano") || null;
   const {data, error} = await sb.rpc("boletim_publico", ano ? {p_ano: ano} : {});
   if (error){ $("#atual").textContent = "Não foi possível carregar os dados: " + error.message; return; }
   D = data; desenhar();
 }
+const porMes = () => { const m = Array(12).fill(0); D.ris.forEach(r => { if (r.dat_detec) m[+r.dat_detec.slice(5,7)-1]++; }); return m; };
 function desenhar(){
   const R = D.ris, and = R.filter(r=>r.status==="andamento"), deb = R.filter(r=>r.status==="debelado");
+  porUC = {}; R.forEach(r => { const s = porUC[r.nome_uc] ||= {and:[], todas:[]}; s.todas.push(r); if (r.status==="andamento") s.and.push(r); });
   const hA = D.anos_historico ? `${D.anos_historico.ini}–${D.anos_historico.fim}` : "";
-  $("#tAno").textContent = D.ano; $("#atual").textContent = `Atualizado em ${new Date(D.gerado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}`;
-  $("#kAnd").textContent = and.length; $("#kDeb").textContent = deb.length;
-  const cont = (L, f) => { const m = {}; L.forEach(r => { const k=f(r); m[k]=(m[k]||0)+1; }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
-  const kv = pares => pares.length ? pares.map(([k,v]) => `<div class="kv"><span class="rot">${esc(k)}</span><b>${fmtN(v)}</b></div>`).join("") : `<div class="kv"><span class="rot">—</span><b>0</b></div>`;
-  $("#kLocal").innerHTML = kv(cont(R, r => (r.local||"Não informado").toUpperCase()));
-  $("#kBaseAnd").innerHTML = kv(cont(and, base)); $("#kBaseDeb").innerHTML = kv(cont(deb, base));
-  // UCs em andamento
-  const ucs = {}; and.forEach(r => { const k = base(r)+"|"+uc(r)+"|"+(r.municipio||""); ucs[k]=(ucs[k]||0)+1; });
-  const lin = Object.entries(ucs).sort((a,b)=>b[1]-a[1]);
-  $("#tUCs").innerHTML = `<thead><tr><th></th><th>Base Operacional</th><th>Unidade de Conservação</th><th>Município</th><th class="num">Registros</th></tr></thead><tbody>` +
-    (lin.length ? lin.map(([k,v],i) => { const [b,u,m]=k.split("|"); return `<tr><td>${i+1}.</td><td>${esc(b)}</td><td>${esc(u)}</td><td>${esc(m)}</td><td class="num">${v}</td></tr>`; }).join("")
-               : `<tr><td colspan="5" class="vazio">Nenhuma ocorrência em andamento.</td></tr>`) +
-    `</tbody><tfoot><tr><td></td><td></td><td></td><td>Total geral</td><td class="num">${and.length}</td></tr></tfoot>`;
-  // mensal
-  const porMes = Array(12).fill(0); R.forEach(r => { if (r.dat_detec) porMes[+r.dat_detec.slice(5,7)-1]++; });
-  $("#legAno").textContent = D.ano; $("#legMedia").textContent = `Média ${hA}`;
-  $("#notaMensal").textContent = `Comparação entre a média histórica (${hA}) e o total registrado em ${D.ano}, mês a mês.`;
+  $("#tAno").textContent = D.ano;
+  $("#atual").textContent = `Atualizado em ${new Date(D.gerado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}`;
+  // indicadores
+  const ucsAnd = Object.values(porUC).filter(s=>s.and.length).length, pes = and.reduce((s,r)=>s+pessoas(r),0);
+  $("#kAnd").textContent = and.length;
+  $("#kAndSub").textContent = and.length ? `em ${ucsAnd} ${ucsAnd>1?"UCs":"UC"}${pes ? ` · ${fmtN(pes)} pessoas empenhadas` : ""}` : "nenhuma ocorrência ativa";
+  $("#kDeb").textContent = fmtN(deb.length);
+  const hoje = new Date(), h7 = new Date(hoje - 7*864e5).toISOString().slice(0,10);
+  $("#kDebSub").textContent = `${deb.filter(r => (r.dat_final||"") >= h7).length} nos últimos 7 dias`;
   $("#kAnoRot").textContent = D.ano; $("#kTotal").textContent = fmtN(R.length);
-  $("#kMediaRot").textContent = hA; $("#kMedia").textContent = fmtN(Math.round(D.media_anual||0));
-  grafico(porMes, D.media_mensal || []);
-  // tabelas
-  const cab = extra => `<thead><tr><th></th><th>Nº RI</th><th>Unidade de Conservação</th><th class="cen">Localização</th><th>Município</th><th>Detecção</th>${extra}<th>Recursos empenhados</th></tr></thead>`;
-  const linha = (r,i,extra) => `<tr><td>${i+1}.</td><td class="cen"><b>${r.ri}</b></td><td>${esc(uc(r))}<div style="font-size:11.5px;color:var(--mudo)">${esc(base(r))}</div></td>
-    <td class="cen">${esc((r.local||"").toUpperCase())}</td><td>${esc(r.municipio||"")}</td><td style="white-space:nowrap">${fmtD(r.dat_detec)}<br>${fmtH(r.hr_detec)}</td>${extra}<td class="rec">${recursos(r)}</td></tr>`;
-  $("#tAnd").innerHTML = cab("") + "<tbody>" + (and.length ? and.map((r,i)=>linha(r,i,"")).join("") : `<tr><td colspan="7" class="vazio">Nenhuma ocorrência em andamento.</td></tr>`) + "</tbody>";
-  const D2 = deb.slice(0, mostrarDeb);
-  $("#tDeb").innerHTML = cab("<th>Fim</th>") + "<tbody>" + D2.map((r,i)=>linha(r,i,`<td style="white-space:nowrap">${fmtD(r.dat_final)}<br>${fmtH(r.hr_final)}</td>`)).join("") + "</tbody>";
-  $("#contDeb").textContent = `${D2.length} de ${deb.length} ocorrências debeladas`;
+  const mesAtual = D.ano === hoje.getFullYear() ? hoje.getMonth() : 11;
+  const esperado = (D.media_mensal||[]).slice(0, mesAtual+1).reduce((s,v)=>s+v,0);
+  $("#kTotalSub").textContent = esperado ? `média histórica até ${MESES[mesAtual].toLowerCase()}: ${fmtN(Math.round(esperado))}` : "";
+  $("#kMediaRot").textContent = hA ? `(${hA})` : ""; $("#kMedia").textContent = fmtN(Math.round(D.media_anual||0));
+  $("#kUCs").textContent = Object.keys(porUC).length; $("#kUCsSub").textContent = GEO ? `das ${GEO.features.length} UCs estaduais no mapa` : "";
+  // lista em andamento
+  $("#nAnd").textContent = and.length;
+  const semLimite = n => GEO && !GEO.features.some(f => f.properties.nome_uc === n);
+  $("#listaAnd").innerHTML = and.length ? [...and].sort((a,b)=>((b.dat_detec||"")+(b.hr_detec||"")).localeCompare((a.dat_detec||"")+(a.hr_detec||""))).map(r => `
+    <div class="oc" tabindex="0" data-uc="${esc(r.nome_uc)}">
+      <div class="uc"><span>${esc(uc(r))}</span><small>RI ${r.ri}</small></div>
+      <div class="meta">${esc(r.municipio||"")}${r.local ? " · "+esc(r.local.toLowerCase()) : ""} · ${esc(base(r))} · desde ${fmtDc(r.dat_detec)} ${fmtH(r.hr_detec)}${semLimite(r.nome_uc) ? " · sem limite no mapa" : ""}</div>
+      ${recursos(r) ? `<div class="rec">${recursos(r)}</div>` : ""}
+    </div>`).join("") : `<div class="vazio">Nenhuma ocorrência em andamento neste momento.</div>`;
+  $$(".oc").forEach(el => { el.onclick = () => focarUC(el.dataset.uc); el.onkeydown = e => { if (e.key==="Enter") focarUC(el.dataset.uc); }; });
+  pintarUCs();
+  // mensal
+  $("#legAno").textContent = D.ano; $("#legMedia").textContent = `Média ${hA}`;
+  $("#notaMensal").textContent = `Registros de ${D.ano} comparados à média mensal dos ROIs de ${hA}.`;
+  grafico(porMes(), D.media_mensal || []);
+  // bases e localização (cinza = total no ano; vermelho = parte em andamento)
+  const cont = (L, f) => { const m = {}; L.forEach(r => { const k=f(r); m[k]=(m[k]||0)+1; }); return m; };
+  const tb = cont(R, base), ta = cont(and, base);
+  hbar("#gBase", Object.entries(tb).sort((a,b)=>b[1]-a[1]).map(([k,v]) => [NOME_BASE[k]||k, v, ta[k]||0]));
+  const loc = r => r.local || "Não informado", tl = cont(R, loc), tla = cont(and, loc);
+  hbar("#gLocal", Object.entries(tl).sort((a,b)=>b[1]-a[1]).map(([k,v]) => [k, v, tla[k]||0]));
+  // debeladas
+  const D2 = [...deb].sort((a,b)=>((b.dat_final||"")+(b.hr_final||"")).localeCompare((a.dat_final||"")+(a.hr_final||""))).slice(0, mostrarDeb);
+  $("#tDeb").innerHTML = `<thead><tr><th>RI</th><th>Unidade de Conservação</th><th>Município</th><th>Local</th><th>Detecção</th><th>Fim</th><th>Recursos empenhados</th></tr></thead><tbody>` +
+    (D2.map(r => `<tr><td class="n"><b>${r.ri}</b></td><td>${esc(uc(r))}<div style="font-size:11.5px;color:var(--text-muted)">${esc(base(r))}</div></td><td>${esc(r.municipio||"")}</td>
+      <td>${esc(r.local||"")}</td><td class="n">${fmtD(r.dat_detec)} ${fmtH(r.hr_detec)}</td><td class="n">${fmtD(r.dat_final)} ${fmtH(r.hr_final)}</td><td class="rec">${recursos(r)}</td></tr>`).join("")
+     || `<tr><td colspan="7" class="vazio">Nenhuma ocorrência debelada.</td></tr>`) + "</tbody>";
+  $("#contDeb").textContent = `${D2.length} de ${deb.length} ocorrências debeladas, das mais recentes para as mais antigas`;
   $("#maisDeb").hidden = D2.length >= deb.length;
 }
 $("#maisDeb").onclick = () => { mostrarDeb += 50; desenhar(); };
 
-/* gráfico de colunas agrupadas: ano (laranja) x média histórica (cinza-escuro), com rótulos de valor */
+function hbar(sel, linhas){
+  const max = Math.max(1, ...linhas.map(l=>l[1]));
+  $(sel).innerHTML = linhas.map(([rot, v, a]) => `<span class="r" title="${esc(rot)}">${esc(rot)}</span>
+    <span class="t"><span class="b" style="width:${v/max*100}%">${a ? `<i style="width:${a/v*100}%"></i>` : ""}</span>
+    <span class="v">${fmtN(v)}${a ? ` · <span>${a}</span>` : ""}</span></span>`).join("") || `<span class="r">—</span><span class="t"></span>`;
+}
+
+/* colunas agrupadas: ano (laranja) × média histórica (cinza), rótulos diretos */
 function grafico(ano, media){
-  const el = $("#gMensal"), W = Math.max(320, el.clientWidth), H = 280, m = {t:22,r:6,b:30,l:38};
+  const el = $("#gMensal"), W = Math.max(320, el.clientWidth), H = 280, m = {t:22,r:6,b:26,l:38};
   const iw = W-m.l-m.r, ih = H-m.t-m.b, max = Math.max(...ano, ...media, 1);
-  const top = [20,40,60,80,100,120,160,200,240,300,400,500,600,800,1000,1200,1600,2000].find(v=>v>=max) || Math.ceil(max/400)*400;   // divisível em 4 faixas redondas
+  const top = [20,40,60,80,100,120,160,200,240,300,400,500,600,800,1000,1200,1600,2000].find(v=>v>=max) || Math.ceil(max/400)*400;
   const g = iw/12, bw = Math.max(4, Math.min(24, (g-10)/2)), estreito = W < 560;
   const Y = v => m.t + ih - ih*v/top;
-  let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Registros por mês: ${D.ano} e média histórica">`;
-  for (let i=0;i<=4;i++){ const v=top*i/4, y=Y(v); s += `<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="${i?"#e4e5dc":"#b9bbb0"}"/><text x="${m.l-6}" y="${y+4}" text-anchor="end" font-size="11" fill="#55594d">${fmtN(v)}</text>`; }
+  let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Ocorrências por mês: ${D.ano} e média histórica">`;
+  for (let i=0;i<=4;i++){ const v=top*i/4, y=Y(v); s += `<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" class="${i?"grid":"eixo"}"/><text x="${m.l-6}" y="${y+4}" text-anchor="end">${fmtN(v)}</text>`; }
   const barra = (x,v,cor,serie,mes) => { const h = ih*v/top, y = m.t+ih-h, r = Math.min(3, bw/2, h);
     const d = h>0 ? `M${x},${m.t+ih}V${y+r}Q${x},${y} ${x+r},${y}H${x+bw-r}Q${x+bw},${y} ${x+bw},${y+r}V${m.t+ih}Z` : "";
-    return `<path d="${d}" fill="${cor}"/>` + (estreito ? "" : `<text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="${estreito?9:10.5}" font-weight="700" fill="#1f231a">${fmtN(Math.round(v))}</text>`) +
+    return `<path d="${d}" fill="${cor}"/>` + (estreito || !v ? "" : `<text class="rotval" x="${x+bw/2}" y="${y-4}" text-anchor="middle">${fmtN(Math.round(v))}</text>`) +
       `<rect x="${x-2}" y="${m.t}" width="${bw+4}" height="${ih}" fill="transparent" data-tip="${fmtN(v, serie==="Média"?1:0)}|${serie} · ${mes}"/>`; };
   MESES.forEach((mes,i) => {
-    const cx = m.l + g*i + g/2, x1 = cx - bw - 1, x2 = cx + 1;
-    s += barra(x1, ano[i]||0, "var(--s2026)", String(D.ano), mes) + barra(x2, media[i]||0, "var(--smedia)", "Média", mes);
-    s += `<text x="${cx}" y="${H-10}" text-anchor="middle" font-size="11" fill="#55594d">${estreito ? mes.slice(0,3) : mes}</text>`;
+    const cx = m.l + g*i + g/2;
+    s += barra(cx-bw-1, ano[i]||0, "var(--s2026)", String(D.ano), mes) + barra(cx+1, media[i]||0, "var(--smedia)", "Média", mes);
+    s += `<text x="${cx}" y="${H-8}" text-anchor="middle">${mes.slice(0,3)}</text>`;
   });
-  el.innerHTML = s + "</svg>" + (estreito ?        // tela estreita: valores numa tabela em vez de rótulos sobrepostos
+  el.innerHTML = s + "</svg>" + (estreito ?
     `<div style="overflow-x:auto"><table class="mini"><tr><th></th>${MESES.map(m=>`<th>${m.slice(0,3)}</th>`).join("")}</tr>
      <tr><th style="color:var(--s2026)">${D.ano}</th>${ano.map(v=>`<td>${fmtN(v)}</td>`).join("")}</tr>
      <tr><th>Média</th>${media.map(v=>`<td>${fmtN(Math.round(v))}</td>`).join("")}</tr></table></div>` : "");
@@ -249,9 +390,10 @@ function grafico(ano, media){
     r.addEventListener("pointerleave", () => $("#tip").style.display="none");
   });
 }
-let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => D && desenhar(), 150); });
+let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => D && grafico(porMes(), D.media_mensal||[]), 150); });
+iniciarMapa().catch(e => console.error("mapa:", e));
 carregar();
-setInterval(carregar, 5*60*1000);        // atualiza a cada 5 minutos
+setInterval(carregar, 5*60*1000);
 </script>
 </body>
 </html>
