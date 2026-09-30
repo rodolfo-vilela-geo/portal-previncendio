@@ -1,4 +1,4 @@
-# Banco de dados do Portal Previncêndio
+# Banco de dados do SIGFogo (Sistema Integrado de Gestão do Fogo)
 
 A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja no Supabase, seja num servidor PostgreSQL do Estado (PRODEMGE). O mesmo que roda hoje no projeto Supabase `nhsjsttvxixgfqnweqos`.
 

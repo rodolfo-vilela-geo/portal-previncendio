@@ -2,22 +2,22 @@
 // O PIPCIF passa a ser um relatório gerado a partir desses módulos (ver PIPCIF_RELATORIO).
 // Usado na página inicial e no Cadastro das UCs. mapa = bloco com dados georreferenciados.
 window.PIPCIF_MODULOS = [
-  {n:1, ic:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>', id:"cadastro", nome:"Cadastro da UC", pronto:true, blocos:[
+  {n:1, ic:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>', id:"cadastro", sintese:"Gerente e contatos, equipe, decretos, ambiente, meses críticos, situação fundiária e sede no mapa.", nome:"Cadastro da UC", pronto:true, blocos:[
     {s:"3",   t:"Informações gerais", d:"gerente e contatos, funcionários, responsáveis na ausência, decretos, ambiente, meses críticos, situação fundiária"},
     {s:"4.1", t:"Sede da UC", d:"endereço e coordenadas", mapa:true}]},
-  {n:2, ic:'<path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M10 21v-6h4v6"/>', id:"infraestrutura", nome:"Infraestrutura", pronto:true, blocos:[
+  {n:2, ic:'<path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M10 21v-6h4v6"/>', id:"infraestrutura", sintese:"Alojamento e camping; torres, pistas de pouso, helipontos, estações meteorológicas e pontos de água no mapa.", nome:"Infraestrutura", pronto:true, blocos:[
     {s:"4.2", t:"Alojamento e camping", d:"camas, roupa de cama, sanitários, cozinha, barracas, energia"},
     {s:"4.3", t:"Vigilância", d:"torres e postos de observação", mapa:true},
     {s:"4.7", t:"Pistas de pouso", d:"dimensões, pavimentação, reservatório de água, situação", mapa:true},
     {s:"4.8", t:"Heliportos e helipontos", d:"áreas para operação de helicóptero", mapa:true},
     {s:"4.9", t:"Estações meteorológicas", d:"responsável, localização e situação", mapa:true},
     {s:"4.10", t:"Hidrantes e pontos de água", d:"hidrantes, represas, poços e outros pontos de abastecimento", mapa:true}]},
-  {n:3, ic:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4M10 14.5h4"/>', id:"recursos", nome:"Recursos e comunicação", pronto:true, blocos:[
+  {n:3, ic:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4M10 14.5h4"/>', id:"recursos", sintese:"Veículos, rádios (repetidoras, fixos, móveis e HT), ferramentas, equipamentos e EPIs.", nome:"Recursos e comunicação", pronto:true, blocos:[
     {s:"4.4", t:"Veículos", d:"tipo, marca/modelo, estado de conservação, disponibilidade"},
     {s:"4.5", t:"Radiocomunicação da UC", d:"repetidoras, rádios fixos, móveis e portáteis (HT)", mapa:true},
     {s:"4.6", t:"Rádios com parceiros", d:"fixos, móveis e portáteis disponibilizados por parceiros", mapa:true},
     {s:"5",   t:"Materiais e equipamentos", d:"ferramentas manuais, equipamentos especiais e EPIs — quantidade e situação"}]},
-  {n:4, ic:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/>', id:"apoio", nome:"Rede de apoio", pronto:true, blocos:[
+  {n:4, ic:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/>', id:"apoio", sintese:"Parceiros e apoios, prestadores (alimentação, saúde, combustível), colaboradores e brigadistas voluntários.", nome:"Rede de apoio", pronto:true, blocos:[
     {s:"6", t:"Parceiros e apoios disponíveis", d:"responsável, contatos, localização e apoio oferecido; outros contatos importantes", mapa:true},
     {s:"7", t:"Prestadores de serviço", d:"alimentação, unidades de saúde, abastecimento e outros", mapa:true},
     {s:"8", t:"Colaboradores e moradores", d:"propriedades, atividade e tipo de apoio", mapa:true},
