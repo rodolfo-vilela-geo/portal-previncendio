@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Ocorrências — Previncêndio</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    color-scheme: light;
+    --fundo:#f5f3ef; --surface-1:#fcfcfb; --linha:#e3e0da; --grade:#ecebe7;
+    --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#6f6e69;
+    --serie:#e34948; --serie-hover:#c93a39; --marca:#7a1f1f; --ctl:#ffffff; --ctl-borda:#cfcbc3;
+    --raio:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --fundo:#111110; --surface-1:#1a1a19; --linha:#2e2e2b; --grade:#262624;
+      --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#9c9b92;
+      --serie:#e66767; --serie-hover:#f08a8a; --marca:#5a1414; --ctl:#232321; --ctl-borda:#3a3a36;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --fundo:#111110; --surface-1:#1a1a19; --linha:#2e2e2b; --grade:#262624;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#9c9b92;
+    --serie:#e66767; --serie-hover:#f08a8a; --marca:#5a1414; --ctl:#232321; --ctl-borda:#3a3a36;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fundo);color:var(--text-primary);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--marca);color:#fff;padding:14px 16px}
+  header .inst{font-size:12px;opacity:.85}
+  header h1{margin:2px 0 0;font-size:20px;font-weight:650}
+  header .atual{font-size:12px;opacity:.85;margin-top:2px}
+  main{max-width:1180px;margin:0 auto;padding:16px}
+
+  .filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px}
+  .filtros label{display:block;font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:3px}
+  .filtros select{font:inherit;color:var(--text-primary);background:var(--ctl);border:1px solid var(--ctl-borda);border-radius:7px;padding:6px 8px;max-width:220px}
+  .seg{display:inline-flex;border:1px solid var(--ctl-borda);border-radius:8px;overflow:hidden;background:var(--ctl)}
+  .seg button{font:inherit;font-weight:600;border:0;background:transparent;color:var(--text-secondary);padding:6px 12px;cursor:pointer}
+  .seg button[aria-pressed=true]{background:var(--text-primary);color:var(--surface-1)}
+  .btn{font:inherit;font-weight:600;border:1px solid var(--ctl-borda);background:var(--ctl);color:var(--text-primary);border-radius:8px;padding:6px 12px;cursor:pointer}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+  .tile{background:var(--surface-1);border:1px solid var(--linha);border-radius:var(--raio);padding:12px 14px}
+  .tile .rot{font-size:12px;color:var(--text-secondary)}
+  .tile .val{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-top:2px;font-variant-numeric:tabular-nums}
+  .tile .sub{font-size:12px;color:var(--text-muted)}
+
+  .grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .card{background:var(--surface-1);border:1px solid var(--linha);border-radius:var(--raio);padding:14px;min-width:0}
+  .card.largo{grid-column:1/-1}
+  .card h2{margin:0;font-size:15px}
+  .card .nota{font-size:12px;color:var(--text-muted);margin:2px 0 10px}
+  .grafico{position:relative;min-height:60px}
+  .grafico svg{display:block;width:100%;overflow:visible}
+  .grafico svg text{fill:var(--text-secondary);font-size:11.5px}
+  .grafico .eixo{stroke:var(--linha)}
+  .grafico .grid{stroke:var(--grade)}
+  .grafico rect.barra{fill:var(--serie)}
+  .grafico rect.barra.ativa{fill:var(--serie-hover)}
+  .grafico text.rotval{fill:var(--text-primary);font-weight:600;font-size:11px}
+
+  /* barras horizontais em HTML (rótulo longo, responsivo) */
+  .hbar{display:grid;grid-template-columns:minmax(90px,38%) 1fr;gap:4px 10px;align-items:center}
+  .hbar .r{font-size:12.5px;color:var(--text-secondary);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbar .t{display:flex;align-items:center;gap:6px;min-width:0}
+  .hbar .b{height:14px;background:var(--serie);border-radius:0 4px 4px 0;min-width:2px}
+  .hbar .v{font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .hbar .lin{display:contents}
+  .hbar .lin:hover .b,.hbar .lin:focus .b{background:var(--serie-hover)}
+  .hbar .lin:focus{outline:none}
+
+  details.tab{margin-top:10px}
+  details.tab summary{cursor:pointer;font-size:12px;color:var(--text-secondary)}
+  details.tab table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:6px}
+  details.tab td,details.tab th{padding:3px 6px;border-bottom:1px solid var(--grade);text-align:left}
+  details.tab td.n,details.tab th.n{text-align:right;font-variant-numeric:tabular-nums}
+
+  #tip{position:fixed;pointer-events:none;z-index:10;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--linha);
+       box-shadow:0 4px 18px rgba(0,0,0,.15);border-radius:8px;padding:7px 10px;font-size:12.5px;display:none;max-width:260px}
+  #tip b{font-size:15px;display:block}
+  #tip span{color:var(--text-secondary)}
+  #estado{padding:40px 0;text-align:center;color:var(--text-secondary)}
+  .carregando{opacity:.45;transition:opacity .2s}
+
+  @media (max-width:760px){ .grade{grid-template-columns:1fr} header h1{font-size:18px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="inst"><a href="index.html" style="color:#fff;text-decoration:none;opacity:.95">← Portal Previncêndio</a> · Governo de Minas Gerais · IEF · DIUC</div>
+  <h1>Painel de ocorrências de incêndio em UCs estaduais</h1>
+  <div class="atual" id="atual">Carregando dados…</div>
+</header>
+
+<main>
+  <div class="filtros" id="filtros" hidden>
+    <div><label for="fAnoIni">Ano — de</label><select id="fAnoIni"></select></div>
+    <div><label for="fAnoFim">até</label><select id="fAnoFim"></select></div>
+    <div><label for="fReg">Regional URFBio</label><select id="fReg"></select></div>
+    <div><label for="fCat">Categoria</label><select id="fCat"></select></div>
+    <div><label for="fUC">Unidade de Conservação</label><select id="fUC"></select></div>
+    <div><label for="fLocal">Local de início</label><select id="fLocal"></select></div>
+    <div><label>Medida</label>
+      <div class="seg" role="group" aria-label="Medida dos gráficos">
+        <button type="button" data-m="n" aria-pressed="true">Ocorrências</button>
+        <button type="button" data-m="area" aria-pressed="false">Área (ha)</button>
+      </div></div>
+    <div><button type="button" class="btn" id="limpar">Limpar filtros</button></div>
+    <div><button type="button" class="btn" id="csv">Baixar CSV do filtro</button></div>
+  </div>
+
+  <div id="estado">Carregando dados do banco…</div>
+
+  <div id="conteudo" hidden>
+    <div class="tiles" id="tiles"></div>
+    <div class="grade">
+      <div class="card largo"><h2 id="tAno">Por ano</h2><div class="nota" id="nAno"></div><div class="grafico" id="gAno"></div></div>
+      <div class="card"><h2 id="tMes">Sazonalidade — por mês de detecção</h2><div class="nota">Soma do período filtrado.</div><div class="grafico" id="gMes"></div></div>
+      <div class="card"><h2>Horário de detecção</h2><div class="nota">Número de ocorrências por faixa de 2 horas.</div><div class="grafico" id="gHora"></div></div>
+      <div class="card"><h2 id="tUC">Unidades de Conservação — 15 maiores</h2><div class="nota" id="nUC"></div><div class="grafico" id="gUC"></div></div>
+      <div class="card"><h2 id="tReg">Por regional URFBio</h2><div class="nota"></div><div class="grafico" id="gReg"></div></div>
+      <div class="card"><h2 id="tCausa">Provável causa principal</h2><div class="nota">10 principais; o restante em “Outras”.</div><div class="grafico" id="gCausa"></div></div>
+      <div class="card"><h2 id="tDet">Forma de detecção</h2><div class="nota">10 principais; o restante em “Outras”.</div><div class="grafico" id="gDet"></div></div>
+      <div class="card"><h2>Tempo de resposta</h2><div class="nota">Da detecção ao início do combate (minutos ou horas) · nº de ocorrências.</div><div class="grafico" id="gTR"></div></div>
+      <div class="card"><h2>Classe de área queimada</h2><div class="nota">Hectares (área interna + entorno) · nº de ocorrências.</div><div class="grafico" id="gAR"></div></div>
+    </div>
+  </div>
+</main>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+const SUPABASE_URL = "https://nhsjsttvxixgfqnweqos.supabase.co";
+const SUPABASE_KEY = "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39";
+
+const $ = s => document.querySelector(s);
+const fmtN = (n, d=0) => (n ?? 0).toLocaleString("pt-BR", {minimumFractionDigits:d, maximumFractionDigits:d});
+const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const ORD_TR = ["Menor que 10min.","10min - 29min","30min - 59min","1h - 4h59min","5h - 11h59min","Maior que 12 horas","Não Houve Combate","Não Classificado"];
+const ROT_TR = ["<10min","10–29","30–59","1–5h","5–12h",">12h","s/ comb.","N/C"];
+const ORD_AR = ["0 até 0,99 ha","1 ha até 4,99 ha","5 ha até 9,99 ha","10 ha até 49,99 ha","50 ha até 99,99 ha","100 ha até 499,99 ha","500 ha até 999,99 ha","Maior que 1000 ha","Não Classificado"];
+const ROT_AR = ["<1","1–5","5–10","10–50","50–100","100–500","500–1k",">1k","N/C"];
+const HORAS = Array.from({length:12}, (_,i) => `${String(i*2).padStart(2,"0")}:00:00 - ${i===11 ? "23:59:59" : String(i*2+2).padStart(2,"0")+":00:00"}`);
+
+let DADOS = [], medida = "n";
+
+/* ---------------- dados ---------------- */
+async function carregar(){
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const {data, error} = await sb.rpc("painel_dados");
+  if (error) throw new Error(error.message);
+  const c = data.campos;
+  DADOS = data.linhas.map(l => Object.fromEntries(c.map((k,i) => [k, l[i]])));
+  $("#atual").textContent = `${fmtN(DADOS.length)} ocorrências no banco · atualizado em ${new Date(data.gerado_em).toLocaleString("pt-BR")}`;
+}
+
+/* ---------------- filtros ---------------- */
+function opcoes(sel, valores, todos="Todas"){
+  const atual = sel.value;
+  sel.innerHTML = `<option value="">${todos}</option>`;
+  valores.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+  sel.value = valores.includes(atual) ? atual : "";
+}
+const uniq = (arr) => [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),"pt-BR"));
+function montarFiltros(){
+  const anos = uniq(DADOS.map(d=>d.ano)).map(Number).sort((a,b)=>a-b);
+  ["#fAnoIni","#fAnoFim"].forEach((s,i) => { $(s).innerHTML = anos.map(a=>`<option>${a}</option>`).join(""); $(s).value = i ? anos.at(-1) : anos[0]; });
+  opcoes($("#fReg"), uniq(DADOS.map(d=>d.reg)));
+  opcoes($("#fCat"), uniq(DADOS.map(d=>d.cat)));
+  opcoes($("#fLocal"), uniq(DADOS.map(d=>d.local)), "Todos");
+  atualizarUCs();
+  $("#filtros").hidden = false;
+}
+function atualizarUCs(){
+  const r=$("#fReg").value, c=$("#fCat").value;
+  opcoes($("#fUC"), uniq(DADOS.filter(d => (!r||d.reg===r) && (!c||d.cat===c)).map(d=>d.uc)));
+}
+function filtrados(){
+  const a0=+$("#fAnoIni").value, a1=+$("#fAnoFim").value, r=$("#fReg").value, c=$("#fCat").value, u=$("#fUC").value, l=$("#fLocal").value;
+  return DADOS.filter(d => d.ano>=Math.min(a0,a1) && d.ano<=Math.max(a0,a1) && (!r||d.reg===r) && (!c||d.cat===c) && (!u||d.uc===u) && (!l||d.local===l));
+}
+
+/* ---------------- agregação ---------------- */
+function agrupa(lista, chave, med=medida){
+  const m = new Map();
+  lista.forEach(d => { const k = typeof chave==="function" ? chave(d) : d[chave]; if (k==null||k==="") return;
+    m.set(k, (m.get(k)||0) + (med==="area" ? (d.area||0) : 1)); });
+  return m;
+}
+function topN(m, n){
+  const arr = [...m.entries()].sort((a,b)=>b[1]-a[1]);
+  if (arr.length<=n) return arr;
+  const resto = arr.slice(n).reduce((s,[,v])=>s+v,0);
+  return [...arr.slice(0,n), ["Outras", resto]];
+}
+const unid = med => med==="area" ? "ha" : "ocorrências";
+const fmtV = (v, med=medida) => med==="area" ? fmtN(v, v<100?1:0)+" ha" : fmtN(v);
+
+/* ---------------- tooltip ---------------- */
+const tip = $("#tip");
+function mostrarTip(ev, valor, rotulo){
+  tip.replaceChildren();
+  const b=document.createElement("b"); b.textContent=valor;
+  const s=document.createElement("span"); s.textContent=rotulo;
+  tip.append(b,s); tip.style.display="block";
+  const x = (ev.clientX ?? ev.target.getBoundingClientRect().left) + 14, y = (ev.clientY ?? ev.target.getBoundingClientRect().top) + 14;
+  tip.style.left = Math.min(x, innerWidth - tip.offsetWidth - 8) + "px";
+  tip.style.top  = Math.min(y, innerHeight - tip.offsetHeight - 8) + "px";
+}
+const esconderTip = () => tip.style.display = "none";
+
+/* ---------------- barras verticais (SVG na largura real) ---------------- */
+function niceMax(v){            // topo do eixo: próximo valor "redondo" divisível em 4 faixas
+  if (v<=0) return 4; const p=10**Math.floor(Math.log10(v)), f=v/p;
+  const passos=[1,1.2,1.6,2,2.4,3,4,5,6,8,10]; return passos.find(x=>x>=f)*p; }
+function barrasV(el, itens, {med=medida, alt=220, rotCurto=null, labelTodos=false, todosRotulos=false}={}){
+  const W = Math.max(280, el.clientWidth), m={t:18,r:6,b:26,l:44};
+  const rots = itens.map(([r],i) => rotCurto ? rotCurto(r,i) : r);
+  const larg = Math.max(...rots.map(r => String(r).length)) * 6.6 + 8;       // largura estimada do maior rótulo
+  const inclinar = todosRotulos && larg > (W-m.l-m.r)/itens.length;          // classes: nunca esconder, inclinar
+  if (inclinar) m.b = 20 + larg*0.6;
+  const H = alt + (m.b - 26);
+  const iw = W-m.l-m.r, ih = H-m.t-m.b, n = itens.length;
+  const max = niceMax(Math.max(...itens.map(i=>i[1]), 0));
+  const bw = iw/n, gap = Math.max(2, Math.min(10, bw*0.22));
+  const ns="http://www.w3.org/2000/svg", svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("height",H); svg.setAttribute("role","img");
+  const add=(tag,at,txt)=>{const e=document.createElementNS(ns,tag); for(const k in at) e.setAttribute(k,at[k]); if(txt!=null) e.textContent=txt; svg.appendChild(e); return e;};
+  for (let i=0;i<=4;i++){ const y=m.t+ih-ih*i/4;
+    add("line",{x1:m.l,x2:W-m.r,y1:y,y2:y,class:i?"grid":"eixo"});
+    add("text",{x:m.l-6,y:y+4,"text-anchor":"end"}, med==="area" && max*i/4>=1000 ? fmtN(max*i/4/1000,max>=10000?0:1)+" mil" : fmtN(max*i/4)); }
+  const passo = (todosRotulos) ? 1 : Math.ceil(n / Math.max(1, Math.floor(iw/larg)));
+  const maior = itens.reduce((a,b,i)=> b[1]>itens[a][1]?i:a, 0);
+  itens.forEach(([rot,v],i) => {
+    const x=m.l+i*bw+gap/2, w=Math.max(1,bw-gap), h=ih*v/max, y=m.t+ih-h, r=Math.min(4,w/2,h);
+    const d = h>0 ? `M${x},${m.t+ih}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${m.t+ih}Z` : "";
+    const p = add("path",{d, class:"barra", tabindex:0, "aria-label":`${rot}: ${fmtV(v,med)}`});
+    p.setAttribute("style","fill:var(--serie)");
+    const rc = rots[i];
+    if (i % passo === 0){
+      if (inclinar) add("text",{x:x+w/2,y:m.t+ih+14,"text-anchor":"end",transform:`rotate(-35 ${x+w/2} ${m.t+ih+14})`}, rc);
+      else add("text",{x:x+w/2,y:H-8,"text-anchor":"middle"}, rc);
+    }
+    if ((labelTodos && bw>30) || i===maior) add("text",{x:x+w/2,y:y-5,"text-anchor":"middle",class:"rotval"}, med==="area" ? fmtN(v) : fmtN(v));
+    const hit = add("rect",{x:m.l+i*bw,y:m.t,width:bw,height:ih,fill:"transparent"});
+    const on = ev => { p.setAttribute("style","fill:var(--serie-hover)"); mostrarTip(ev, fmtV(v,med), rot); };
+    const off = () => { p.setAttribute("style","fill:var(--serie)"); esconderTip(); };
+    hit.addEventListener("pointermove", on); hit.addEventListener("pointerleave", off);
+    p.addEventListener("focus", on); p.addEventListener("blur", off);
+  });
+  el.replaceChildren(svg);
+  tabela(el, itens, med);
+}
+
+/* ---------------- barras horizontais (HTML) ---------------- */
+function barrasH(el, itens, med=medida){
+  const max = Math.max(...itens.map(i=>i[1]), 1);
+  const g = document.createElement("div"); g.className="hbar";
+  itens.forEach(([rot,v]) => {
+    const lin=document.createElement("div"); lin.className="lin"; lin.tabIndex=0;
+    const r=document.createElement("div"); r.className="r"; r.textContent=rot; r.title=rot;
+    const t=document.createElement("div"); t.className="t";
+    const b=document.createElement("div"); b.className="b"; b.style.width=(100*v/max*0.82)+"%";
+    const vv=document.createElement("div"); vv.className="v"; vv.textContent=fmtV(v,med);
+    t.append(b,vv); lin.append(r,t); g.appendChild(lin);
+    lin.addEventListener("pointermove", ev => mostrarTip(ev, fmtV(v,med), rot));
+    lin.addEventListener("pointerleave", esconderTip);
+  });
+  el.replaceChildren(g);
+  tabela(el, itens, med);
+}
+
+/* ---------------- tabela de dados (acessível) ---------------- */
+function tabela(el, itens, med){
+  const d=document.createElement("details"); d.className="tab";
+  const s=document.createElement("summary"); s.textContent="Ver dados em tabela"; d.appendChild(s);
+  const t=document.createElement("table");
+  const h=t.insertRow(); ["Categoria", med==="area"?"Área (ha)":"Ocorrências"].forEach((x,i)=>{const th=document.createElement("th"); th.textContent=x; if(i) th.className="n"; h.appendChild(th);});
+  itens.forEach(([r,v])=>{ const tr=t.insertRow(); const a=tr.insertCell(); a.textContent=r; const b=tr.insertCell(); b.className="n"; b.textContent=med==="area"?fmtN(v,2):fmtN(v); });
+  d.appendChild(t); el.appendChild(d);
+}
+
+/* ---------------- painel ---------------- */
+function tiles(L){
+  const area = L.reduce((s,d)=>s+(d.area||0),0);
+  const ucs = new Set(L.map(d=>d.uc)).size;
+  const resp = L.map(d=>d.resp_min).filter(v=>v!=null && v>=0).sort((a,b)=>a-b);
+  const med = resp.length ? resp[Math.floor(resp.length/2)] : null;
+  const poli = L.length ? 100*L.filter(d=>d.poli).length/L.length : 0;
+  const anos = new Set(L.map(d=>d.ano)).size || 1;
+  const t = [
+    ["Ocorrências", fmtN(L.length), `média de ${fmtN(L.length/anos)} por ano`],
+    ["Área queimada", fmtN(area)+" ha", `média de ${fmtN(area/anos)} ha por ano`],
+    ["UCs com ocorrência", fmtN(ucs), ""],
+    ["Tempo de resposta (mediana)", med==null ? "—" : (med<60 ? `${med} min` : `${fmtN(med/60,1)} h`), "da detecção ao início do combate"],
+    DADOS.some(d=>d.poli)
+      ? ["Com polígono mapeado", fmtN(poli,0)+"%", "ocorrências com área queimada no banco"]
+      : ["Com polígono mapeado", "—", "polígonos históricos ainda não importados"]
+  ];
+  $("#tiles").replaceChildren(...t.map(([r,v,s]) => { const d=document.createElement("div"); d.className="tile";
+    d.innerHTML = `<div class="rot"></div><div class="val"></div><div class="sub"></div>`;
+    d.children[0].textContent=r; d.children[1].textContent=v; d.children[2].textContent=s; return d; }));
+}
+function desenhar(){
+  const L = filtrados();
+  tiles(L);
+  const u = medida==="area" ? "área queimada (ha)" : "número de ocorrências";
+  $("#tAno").textContent = `Por ano — ${u}`;
+  const anos = []; for (let a=Math.min(+$("#fAnoIni").value,+$("#fAnoFim").value); a<=Math.max(+$("#fAnoIni").value,+$("#fAnoFim").value); a++) anos.push(a);
+  const mAno = agrupa(L,"ano");
+  $("#nAno").textContent = anos.includes(new Date().getFullYear()) ? `${new Date().getFullYear()} ainda em andamento.` : "";
+  barrasV($("#gAno"), anos.map(a=>[String(a), mAno.get(a)||0]), {alt:240, labelTodos:true, rotCurto:(r)=> $("#gAno").clientWidth<520 ? "’"+r.slice(2) : r});
+  const mMes = agrupa(L,"mes");
+  barrasV($("#gMes"), MESES.map((n,i)=>[n, mMes.get(i+1)||0]));
+  const mH = agrupa(L,"int","n");
+  barrasV($("#gHora"), HORAS.map(h=>[h, mH.get(h)||0]), {med:"n", rotCurto:(r)=>r.slice(0,2)+"h"});
+  $("#tUC").textContent = `Unidades de Conservação — 15 maiores (${medida==="area"?"área":"ocorrências"})`;
+  barrasH($("#gUC"), topN(agrupa(L,"uc"),15).filter(([k])=>k!=="Outras"));
+  $("#nUC").textContent = `${new Set(L.map(d=>d.uc)).size} UCs no filtro.`;
+  barrasH($("#gReg"), [...agrupa(L,"reg").entries()].sort((a,b)=>b[1]-a[1]));
+  barrasH($("#gCausa"), topN(agrupa(L,"causa"),10));
+  barrasH($("#gDet"), topN(agrupa(L,"detec"),10));
+  const mTR = agrupa(L,"tr","n"); barrasV($("#gTR"), ORD_TR.map((k,i)=>[k, mTR.get(k)||0]), {med:"n", rotCurto:(r,i)=>ROT_TR[i], todosRotulos:true});
+  const mAR = agrupa(L,"ar","n"); barrasV($("#gAR"), ORD_AR.map((k,i)=>[k, mAR.get(k)||0]), {med:"n", rotCurto:(r,i)=>ROT_AR[i], todosRotulos:true});
+}
+
+function baixarCSV(){
+  const L = filtrados(), cols = ["cod","ano","mes","uc","cat","reg","bioma","local","detec","causa","agente","tr","dur","ar","area","comb","resp_min","dur_h","poli"];
+  const q = v => v==null ? "" : /[";\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v).replace(".",",");
+  const csv = "﻿" + cols.join(";") + "\n" + L.map(d => cols.map(c => typeof d[c]==="number" ? q(d[c]) : q(d[c])).join(";")).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download = `ocorrencias_previncendio_${$("#fAnoIni").value}-${$("#fAnoFim").value}.csv`; a.click();
+}
+
+(async function(){
+  try{ await carregar(); }
+  catch(e){ $("#estado").textContent = "Não foi possível carregar os dados: " + e.message; $("#atual").textContent=""; return; }
+  montarFiltros();
+  $("#estado").hidden = true; $("#conteudo").hidden = false;
+  desenhar();
+  ["#fAnoIni","#fAnoFim","#fUC","#fLocal"].forEach(s => $(s).addEventListener("change", desenhar));
+  ["#fReg","#fCat"].forEach(s => $(s).addEventListener("change", () => { atualizarUCs(); desenhar(); }));
+  document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+    medida = b.dataset.m; document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x===b)); desenhar(); });
+  $("#limpar").onclick = () => { montarFiltros(); desenhar(); };
+  $("#csv").onclick = baixarCSV;
+  let t; addEventListener("resize", () => { clearTimeout(t); t=setTimeout(desenhar,150); });
+})();
+</script>
+</body>
+</html>

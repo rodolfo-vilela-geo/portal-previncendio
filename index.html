@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal Previncêndio</title>
+<style>
+  :root{
+    color-scheme: light;
+    --fundo:#f5f3ef; --papel:#ffffff; --linha:#e3e0da; --tinta:#1d1d1f; --suave:#5f6368;
+    --marca:#7a1f1f; --marca-2:#a32b2b; --realce:#fbeeee;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --tinta:#f3f2ee; --suave:#b5b4ab;
+      --marca:#5a1414; --marca-2:#e66767; --realce:#2a1a19;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --tinta:#f3f2ee; --suave:#b5b4ab;
+    --marca:#5a1414; --marca-2:#e66767; --realce:#2a1a19;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fundo);color:var(--tinta);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--marca);color:#fff;padding:28px 16px 30px}
+  header .dentro,main,footer{max-width:1000px;margin:0 auto}
+  header .inst{font-size:12.5px;opacity:.85;letter-spacing:.02em}
+  header h1{margin:6px 0 4px;font-size:28px;line-height:1.15;font-weight:700}
+  header p{margin:0;opacity:.9;max-width:640px}
+  main{padding:22px 16px 10px}
+  h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--suave);margin:18px 0 10px}
+  .cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  a.card,div.card{display:flex;flex-direction:column;gap:6px;background:var(--papel);border:1px solid var(--linha);border-radius:12px;
+         padding:18px;color:inherit;text-decoration:none;transition:border-color .15s, transform .15s, box-shadow .15s;min-height:150px}
+  a.card:hover,a.card:focus-visible{border-color:var(--marca-2);transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);outline:none}
+  .card .ic{width:40px;height:40px;border-radius:10px;background:var(--realce);color:var(--marca-2);display:grid;place-items:center}
+  .card .ic svg{width:22px;height:22px}
+  .card h3{margin:4px 0 0;font-size:17px}
+  .card p{margin:0;color:var(--suave);font-size:14px}
+  .card .ir{margin-top:auto;font-weight:600;color:var(--marca-2);font-size:14px}
+  .card.breve{opacity:.6}
+  .card.breve .ir{color:var(--suave)}
+  .prazo{background:var(--papel);border:1px solid var(--linha);border-left:4px solid var(--marca-2);border-radius:10px;padding:14px 16px;margin-top:22px;font-size:14.5px}
+  .prazo b{color:var(--marca-2)}
+  footer{padding:24px 16px 32px;color:var(--suave);font-size:12.5px}
+</style>
+</head>
+<body>
+<header>
+  <div class="dentro">
+    <div class="inst">Governo de Minas Gerais · Instituto Estadual de Florestas · DIUC</div>
+    <h1>Portal Previncêndio</h1>
+    <p>Serviços da Gerência de Prevenção e Combate a Incêndios Florestais para as Unidades de Conservação estaduais.</p>
+  </div>
+</header>
+
+<main>
+  <h2>Ocorrência de incêndio</h2>
+  <div class="cards">
+    <a class="card" href="https://area-queimada-previncendio.projects.earthengine.app/view/cicatrizes-previncendio" target="_blank" rel="noopener">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></div>
+      <h3>1. Mapear a área queimada</h3>
+      <p>SMC — Sistema de Mapeamento de Cicatrizes. Delimite a cicatriz em imagens Sentinel-2 e exporte o KML.</p>
+      <span class="ir">Abrir o SMC ↗</span>
+    </a>
+    <a class="card" href="roi.html">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg></div>
+      <h3>2. Registrar o ROI</h3>
+      <p>Relatório de Ocorrência de Incêndio Florestal. Anexe o KML do SMC e as fotos; ao final, gere o PDF para o SEI.</p>
+      <span class="ir">Novo ROI →</span>
+    </a>
+  </div>
+
+  <div class="prazo">O ROI deve ser enviado em até <b>10 dias</b> após o fim do incêndio (debelado, após o rescaldo). O rascunho fica salvo no navegador enquanto você preenche.</div>
+
+  <h2>Acompanhamento</h2>
+  <div class="cards">
+    <a class="card" href="painel.html">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16V11M12 16V7M17 16v-4"/></svg></div>
+      <h3>Painel de ocorrências</h3>
+      <p>Estatísticas de 2013 até hoje: por ano, mês, UC, regional, causa, tempo de resposta e área queimada.</p>
+      <span class="ir">Abrir o painel →</span>
+    </a>
+    <div class="card breve" aria-disabled="true">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <h3>Controle de prazos</h3>
+      <p>ROIs pendentes, a vencer e atrasados. Área restrita à equipe da GPCIF.</p>
+      <span class="ir">Em breve</span>
+    </div>
+  </div>
+</main>
+
+<footer>IEF-MG · Gerência de Prevenção e Combate a Incêndios Florestais — Previncêndio</footer>
+</body>
+</html>

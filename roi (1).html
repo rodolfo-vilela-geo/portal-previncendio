@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novo ROI — Previncêndio</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --vinho:#7a1f1f; --vinho-esc:#5a1414; --tinta:#1d1d1f; --suave:#5f6368;
+    --linha:#d9d6d0; --fundo:#f5f3ef; --papel:#ffffff; --ok:#1e7a46; --alerta:#b26a00; --erro:#b3261e;
+    --raio:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--fundo);color:var(--tinta);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header.topo{background:var(--vinho);color:#fff;padding:14px 16px}
+  header.topo .inst{font-size:12px;opacity:.85;letter-spacing:.02em}
+  header.topo h1{margin:2px 0 0;font-size:20px;font-weight:650}
+  main{max-width:980px;margin:0 auto;padding:16px 16px 120px}
+  .aviso{background:#fff7e6;border:1px solid #f0d49a;border-radius:var(--raio);padding:10px 12px;margin:0 0 14px;font-size:14px}
+  .aviso button{margin-left:8px}
+  section.bloco{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);margin:0 0 16px;overflow:hidden}
+  section.bloco>h2{margin:0;background:#111;color:#fff;font-size:14px;letter-spacing:.03em;text-transform:uppercase;padding:8px 14px}
+  .corpo{padding:14px}
+  .grade{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  .grade .largo{grid-column:1/-1}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--suave);margin-bottom:4px}
+  label .req{color:var(--erro)}
+  input,select,textarea{width:100%;font:inherit;color:inherit;background:#fff;border:1px solid #c9c5bd;border-radius:7px;padding:8px 9px}
+  input:focus,select:focus,textarea:focus{outline:2px solid #e2b4b4;border-color:var(--vinho)}
+  textarea{min-height:120px;resize:vertical}
+  select:disabled{background:#f1ece6;color:var(--tinta);opacity:1;border-style:dashed;cursor:not-allowed}
+  .cadeado{font-size:12px;color:var(--suave);margin-top:6px}
+  .invalido{border-color:var(--erro)!important;background:#fff5f4}
+  .dica{font-size:12px;color:var(--suave);margin-top:4px}
+  .codigo{font:600 18px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;padding:8px 10px;background:#f1ece6;border-radius:7px;display:inline-block}
+  .linha-radio{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding-top:4px}
+  .linha-radio label{display:flex;gap:6px;align-items:center;font-weight:500;color:var(--tinta);margin:0;font-size:14.5px}
+  .linha-radio input{width:auto}
+  .dms{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px}
+  .tabela-wrap{overflow-x:auto;border:1px solid var(--linha);border-radius:8px}
+  table.din{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+  table.din th{background:#f1ece6;font-size:12px;text-align:left;padding:6px;border-bottom:1px solid var(--linha);white-space:nowrap}
+  table.din td{padding:4px;border-bottom:1px solid #eee}
+  table.din input{padding:6px}
+  table.din input[type=number]{min-width:56px}
+  table.din td.total{font-weight:700;text-align:center;min-width:52px}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--vinho);background:#fff;color:var(--vinho);padding:8px 14px;cursor:pointer}
+  .btn:hover{background:#f8eeee}
+  .btn.primario{background:var(--vinho);color:#fff}
+  .btn.primario:hover{background:var(--vinho-esc)}
+  .btn.peq{padding:4px 9px;font-size:13px}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .veic{display:grid;grid-template-columns:1.6fr .7fr .7fr;gap:6px 10px;align-items:center}
+  .veic .cab{font-size:12px;font-weight:700;color:var(--suave)}
+  .somatorio{margin-top:10px;font-size:14px}
+  .somatorio b{font-size:16px}
+  .fotos{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-top:10px}
+  .foto{border:1px solid var(--linha);border-radius:8px;overflow:hidden;background:#fafafa}
+  .foto img{width:100%;height:150px;object-fit:cover;display:block}
+  .foto .info{padding:6px}
+  .foto .info small{color:var(--suave)}
+  .barra-envio{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--linha);padding:10px 16px;box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+  .barra-envio .dentro{max-width:980px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  #status{font-size:14px}
+  #status.ok{color:var(--ok)} #status.erro{color:var(--erro)} #status.alerta{color:var(--alerta)}
+  .desativado{opacity:.45;pointer-events:none}
+  #relatorio{display:none}
+  .poli{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:14px;align-items:start;margin-top:12px}
+  .poli svg{width:100%;height:auto;background:#f1ece6;border:1px solid var(--linha);border-radius:8px}
+  .poli .dados div{margin-bottom:4px}
+  @media (max-width:560px){ .poli{grid-template-columns:1fr} }
+
+  @media (max-width:560px){
+    .veic{grid-template-columns:1.3fr .8fr .8fr}
+    header.topo h1{font-size:18px}
+  }
+
+  /* =================== IMPRESSÃO: modelo do ROI =================== */
+  @media print{
+    @page{size:A4;margin:14mm 12mm}
+    body{background:#fff;font:10.5pt/1.3 Arial,Helvetica,sans-serif}
+    header.topo,main,.barra-envio{display:none!important}
+    #relatorio{display:block}
+  }
+  #relatorio .cab{display:flex;gap:10px;align-items:flex-start;font-size:9.5pt;line-height:1.25}
+  #relatorio h3.uc{text-align:center;font-weight:400;font-size:13pt;margin:14px 0 2px;text-transform:uppercase}
+  #relatorio h4.tit{text-align:center;font-size:11pt;margin:0 0 10px}
+  #relatorio .sec{background:#000;color:#fff;font-weight:700;padding:2px 6px;margin:12px 0 4px;text-transform:uppercase;font-size:10.5pt;break-after:avoid}
+  #relatorio table{border-collapse:collapse;width:100%;font-size:9.5pt}
+  #relatorio td,#relatorio th{border:1px solid #000;padding:2px 4px;vertical-align:top}
+  #relatorio th{background:#e6e6e6}
+  #relatorio .txt{border:1px solid #000;padding:4px 6px;white-space:pre-wrap;min-height:1.4em}
+  #relatorio .fotoimp{break-inside:avoid;border:1px solid #000;margin:8px 0;padding:4px;text-align:center}
+  #relatorio .fotoimp img{max-width:100%;max-height:115mm}
+  #relatorio .assin{break-inside:avoid;margin-top:28px;text-align:center}
+  #relatorio .assin .linha{display:inline-block;width:70%;border-top:1px solid #000;margin-top:34px;padding-top:2px}
+  #relatorio .kv{margin:1px 0}
+  #relatorio .mapa{break-inside:avoid;border:1px solid #000;padding:6px;text-align:center}
+  #relatorio .mapa svg{width:120mm;height:auto}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="inst"><a href="index.html" style="color:#fff;text-decoration:none;opacity:.95">← Portal Previncêndio</a> · Governo de Minas Gerais · IEF · DIUC</div>
+  <h1>Relatório de Ocorrência de Incêndio Florestal (ROI)</h1>
+</header>
+
+<main id="form">
+  <div id="avisoRascunho" class="aviso" hidden>
+    Rascunho restaurado deste navegador.
+    <button type="button" class="btn peq" id="btnDescartar">Começar do zero</button>
+  </div>
+
+  <!-- ============ IDENTIFICAÇÃO ============ -->
+  <section class="bloco">
+    <h2>Identificação</h2>
+    <div class="corpo">
+      <div class="grade">
+        <div><label>Ano <span class="req">*</span></label><input name="ano" type="number" min="2013" max="2100" required></div>
+        <div><label>Número do RI <span class="req">*</span></label><input name="ri" inputmode="numeric" maxlength="4" placeholder="ex.: 125" required></div>
+        <div><label>Número do ROI <span class="req">*</span></label><input name="roi_num" inputmode="numeric" maxlength="3" placeholder="ex.: 19" required></div>
+        <div><label>Código BDP (automático)</label><span class="codigo" id="codPreview">AAAA-RRRR-OOO</span></div>
+
+        <div class="largo"><label>Unidade de Conservação <span class="req">*</span></label>
+          <select name="nome_uc" required></select>
+          <div class="dica" id="dicaUC">Ao escolher a unidade, os dados fixos são preenchidos pelo cadastro de UCs.</div></div>
+        <div><label>Categoria</label><select name="categoria" data-lista="categoria"></select></div>
+        <div><label>Grupo</label><select name="grupo" data-lista="grupo"></select></div>
+        <div><label>Bioma</label><select name="bioma_uc" data-lista="bioma_uc"></select></div>
+        <div><label>Regional URFBio</label><select name="ufbio" data-lista="ufbio"></select></div>
+        <div><label>Base operacional</label><select name="base_op" data-lista="base_op"></select></div>
+        <div><label>Número REDS ou BOS</label><input name="reds_bos"></div>
+        <div class="largo"><label>Municípios envolvidos <span class="req">*</span></label>
+          <input name="municipio" list="listaMun" placeholder="ex.: Buenópolis  (vários: separe com /)" required>
+          <datalist id="listaMun"></datalist></div>
+        <div><label>Gerente da unidade</label><input name="gerente_uc"></div>
+        <div><label>Responsável pelo preenchimento <span class="req">*</span></label><input name="responsavel" required></div>
+        <div><label>Telefone de contato</label><input name="telefone" inputmode="tel"></div>
+        <div class="largo"><label>Nome do local do início do incêndio</label><input name="nome_local"></div>
+        <div><label>Localização provável do início <span class="req">*</span></label><select name="local" data-lista="local" required></select></div>
+        <div><label>Distância (se Entorno/ZA)</label><input name="distancia" placeholder="ex.: 2 km"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 1. DETECÇÃO ============ -->
+  <section class="bloco">
+    <h2>1. Forma de detecção</h2>
+    <div class="corpo">
+      <div class="grade">
+        <div class="largo"><label>Forma de detecção <span class="req">*</span></label><select name="f_detec" data-lista="f_detec" required></select></div>
+        <div class="largo"><label>Quem? (nome ou instituição)</label><input name="f_detec_quem" placeholder="ex.: AMDA"></div>
+        <div><label>Data da detecção <span class="req">*</span></label><input name="dat_detec" type="date" required></div>
+        <div><label>Hora da detecção <span class="req">*</span></label><input name="hr_detec" type="time" required></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. COMBATE ============ -->
+  <section class="bloco">
+    <h2>2. Operação de combate</h2>
+    <div class="corpo">
+      <div class="linha-radio" style="margin-bottom:10px">
+        <label><input type="checkbox" name="sem_combate"> Não houve combate</label>
+      </div>
+      <label>2.1 Coordenadas geográficas do local do incêndio</label>
+      <div class="grade" style="margin-bottom:12px">
+        <div><label>Latitude (S) — graus / min / seg</label>
+          <div class="dms"><input name="lat_g" inputmode="numeric" placeholder="17"><input name="lat_m" inputmode="numeric" placeholder="58"><input name="lat_s" inputmode="decimal" placeholder="32,3"></div></div>
+        <div><label>Longitude (W) — graus / min / seg</label>
+          <div class="dms"><input name="lon_g" inputmode="numeric" placeholder="44"><input name="lon_m" inputmode="numeric" placeholder="17"><input name="lon_s" inputmode="decimal" placeholder="04,3"></div></div>
+        <div><label>Em decimal (automático)</label><div class="dica" id="coordDec" style="font-size:14px;margin-top:8px">—</div></div>
+      </div>
+      <div id="blocoCombate">
+        <div class="grade" style="margin-bottom:12px">
+          <div><label>Início do combate — data</label><input name="dat_comb" type="date"></div>
+          <div><label>Início do combate — hora</label><input name="hr_comb" type="time"></div>
+          <div class="dica largo" style="margin-top:-6px">Chegada da equipe ao local.</div>
+        </div>
+        <label>2.2 Evolução da operação de combate — quantidade de pessoas (um turno por linha)</label>
+        <div class="tabela-wrap">
+          <table class="din" id="tabEvol">
+            <thead><tr><th>Data</th><th>Início</th><th>Fim</th><th>UC</th><th>FTP</th><th>Parc.</th><th>Brig. CFM</th><th>Voluntária</th><th>PM</th><th>BM</th><th>Total</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn peq" id="addEvol" style="margin-top:8px">+ Adicionar turno</button>
+      </div>
+      <div class="grade" style="margin-top:14px">
+        <div><label>Fim da ocorrência (debelado) — data <span class="req">*</span></label><input name="dat_final" type="date" required></div>
+        <div><label>Fim da ocorrência — hora <span class="req">*</span></label><input name="hr_final" type="time" required></div>
+        <div class="dica largo" style="margin-top:-6px">Após o rescaldo. O prazo do ROI conta a partir desta data (10 dias).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. VEÍCULOS ============ -->
+  <section class="bloco" id="secVeic">
+    <h2>3. Veículos utilizados (quantidade)</h2>
+    <div class="corpo">
+      <div class="veic" id="gradeVeic">
+        <div class="cab">Veículo</div><div class="cab">da UC</div><div class="cab">Outros</div>
+      </div>
+      <div class="grade" style="margin-top:12px">
+        <div class="largo"><label>Outros veículos (tipo e quantidade)</label><input name="vc_outro" placeholder="ex.: Caminhão abastecimento helicóptero, 1; Drone CBMMG, 1"></div>
+        <div class="largo"><label>Nome das instituições (em caso de outros)</label><input name="vc_instituicoes" placeholder="ex.: CFM AMDA; PM"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. VEGETAÇÃO ============ -->
+  <section class="bloco">
+    <h2>4. Vegetação e área atingida (hectares)</h2>
+    <div class="corpo">
+      <div class="grade" id="gradeVeg"></div>
+      <div class="grade" style="margin-top:12px">
+        <div class="largo"><label>Outros (especificar tipo: área)</label><input name="veg_outro" placeholder="ex.: Pastagem: 0,19"></div>
+        <div><label>Área interna (ha) <span class="req">*</span></label><input name="area_int" type="number" step="0.01" min="0" required></div>
+        <div><label>Entorno / ZA (ha) <span class="req">*</span></label><input name="area_ent" type="number" step="0.01" min="0" required></div>
+      </div>
+      <div class="somatorio">Total de área queimada: <b id="areaTotal">0,00 ha</b> <span id="areaAviso" class="dica"></span></div>
+      <div class="grade" style="margin-top:12px">
+        <div><label>4.1 Fonte da informação</label>
+          <div class="linha-radio"><label><input type="radio" name="fonte_area" value="UC"> UC</label><label><input type="radio" name="fonte_area" value="ZEE"> ZEE</label></div></div>
+        <div class="largo"><label>4.2 Zona(s) do Plano de Manejo atingida(s)</label><input name="zonas_pm" placeholder="ex.: Zona Primitiva; ou Nenhuma"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. CAUSAS ============ -->
+  <section class="bloco">
+    <h2>5. Prováveis causas do incêndio</h2>
+    <div class="corpo">
+      <div class="grade">
+        <div class="largo"><label>Provável causa principal <span class="req">*</span></label><select name="causa_p" data-lista="causa_p" required></select></div>
+        <div class="largo"><label>Outras prováveis causas</label><input name="causa_out"></div>
+        <div class="largo"><label>5.1 Provável agente causal <span class="req">*</span></label><select name="ag_causal" data-lista="ag_causal" required></select></div>
+        <div class="largo"><label>Outro agente causal</label><input name="ag_out"></div>
+        <div><label>Indício de autoria?</label>
+          <div class="linha-radio"><label><input type="radio" name="ind_aut" value="Sim"> Sim</label><label><input type="radio" name="ind_aut" value="Não"> Não</label></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. FAUNA ============ -->
+  <section class="bloco">
+    <h2>6. Fauna atingida</h2>
+    <div class="corpo">
+      <div class="tabela-wrap">
+        <table class="din" id="tabFauna" style="min-width:620px">
+          <thead><tr><th>Quantidade</th><th>Identificação do animal</th><th>Latitude (ex.: 19°23'45")</th><th>Longitude (ex.: 43°34'16")</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button type="button" class="btn peq" id="addFauna" style="margin-top:8px">+ Adicionar animal</button>
+      <div class="dica">Deixe vazio se não houve fauna atingida.</div>
+    </div>
+  </section>
+
+  <!-- ============ 7–10 ============ -->
+  <section class="bloco">
+    <h2>7. Descrição da ocorrência</h2>
+    <div class="corpo">
+      <textarea name="descricao" required placeholder="Como o incêndio foi detectado, a evolução do combate, apoio recebido, condições do terreno e do tempo, como foi debelado…" style="min-height:200px"></textarea>
+      <div class="dica"><span id="contDesc">0</span> caracteres · obrigatório</div>
+    </div>
+  </section>
+  <section class="bloco">
+    <h2>8. Identificação do proprietário ou posseiro da área</h2>
+    <div class="corpo"><textarea name="proprietario" style="min-height:70px" placeholder="ex.: Não identificado."></textarea></div>
+  </section>
+  <section class="bloco">
+    <h2>9. Dificuldades encontradas</h2>
+    <div class="corpo"><textarea name="dificuldades" style="min-height:90px" placeholder="ex.: Nenhuma."></textarea></div>
+  </section>
+  <section class="bloco">
+    <h2>10. Alimentação</h2>
+    <div class="corpo">
+      <div class="linha-radio" style="margin-bottom:10px"><b style="font-size:14px">Houve fornecimento de alimentação?</b>
+        <label><input type="radio" name="alim_fornecida" value="true"> Sim</label><label><input type="radio" name="alim_fornecida" value="false"> Não</label></div>
+      <div class="grade" id="gradeAlim">
+        <div><label>Café da manhã</label><input name="alim_cafe_manha" type="number" min="0"></div>
+        <div><label>Almoço</label><input name="alim_almoco" type="number" min="0"></div>
+        <div><label>Café da tarde</label><input name="alim_cafe_tarde" type="number" min="0"></div>
+        <div><label>Jantar</label><input name="alim_jantar" type="number" min="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11. FOTOS ============ -->
+  <section class="bloco">
+    <h2>11. Fotos</h2>
+    <div class="corpo">
+      <input type="file" id="inFotos" accept="image/*" multiple>
+      <div class="dica">Até <span id="maxFotos">4</span> fotos. Elas são reduzidas automaticamente (≈1600 px) antes do envio. As fotos não ficam no rascunho: anexe no momento de enviar.</div>
+      <div class="fotos" id="fotos"></div>
+    </div>
+  </section>
+
+  <section class="bloco">
+    <h2>12. Polígono georreferenciado da área queimada</h2>
+    <div class="corpo">
+      <input type="file" id="inPoli" accept=".kml,.kmz,.geojson,.json">
+      <div class="dica">Anexe o KML exportado do SMC (também aceita KMZ e GeoJSON). Pode conter mais de um polígono.</div>
+      <div id="poliInfo"></div>
+    </div>
+  </section>
+
+  <section class="bloco">
+    <h2>Observações</h2>
+    <div class="corpo"><textarea name="obs" style="min-height:70px"></textarea></div>
+  </section>
+</main>
+
+<div class="barra-envio" id="barra">
+  <div class="dentro">
+    <span id="status">Rascunho salvo automaticamente neste navegador.</span>
+    <span>
+      <button type="button" class="btn" id="btnPdf">Gerar PDF para o SEI</button>
+      <button type="button" class="btn primario" id="btnEnviar">Enviar ROI</button>
+    </span>
+  </div>
+</div>
+
+<div id="relatorio"></div>
+
+<script>
+/* ================================================================
+   CONFIGURAÇÃO
+   ================================================================ */
+const SUPABASE_URL = "https://nhsjsttvxixgfqnweqos.supabase.co";
+const SUPABASE_KEY = "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39";   // chave pública (anon)
+const BUCKET = "roi-fotos";
+const MAX_FOTOS = 4;
+const CHAVE_RASCUNHO = "roi-rascunho-v1";
+
+/* Cadastro das UCs (derivado do histórico 2013–2025) e listas de reserva */
+let UCS = {"Acauã":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["Leme do Prado","Turmalina"]},"Alto Cariri":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Nordeste","base_op":"Base Operacional de Curvelo","mun":["Santa Maria do Salto","Salto da Divisa"]},"Alto Mucuri":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Nordeste","base_op":"Base Operacional de Curvelo","mun":["Ladainha","Poté","Itaipé","Teófilo Otoni","Catuji","Malacacheta","Novo Cruzeiro","Caraí","Itambacuri"]},"Arêdes":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Itabirito"]},"Bacia Hidrográfica do Rio Machado":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Sul","base_op":"Base Operacional de Curvelo","mun":["Machado","Poço Fundo","Ipuiúna","Alfenas","Paraguaçu","Espirito Santo Dourado","Ipuiuna","Ipuiúna, Espírito Santo do Dourado","Espírito Santo Dourado","Fama","São João da Mata","Espírito Santo do Dourado"]},"Baleia":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Belo Horizonte","Nova Lima"]},"Biribiri":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["Diamantina"]},"Botumirim":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Norte","base_op":"Sub Base de Januária","mun":["Botumirim"]},"Cachoeira das Andorinhas":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Ouro Preto","Mariana","Itabirito"]},"Caminho dos Gerais":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Caatinga/Cerrado","ufbio":"Norte","base_op":"Sub Base de Januária","mun":["Gameleiras","Monte Azul","Espinosa","Mamonas"]},"Campos Altos":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Alto Paranaíba","base_op":"Base Operacional de Curvelo","mun":["Campos Altos","Córrego Danta"]},"Cercadinho":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Belo Horizonte"]},"Cochá e Gibão":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Bonito de Minas","Januária"]},"Corumbá":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Centro Oeste","base_op":"Base Operacional de Curvelo","mun":["Arcos"]},"Fechos":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Nova Lima"]},"Fernão Dias":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Sul","base_op":"Base Operacional de Curvelo","mun":["Camanducaia","Extrema","Itapeva","Toledo","Sapucaí-Mirim","Paraisópolis","Brazópolis","Gonçalves"]},"Gruta Rei do Mato":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Centro Norte","base_op":"Base Operacional de Curvelo","mun":["Sete Lagoas"]},"Grão Mogol":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Norte","base_op":"Sub Base de Januária","mun":["Grão Mogol"]},"Ibitipoca":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Mata","base_op":"Base Operacional de Curvelo","mun":["Lima Duarte","Bias Fortes","Santa Rita do Ibitipoca","Santana do Garambéu"]},"Itacolomi":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Mariana","Ouro Preto"]},"Itatiaia":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Ouro Preto","Ouro Branco"]},"Jaíba":{"categoria":"REBIO","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Matias Cardoso"]},"Lagedão":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Matias Cardoso"]},"Lagoa do Cajueiro":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Caatinga/Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Matias Cardoso","Jaíba","Matias Cardoso e Jaíba"]},"Lapa Grande":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Norte","base_op":"Sub Base de Januária","mun":["Montes Claros"]},"Lapa Nova de Vazante":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Cerrado/Mata Atlântica","ufbio":"Noroeste","base_op":"Base Operacional de Curvelo","mun":["Vazante"]},"Libélulas da Serra de São José":{"categoria":"RVS","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Santa Cruz de Minas","Tiradentes","São João Del Rei","Prados","Coronel Xavier Chaves","São João del Rei","Cel.Xavier Chaves"]},"Macaúbas":{"categoria":"RVS","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Santa Luzia","Lagoa Santa"]},"Mata Seca":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Caatinga/Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Manga","Itacarambi"]},"Mata de Krambeck":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Mata","base_op":"Base Operacional de Curvelo","mun":["Juiz de Fora"]},"Mata do Cedro":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Centro Oeste","base_op":"Base Operacional de Curvelo","mun":["Carmópolis de Minas","Cláudio"]},"Mata do Limoeiro":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Rio Doce","base_op":"Base Operacional de Curvelo","mun":["Itabira","Itabirito"]},"Mata dos Ausentes":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["Senador Modestino Gonçalves","Felício dos Santos"]},"Mata dos Muriquis":{"categoria":"RVS","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Nordeste","base_op":"Base Operacional de Curvelo","mun":["Santa Maria do Salto","Guaratinga"]},"Montezuma":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado/Mata Atlântica","ufbio":"Norte","base_op":"Sub Base de Januária","mun":["Montezuma"]},"Nova Baden":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Sul","base_op":"Base Operacional de Curvelo","mun":["Lambari","Cambuquira","Campanha"]},"Pandeiros":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Bonito de Minas","Januária","Cônego Marinho"]},"Paracatu":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Noroeste","base_op":"Base Operacional de Curvelo","mun":["Paracatu"]},"Parque Fernão Dias":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Betim","Contagem"]},"Pau Furado":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Triângulo","base_op":"Base Operacional de Curvelo","mun":["Uberlândia","Araguari"]},"Peter Lund":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Centro Norte","base_op":"Base Operacional de Curvelo","mun":["Cordisburgo"]},"Pico da Ibituruna":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Rio Doce","base_op":"Base Operacional de Curvelo","mun":["Governador Valadares"]},"Pico do Itambé":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["Santo Antônio do Itambé","Serro","Serra Azul de Minas"]},"Rio Corrente":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Rio Doce","base_op":"Base Operacional de Curvelo","mun":["Açucena"]},"Rio Doce":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Rio Doce","base_op":"Base Operacional de Curvelo","mun":["Marliéria","Timóteo","Dionísio","Bom Jesus do galho","Jaguaraçu"]},"Rio Pandeiros":{"categoria":"RVS","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Januária"]},"Rio Preto":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["São Gonçalo do Rio Preto","Couto de Magalhães de Minas","Felício dos Santos","Diamantina","Couto de Mag. de Minas"]},"Rios Tijuco e da Prata":{"categoria":"RVS","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Triângulo","base_op":"Base Operacional de Curvelo","mun":["Ituiutaba"]},"Sagarana":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Noroeste","base_op":"Sub Base de Januária","mun":["Arinos","Riachinho"]},"Santa Izabel e Espalha":{"categoria":"APE","grupo":"Uso Sustentável","bioma_uc":"Cerrado","ufbio":"Noroeste","base_op":"Base Operacional de Curvelo","mun":["Paracatu"]},"Seminário Menor de Mariana":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Mariana"]},"Serra Azul":{"categoria":"REBIO","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Jaíba"]},"Serra Negra":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado/Mata Atlântica","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["Itamarandiba"]},"Serra Negra da Mantiqueira":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Mata","base_op":"Base Operacional de Curvelo","mun":["Olaria","Lima Duarte","Santa Bárbara do Monte Verde"]},"Serra Nova":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado/Mata Atlântica","ufbio":"Norte","base_op":"Sub Base de Januária","mun":["Rio Pardo de Minas","Porteirinha","Mato Verde","Serranópolis de Minas","Riacho dos Machados"]},"Serra Verde":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Belo Horizonte","Vespasiano"]},"Serra da Boa Esperança":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Sul","base_op":"Base Operacional de Curvelo","mun":["Boa Esperança","Ilicínea","Guapé","IIicínea"]},"Serra da Candonga":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Rio Doce","base_op":"Base Operacional de Curvelo","mun":["Guanhães"]},"Serra da Moeda":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Moeda","Itabirito","Brumadinho","Ouro Preto","Nova Lima"]},"Serra da Piedade":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Caeté","Sabará"]},"Serra das Araras":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Chapada Gaúcha","Chapada do Norte"]},"Serra das Aroeiras":{"categoria":"RVS","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Centro Norte","base_op":"Base Operacional de Curvelo","mun":["Pedro Leopoldo","São José da Lapa"]},"Serra do Brigadeiro":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Mata","base_op":"Base Operacional de Curvelo","mun":["Pedra Bonita","Ervália","Sericita","Araponga","Fervedouro","Miradouro","Muriaé","Canaã","Divino","Pouso Alto"]},"Serra do Cabral":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Norte","base_op":"Sub Base de Januária","mun":["Buenópolis","Joaquim Felício","Augusto de Lima"]},"Serra do Intendente":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado/Mata Atlântica","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["Conceição do Mato Dentro","Santana do Riacho","Congonhas do Norte","Morro do Pilar"]},"Serra do Ouro Branco":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Ouro Branco","Ouro Preto"]},"Serra do Papagaio":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Sul","base_op":"Base Operacional de Curvelo","mun":["Alagoa","Baependi","Aiuruoca","Itamonte","Pouso Alto"]},"Serra do Rola Moça":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Belo Horizonte","Ibirité","Nova Lima","Brumadinho"]},"Serra do Sabonetal":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Caatinga/Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Itacarambi","Jaíba","Pedra de Maria da Cruz"]},"Serra do Sobrado":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Centro Norte","base_op":"Base Operacional de Curvelo","mun":["São José da Lapa","Confins","Pedro Leopoldo"]},"Sete Salões":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Rio Doce","base_op":"Base Operacional de Curvelo","mun":["Resplendor","Conselheiro Pena","Santa Rita do Ituêto","Santa Rita do Itueto"]},"Sul RMBH":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Nova Lima","Brumadinho","Belo Horizonte","Itabirito","Rio Acima","Santa Bárbara","Catas Altas","Mário Campos","Caeté"]},"Sumidouro":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Centro Norte","base_op":"Base Operacional de Curvelo","mun":["Pedro Leopoldo","Lagoa Santa","Confins"]},"São José":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Santa Cruz de Minas","Tiradentes","São João Del Rei","Prados"]},"Todos os Santos":{"categoria":"APE","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Nordeste","base_op":"Base Operacional de Curvelo","mun":["Teófilo Otoni"]},"Tripuí":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Ouro Preto"]},"Uaimií":{"categoria":"FLOE","grupo":"Uso Sustentável","bioma_uc":"Mata Atlântica","ufbio":"Centro Sul","base_op":"Base Operacional de Curvelo","mun":["Ouro Preto","Mariana","Santa Bárbara","Ouro Branco"]},"Vargem da Pedra":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Centro Norte","base_op":"Base Operacional de Curvelo","mun":[]},"Vargem das Flores":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Cerrado/Mata Atlântica","ufbio":"Metropolitano","base_op":"Base Operacional de Curvelo","mun":["Contagem","Betim"]},"Verde Grande":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Caatinga/Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Matias Cardoso"]},"Veredas do Acari":{"categoria":"RDS","grupo":"Uso Sustentável","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Chapada Gaúcha","Urucuia"]},"Veredas do Peruaçu":{"categoria":"PAR","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Alto Médio São Francisco","base_op":"Sub Base de Januária","mun":["Januária","Cônego Marinho"]},"Várzea da Lapa":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Cerrado","ufbio":"Centro Norte","base_op":"Base Operacional de Curvelo","mun":["Lagoa Santa"]},"Várzea do Lageado e Serra do Raio":{"categoria":"MONA","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["Serro","serro"]},"Água Limpa":{"categoria":"ESEC","grupo":"Proteção Integral","bioma_uc":"Mata Atlântica","ufbio":"Mata","base_op":"Base Operacional de Curvelo","mun":["Cataguases"]},"Águas Vertentes":{"categoria":"APA","grupo":"Uso Sustentável","bioma_uc":"Cerrado/Mata Atlântica","ufbio":"Jequitinhonha","base_op":"Base Operacional de Curvelo","mun":["Serro","Couto de Magalhães de Minas","Serra Azul de Minas","Diamantina","Santo Antônio do Itambé","Felício dos Santos","Rio Vermelho"]}};                                   // substituído pelo cadastro do banco (tabela uc)
+const CAMPOS_FIXOS = ["categoria","grupo","bioma_uc","ufbio","base_op"];
+const LISTAS_RESERVA = {"local":["Interno","Entorno","Interno/Entorno","Não Informado"],"base_op":["Sub Base Belo Horizonte","Base Operacional de Curvelo","Sub Base de Januária"],"ufbio":["Alto Médio São Francisco","Alto Paranaíba","Centro Norte","Centro Oeste","Centro Sul","Jequitinhonha","Mata","Metropolitano","Nordeste","Noroeste","Norte","Rio Doce","Sul","Triângulo"],"categoria":["APA","APE","ESEC","FLOE","MONA","PAR","RDS","REBIO","RVS"],"nome_uc":["Acauã","Água Limpa","Águas Vertentes","Alto Cariri","Alto Mucuri","Arêdes","Bacia Hidrográfica do Rio Machado","Baleia","Biribiri","Botumirim","Cachoeira das Andorinhas","Caminho dos Gerais","Campos Altos","Cercadinho","Cochá e Gibão","Corumbá","Fechos","Fernão Dias","Grão Mogol","Gruta Rei do Mato","Ibitipoca","Itacolomi","Itatiaia","Lagedão","Lagoa do Cajueiro","Lapa Grande","Lapa Nova de Vazante","Libélulas da Serra de São José","Macaúbas","Mata de Krambeck","Mata do Cedro","Mata do Limoeiro","Mata dos Ausentes","Mata dos Muriquis","Mata Seca","Montezuma","Nova Baden","Pandeiros","Paracatu","Parque Fernão Dias","Pau Furado","Peter Lund","Pico da Ibituruna","Pico do Itambé","Rio Corrente","Rio Doce","Rio Pandeiros","Rio Preto","Rios Tijuco e da Prata","Sagarana","Santa Izabel e Espalha","São José","Seminário Menor de Mariana","Serra Azul","Serra da Boa Esperança","Serra da Candonga","Serra da Moeda","Serra da Piedade","Serra das Araras","Serra das Aroeiras","Serra do Brigadeiro","Serra do Cabral","Serra do Intendente","Serra do Ouro Branco","Serra do Papagaio","Serra do Rola Moça","Serra do Sabonetal","Serra do Sobrado","Serra Negra","Serra Negra da Mantiqueira","Serra Nova","Serra Verde","Sete Salões","Sul RMBH","Sumidouro","Todos os Santos","Tripuí","Uaimií","Vargem da Pedra","Vargem das Flores","Várzea do Lageado e Serra do Raio","Verde Grande","Veredas do Acari","Veredas do Peruaçu","Jaíba"],"grupo":["Proteção Integral","Uso Sustentável"],"municipio":["Açucena","Aiuruoca","Aiuruoca/Baependi","Alagoa","Alagoa/Baependi","Alfenas","Araguari","Araponga","Arcos","Arinos","Augusto de Lima","Baependi","Belo Horizonte","Belo Horizonte/Nova Lima","Belo Horizonte/Vespasiano","Betim","Betim/Contagem","Boa Esperança","Boa Esperança/IIicínea","Bom Jesus do Galho","Bonito de Minas","Bonito de Minas/Januária","Botumirim","Brazópolis","Brumadinho","Buenópolis","Buenópolis/Joaquim Felício","Caeté","Caldas/Santa Rita de Caldas","Camanducaia","Cambuquira/Campanha","Campos Altos","Canaã","Caraí","Carmópolis de Minas","Cataguases","Catas Altas","Catuji","Cel.Xavier Chaves/iradentes","Chapada do Norte","Chapada Gaúcha","Cláudio","Conceição do Mato Dentro","Conceição do Mato Dentro/Congonhas do Norte","Conceição do Mato Dentro/Santana do Riacho","Cônego Marinho","Confins","Congonhas do Norte","Conselheiro Pena","Contagem","Cordisburgo","Coronel Xavier Chaves","Córrego Danta","Couto de Magalhães de Minas","Diamantina","Dionisio","Dionísio","Divino","Ervália","Ervália/Araponga","Espinosa","Espírito Santo Dourado","Espirito Santo Dourado/puiuna","Extrema","Fama","Felício dos Santos","Fervedouro","Gameleiras","Gonçalves","Governador Valadares","Grão Mogol","Guanhães","Guapé","Ibirité","Ilicínea","Ilicínea/Guapé","Ipoema","Ipuiúna","Ipuiúna/Espírito Santo do Dourado","Ipuiúna/Poço Fundo","Itabira","Itabirito","Itabirito/Nova Lima","Itabirto/Moeda","Itacarambi","Itaipé","Itamarandiba","Itamonte","Itapeva","Ituiutaba","Jaíba","Januária","Joaquim Felício","Juiz de Fora","Ladainha","Lagoa Santa","Lambari","Leme do Prado","Leme do Prado/Turmalina","Lima Duarte","Machado","Malacacheta","Mamonas","Manga","Mariana","Mário Campos/Brumadinho","Marliéria","Matias Cardoso","Mato Verde","Miradouro","Moeda","Moeda/Itabirito","Monte Azul","Montes Claros","Montezuma","Morro do Pilar","Muriaé","Nova Lima","Novo Cruzeiro","Olaria","Ouro Branco","Ouro Branco/Ouro Preto","Ouro Preto","Ouro Preto/Mariana","Paracatu","Paraguaçu","Paraisópolis","Pedra Bonita","Pedra de Maria da Cruz","Pedro Leopoldo","Pedro Leopoldo/Lagoa Santa","Poço Fundo","Poço Fundo/São João da Mata","Porteirinha","Poté","Pouso Alto","Prados","Resplendor","Riachinho","Riachinho/Arinos","Rio Acima","Rio Pardo de Minas","Rio Vermelho","Sabará","Salto da Divisa","Santa Bárbara","Santa Cruz de Minas","Santa Luzia","Santa Maria do Salto","Santa Maria do Salto/Guaratinga","Santa Rita do Ituêto","Santana do Riacho","Santana do Riacho/Conceição do Mato Dentro","Santana do Riacho/Congonhas do Norte","Santo Antônio do Itambé","São Bartolomeu/Ouro Preto","São Gonçalo do Rio Preto","São Gonçalo do Rio Preto/Couto de Mag. de Minas/Felício dos Santos","São João Del Rei","São José da Lapa","São José da Lapa/Pedro Leopoldo","Sapucaí-Mirim","Senador Modestino Gonçalves","Sericita","Serra Azul de Minas","Serranópolis de Minas","Serro","Sete Lagoas","Taipé","Teófilo Otoni","Timóteo","Tiradentes","Toledo","Uberlândia","Vazante","Vespasiano","Congonhal","Outros","Baependi/Itamonte","Bias Fortes","Pouso Alto/Itamonte","Alagoa/Aiuruoca","Santa Rita do Ibitipoca","Riacho dos Machados","Espirito Santo Dourado/Ipuiuna","Cel.Xavier Chaves/Tiradentes","Mário Campos"],"bioma_uc":["Caatinga","Caatinga/Cerrado","Cerrado","Cerrado/Mata Atlântica","Mata Atlântica"],"f_detec":["Bombeiro Militar CBMMG","Brigadista Parceiro","Brigadista Prefeitura","Brigadista Previncêndio","Brigadista SAFEMED","Brigadista Voluntário","Defesa Civil Municipal","Denúncia (Ação Olho no Fogo Alphaville)","Denúncia 0800 FTP","Denúncia Anônima","Denúncia de Usuário da BR040","Denúncia Sub Base Januária","Diretor DPIFE/Previncêndio","Funcionário COPASA","Funcionário da Prefeitura de Conceição do Mato Dentro","Funcionário da Preveitura Mun. Resplendor","Funcionário da UC","Funcionário da UC - Monitoramento por Vídeo Vigilância","Funcionário da UC - Torre 1 e 2 do P.E Lagoa do Cajueiro","Funcionário da UC - Torre de Observação","Funcionário da UC - Torre de Observação do Pântano","Funcionário da UC - Torre de Observação do PEMS","Funcionário de Fazenda","Funcionário do MNE Itatiaia","Funcionário do MNE Várzea do Lageado","Funcionário do PE Pico do Itambé","Funcionário do PE Serra do Ouro Branco","Funcionário ICMBIO","Funcionário IEF","Funcionário Outra UC","Funcionário Parceiro","Funcionario Prefeitura","Funcionário Prefeitura (Secretário Municipal)","Funcionario Semad","Funcionário UC PESRM","Funcionarios Parceiros EPAMIG","Gerente da UC","Gerente do MNE Varzea da Palma","Gerente do Parque Serra do Sobrado","Gerente do PEVP","Gerente do Previncêndio","Gerente Outra UC","Gerente Parque Serra do Cural","Líder de Brigada Previncêndio","Monitoramento Aéreo","Monitoramento Aéreo (por Air Tractor)","Monitoramento Aéreo (por Helicóptero)","Morador da UC","Morador do Entorno","Não Informado","Outros/Gerente de RPPN","Polícia Militar PMMG","Satélite de Monitoramento","Visitante da UC","Denúncia - Aplicativo de Mensagem","Coordenador de Brigadas do PARNA Gandarela","Outros: Coordenador do Santuário do Caraça","Funcionário da APAEAV","Outros","Funcionários do Retiro das Pedras","Funcionario da Prefeitura de Santa Cruz de Minas","Funcionário de Empresa","Militar do Exército","Brigadista Compensação Minerária","Funcionário do Hospital da Baleia"],"causa_p":["Ação Antrópica - Atividade de Vazanteiros","Ação Antrópica - Eliminação de Carrapatos","Ação Antrópica - Incendiário/Piromaníaco","Ação Antrópica - Incêndio para Invasão de terras","Ação Antrópica - Não Especificada","Ação Antrópica - Pesca","Ação Antrópica - Provocada por Usuários de Drogas","Ação Antrópica - Queima para Eliminar Animais Peçonhentos","Ação Antrópica - Transeuntes","Ação Antrópica - Veículo em Chamas","Acidental","Cabo de Alta Tensão","Caça","Coleta de Sempre Vivas","Desconhecida","Eliminação de Animais Peçonheintos/Insetos","Extração de Espécie Vegetal","Extração de Madeira","Extração de Mel de Abelha","Extração Mineral","Fagulha de Máquinas","Fagulha de um outro foco de incêndio nas proximidades","Fogos de Artifício","Fogueira de Acampamento","Forno de Carvão","Limpeza de Área para construção civil","Limpeza de Área para Cultivo","Limpeza de Área para Expansão Urbana","Limpeza de Área para Fins Agropecuários - Não especificados","Limpeza de Área para uso alternativo do solo","Limpeza de Área Urbana","Limpeza de Estrada","Limpeza de Estradas/Rodovias/Ferrovias","Limpeza de Lote","Limpeza de sub bosque de eucaliptal","Limpeza de Trilha","Litígio com o IEF-MG","Mineração","Não Informada","Natural (incêndio causado por queda de raio)","Outro: Acidente Veículo","Outro: conflitos com brigadistas parceiros","Outro: Criminoso","Outro: Demarcação de Via Urbana","Outro: Exploração Minerária","Outro: Exploração Minerária e Silvicultura","Outro: Exploração Minerária e Silvicultura com fornos de carvão.","Outro: Guimba de Cigarro","Outro: Loteamento irregular","Outro: Motocross","Outro: Pane bomba elétrica","Outro: Queima de Botafora Rural","Outro: Queima de cabos de guatambu","Possivel vingança entre entes familiares","Queima de Área para Cultivo de Eucalipto","Queima de Lixo","Queima de Resíduos de Exploração Vegetal","Queima de vegetação para realização de Pesca Ilegal","Queima de vegetaçãoo para limpeza de quintal","Queima para Coleta de Sempre Vivas","Reignição","Renovação de Pastagem Natural","Renovação de Pastagem Plantada","Represália de Proprietários vizinhos","Restos de Cigarro","Retaliação em detrimento de processo de fiscalização","Retirada de Vegetação Nativa","Ritual Religioso","Supressão de Vegetação para Limpeza de Área","Transeuntes","Vandalismo","Visitantes da UC"],"ag_causal":["Arrendatário","Assentado","Suspeitos em Fuga","Caçador","Caçador/Pescador","Carvoeiro","Criador de Animais","Criador de Cavalo","Criador de Gado","Descarga Elétrica (raio)","Descarga Eletrica (rede de alta tensão)","Empresa Florestal","Extrativista Vegetal","Festeiro (uso de fogos de artifício)","Funcionário de Empresa Responsável por Rodovia","Funcionarios terceirizados da PBH","Garimpeiro","Incendiário/Piromaníaco","Indeterminado","Indígena","Invasor","Madeireiro","Morador da UC","Morador do Entorno","Motorista/Operador de Máquina","Não Informado","Operador de Máquinas","Outros: Motocross","Pescador","Posseiro","Proprietário de Fazenda","Proprietário ou Funcionário de Fazenda","Religioso","Transeunte","Turista","Vazanteiros","Veículo em chamas","Visitante da UC - Banhista"],"ind_aut":["Sim","Não"]};
+
+const VEICULOS = [
+  ["Veículo 4x2","vc_4x2","vc_4x2_d"], ["Veículo 4x4","vc_4x4","vc_4x4_d"], ["Van","vc_van","vc_van_d"],
+  ["Motocicleta","vc_moto","vc_moto_d"], ["Trator","vc_trator","vc_trator_d"], ["Caminhão pipa / autobomba","vc_pipa","vc_pipa_d"],
+  ["Helicóptero",null,"a_helicop"], ["Air Tractor",null,"a_air_tr"]
+];
+const VEGETACAO = [
+  ["veg_f_e_d","Floresta Estacional Decidual"],["veg_f_e_s","Floresta Estacional Semidecidual"],
+  ["veg_f_o","Floresta Ombrófila"],["veg_c_r","Campo Rupestre"],["veg_ant","Área antrópica"],
+  ["veg_c_c","Campo cerrado"],["veg_c_a","Campo de altitude"],["veg_c_s_s","Cerrado sensu stricto"],
+  ["veg_c_d","Cerradão"],["veg_ver","Vereda"]
+];
+const CATEGORIAS = {PAR:"Parque Estadual", APA:"Área de Proteção Ambiental", MONA:"Monumento Natural",
+  ESEC:"Estação Ecológica", REBIO:"Reserva Biológica", RVS:"Refúgio Estadual de Vida Silvestre",
+  FLOE:"Floresta Estadual", RDS:"Reserva de Desenvolvimento Sustentável", APE:"Área de Proteção Especial"};
+const COMB = ["comb_uc","comb_ftp","comb_par","comb_sm","comb_vol","comb_pm","comb_bm"];
+
+/* ================================================================
+   UTILITÁRIOS
+   ================================================================ */
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const F = n => $(`[name="${n}"]`);
+const num = v => { if (v===null||v===undefined) return null; const s=String(v).trim().replace(",", "."); if(s==="") return null; const n=Number(s); return isNaN(n)?null:n; };
+const txt = v => { const s=(v??"").toString().trim(); return s===""?null:s; };
+const fmtHa = n => (n||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc = s => (s??"").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtData = d => d ? d.split("-").reverse().join("/") : "";
+function status(msg, tipo=""){ const s=$("#status"); s.textContent=msg; s.className=tipo; }
+
+let sb = null;
+try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){ console.warn("supabase-js indisponível", e); }
+
+/* ================================================================
+   MONTAGEM DOS CAMPOS
+   ================================================================ */
+function preencherSelect(sel, valores, vazio="— selecione —"){
+  const atual = sel.value;
+  sel.innerHTML = `<option value="">${vazio}</option>` + valores.map(v=>`<option>${esc(v)}</option>`).join("");
+  if (atual) sel.value = atual;
+}
+async function carregarListas(){
+  let listas = LISTAS_RESERVA;
+  if (sb){
+    try{
+      const {data, error} = await sb.from("dominio").select("campo,valor,ordem").eq("ativo", true).order("ordem");
+      if (!error && data?.length){
+        listas = {};
+        data.forEach(r => (listas[r.campo] ??= []).push(r.valor));
+      }
+    }catch(e){ /* usa reserva */ }
+    try{
+      const {data, error} = await sb.from("uc").select("*").eq("ativo", true);
+      if (!error && data?.length){
+        UCS = {};
+        data.forEach(u => UCS[u.nome_uc] = {categoria:u.categoria, grupo:u.grupo, bioma_uc:u.bioma_uc, ufbio:u.ufbio,
+                                             base_op:u.base_op, mun:u.municipios||[], gerente:u.gerente, telefone:u.telefone});
+      }
+    }catch(e){ /* usa reserva */ }
+  }
+  $$("select[data-lista]").forEach(s => preencherSelect(s, listas[s.dataset.lista] || []));
+  // Lista de UCs com a categoria à frente (evita confundir APA Pandeiros x RVS Rio Pandeiros)
+  const selUC = F("nome_uc"), atualUC = selUC.value;
+  selUC.innerHTML = `<option value="">— selecione —</option>` + Object.keys(UCS)
+    .sort((a,b)=>a.localeCompare(b,"pt-BR"))
+    .map(n => `<option value="${esc(n)}">${esc(n)}${UCS[n].categoria ? ` (${esc(UCS[n].categoria)})` : ""}</option>`).join("");
+  if (atualUC) selUC.value = atualUC;
+  $("#listaMun").innerHTML = (listas.municipio||[]).map(m=>`<option value="${esc(m)}">`).join("");
+}
+
+function montarVeiculos(){
+  const g = $("#gradeVeic");
+  VEICULOS.forEach(([rot, uc, out]) => {
+    g.insertAdjacentHTML("beforeend",
+      `<div>${rot}</div>` +
+      (uc ? `<input name="${uc}" type="number" min="0" inputmode="numeric">` : `<div class="dica">—</div>`) +
+      `<input name="${out}" type="number" min="0" inputmode="numeric">`);
+  });
+}
+function montarVegetacao(){
+  $("#gradeVeg").innerHTML = VEGETACAO.map(([n, r]) =>
+    `<div><label>${r}</label><input name="${n}" type="number" step="0.01" min="0" inputmode="decimal"></div>`).join("");
+}
+
+function linhaEvol(d={}){
+  const tr = document.createElement("tr");
+  tr.innerHTML =
+    `<td><input type="date" data-k="data" value="${d.data||""}"></td>
+     <td><input type="time" data-k="hr_inicio" value="${d.hr_inicio||""}"></td>
+     <td><input type="time" data-k="hr_fim" value="${d.hr_fim||""}"></td>` +
+    COMB.map(k=>`<td><input type="number" min="0" inputmode="numeric" data-k="${k}" value="${d[k]??""}"></td>`).join("") +
+    `<td class="total">0</td><td><button type="button" class="btn peq" title="Remover">×</button></td>`;
+  tr.querySelector("button").onclick = () => { tr.remove(); mudou(); };
+  $("#tabEvol tbody").appendChild(tr);
+  atualizarTotaisEvol();
+}
+function linhaFauna(d={}){
+  const tr = document.createElement("tr");
+  tr.innerHTML =
+    `<td><input type="number" min="1" data-k="qtd" value="${d.qtd??""}" style="max-width:90px"></td>
+     <td><input data-k="nome" value="${esc(d.nome||"")}" placeholder="ex.: Tamanduá"></td>
+     <td><input data-k="lat" value="${esc(d.lat||"")}"></td>
+     <td><input data-k="lon" value="${esc(d.lon||"")}"></td>
+     <td><button type="button" class="btn peq" title="Remover">×</button></td>`;
+  tr.querySelector("button").onclick = () => { tr.remove(); mudou(); };
+  $("#tabFauna tbody").appendChild(tr);
+}
+const lerTabela = id => $$(`#${id} tbody tr`).map(tr => Object.fromEntries($$("input", tr).map(i => [i.dataset.k, i.value])));
+function atualizarTotaisEvol(){
+  $$("#tabEvol tbody tr").forEach(tr => {
+    tr.querySelector(".total").textContent = COMB.reduce((s,k)=>s+(num(tr.querySelector(`[data-k=${k}]`).value)||0),0);
+  });
+}
+
+/* ================================================================
+   COMPORTAMENTOS
+   ================================================================ */
+function codBdp(){
+  const a = (F("ano").value||"").trim(), r=(F("ri").value||"").replace(/\D/g,""), o=(F("roi_num").value||"").replace(/\D/g,"");
+  if (!/^\d{4}$/.test(a) || !r || !o) return null;
+  return `${a}-${r.padStart(4,"0")}-${o.padStart(3,"0")}`;
+}
+function dmsParaDec(g, m, s){
+  const G=num(g), M=num(m)||0, S=num(s)||0;
+  if (G===null) return null;
+  return -(Math.abs(G) + M/60 + S/3600);           // Sul e Oeste: negativos
+}
+function coords(){
+  return { lat: dmsParaDec(F("lat_g").value,F("lat_m").value,F("lat_s").value),
+           lon: dmsParaDec(F("lon_g").value,F("lon_m").value,F("lon_s").value) };
+}
+function somaVeg(){ return VEGETACAO.reduce((s,[n])=>s+(num(F(n).value)||0),0); }
+
+function atualizarDerivados(){
+  $("#codPreview").textContent = codBdp() || "AAAA-RRRR-OOO";
+  const c = coords();
+  $("#coordDec").textContent = (c.lat!==null && c.lon!==null) ? `${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}` : "—";
+  const tot = (num(F("area_int").value)||0) + (num(F("area_ent").value)||0);
+  $("#areaTotal").textContent = fmtHa(tot) + " ha";
+  const sv = somaVeg();
+  $("#areaAviso").textContent = (sv>0 && Math.abs(sv-tot)>0.05) ? `· atenção: a soma por vegetação dá ${fmtHa(sv)} ha` : "";
+  $("#contDesc").textContent = F("descricao").value.length;
+  const semComb = F("sem_combate").checked;
+  $("#blocoCombate").classList.toggle("desativado", semComb);
+  $("#gradeAlim").classList.toggle("desativado", $('[name=alim_fornecida][value=false]').checked);
+  atualizarTotaisEvol();
+  if (poligonos.length) mostrarPoligono();
+}
+
+/* Cadastro da UC: preenche e trava os dados fixos */
+function aplicarUC(trocouUC){
+  const u = UCS[F("nome_uc").value];
+  CAMPOS_FIXOS.forEach(k => {
+    const el = F(k);
+    if (u && u[k]){
+      if (![...el.options].some(o => o.value === u[k])) el.insertAdjacentHTML("beforeend", `<option>${esc(u[k])}</option>`);
+      el.value = u[k]; el.disabled = true;
+    } else el.disabled = false;
+  });
+  $("#dicaUC").innerHTML = u
+    ? `🔒 Categoria, grupo, bioma, regional e base vêm do cadastro da UC. Algo errado? Avise a GPCIF para corrigir o cadastro.`
+    : `Ao escolher a unidade, os dados fixos são preenchidos pelo cadastro de UCs.`;
+  if (!u) return;
+  const mun = [...(u.mun||[]), ...[...$("#listaMun").options].map(o=>o.value).filter(m => !(u.mun||[]).includes(m))];
+  $("#listaMun").innerHTML = mun.map(m=>`<option value="${esc(m)}">`).join("");
+  if (trocouUC){
+    if (u.mun?.length) F("municipio").value = u.mun[0];
+    if (u.gerente)  F("gerente_uc").value = u.gerente;
+    if (u.telefone) F("telefone").value = u.telefone;
+  }
+}
+F("nome_uc").addEventListener("change", () => { aplicarUC(true); mudou(); });
+
+/* ================================================================
+   RASCUNHO (localStorage — só neste navegador)
+   ================================================================ */
+function estado(){
+  const s = {};
+  $$("#form [name]").forEach(el => {
+    if (el.type==="radio"){ if (el.checked) s[el.name]=el.value; }
+    else if (el.type==="checkbox") s[el.name]=el.checked;
+    else s[el.name]=el.value;
+  });
+  s._evol = lerTabela("tabEvol"); s._fauna = lerTabela("tabFauna");
+  return s;
+}
+function aplicar(s){
+  Object.entries(s).forEach(([k,v]) => {
+    if (k.startsWith("_")) return;
+    $$(`#form [name="${k}"]`).forEach(el => {
+      if (el.type==="radio") el.checked = (el.value===v);
+      else if (el.type==="checkbox") el.checked = !!v;
+      else el.value = v;
+    });
+  });
+  $("#tabEvol tbody").innerHTML=""; (s._evol||[]).forEach(linhaEvol);
+  $("#tabFauna tbody").innerHTML=""; (s._fauna||[]).forEach(linhaFauna);
+}
+let timer=null;
+function mudou(){
+  atualizarDerivados();
+  clearTimeout(timer);
+  timer = setTimeout(() => { try{ localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify(estado())); }catch(e){} }, 400);
+}
+$("#btnDescartar").onclick = () => {
+  if (!confirm("Apagar o rascunho e começar um ROI novo?")) return;
+  try{ localStorage.removeItem(CHAVE_RASCUNHO); }catch(e){}
+  location.reload();
+};
+
+/* ================================================================
+   FOTOS — redução no navegador
+   ================================================================ */
+let fotos = [];   // {blob, url, legenda, nome}
+function reduzir(arquivo, maxLado=1600, qualidade=0.8){
+  return new Promise((ok, falha) => {
+    const img = new Image();
+    img.onload = () => {
+      const esc = Math.min(1, maxLado/Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width*esc); c.height = Math.round(img.height*esc);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(b => b ? ok(b) : falha(new Error("falha ao converter")), "image/jpeg", qualidade);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => falha(new Error("imagem inválida"));
+    img.src = URL.createObjectURL(arquivo);
+  });
+}
+function desenharFotos(){
+  $("#fotos").innerHTML = fotos.map((f,i)=>`
+    <div class="foto"><img src="${f.url}" alt="">
+      <div class="info"><input data-i="${i}" class="legenda" placeholder="Legenda" value="${esc(f.legenda)}">
+      <small>${Math.round(f.blob.size/1024)} KB</small>
+      <button type="button" class="btn peq" data-rem="${i}" style="float:right">remover</button></div></div>`).join("");
+  $$(".legenda").forEach(el => el.oninput = () => fotos[el.dataset.i].legenda = el.value);
+  $$("[data-rem]").forEach(b => b.onclick = () => { URL.revokeObjectURL(fotos[b.dataset.rem].url); fotos.splice(b.dataset.rem,1); desenharFotos(); });
+}
+$("#inFotos").addEventListener("change", async e => {
+  const arqs = [...e.target.files];
+  for (const a of arqs){
+    if (fotos.length >= MAX_FOTOS){ alert(`Máximo de ${MAX_FOTOS} fotos.`); break; }
+    try{ const b = await reduzir(a); fotos.push({blob:b, url:URL.createObjectURL(b), legenda:"", nome:a.name}); }
+    catch(err){ alert(`Não foi possível ler ${a.name}.`); }
+  }
+  e.target.value = ""; desenharFotos();
+});
+
+/* ================================================================
+   POLÍGONO (KML / KMZ / GeoJSON do SMC)
+   ================================================================ */
+let poligonos = [];   // lista de polígonos; cada um = [anelExterno, ...buracos]; anel = [[lon,lat],...]
+let poliArquivo = "";
+
+function fecharAnel(a){ const p=a[0], u=a[a.length-1]; if (p[0]!==u[0]||p[1]!==u[1]) a.push([p[0],p[1]]); return a; }
+function lerCoords(txt){
+  return (txt||"").trim().split(/\s+/).map(t => t.split(",").map(Number)).filter(c => c.length>=2 && !isNaN(c[0]) && !isNaN(c[1])).map(c => [c[0], c[1]]);
+}
+function lerKML(texto){
+  const doc = new DOMParser().parseFromString(texto, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) throw new Error("arquivo KML inválido");
+  const polis = [];
+  for (const pg of doc.getElementsByTagNameNS("*", "Polygon")){
+    const ext = pg.getElementsByTagNameNS("*", "outerBoundaryIs")[0];
+    if (!ext) continue;
+    const aneis = [fecharAnel(lerCoords(ext.getElementsByTagNameNS("*", "coordinates")[0]?.textContent))];
+    for (const inn of pg.getElementsByTagNameNS("*", "innerBoundaryIs"))
+      aneis.push(fecharAnel(lerCoords(inn.getElementsByTagNameNS("*", "coordinates")[0]?.textContent)));
+    if (aneis[0].length >= 4) polis.push(aneis);
+  }
+  return polis;
+}
+function lerGeoJSON(texto){
+  const g = JSON.parse(texto), polis = [];
+  const geoms = g.type==="FeatureCollection" ? g.features.map(f=>f.geometry) : g.type==="Feature" ? [g.geometry] : [g];
+  const add = (geo) => {
+    if (!geo) return;
+    if (geo.type==="Polygon") polis.push(geo.coordinates.map(a => fecharAnel(a.map(c=>[c[0],c[1]]))));
+    else if (geo.type==="MultiPolygon") geo.coordinates.forEach(p => polis.push(p.map(a => fecharAnel(a.map(c=>[c[0],c[1]])))));
+    else if (geo.type==="GeometryCollection") geo.geometries.forEach(add);
+  };
+  geoms.forEach(add);
+  return polis;
+}
+async function lerKMZ(arquivo){
+  if (!window.JSZip){
+    await new Promise((ok, falha) => { const s=document.createElement("script");
+      s.src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"; s.onload=ok; s.onerror=()=>falha(new Error("sem internet para abrir KMZ")); document.head.appendChild(s); });
+  }
+  const zip = await JSZip.loadAsync(arquivo);
+  const kml = Object.values(zip.files).find(f => /\.kml$/i.test(f.name));
+  if (!kml) throw new Error("o KMZ não contém KML");
+  return lerKML(await kml.async("string"));
+}
+/* Área geodésica aproximada (mesmo método do Turf/Google), em hectares */
+function areaAnel(a){
+  const R=6378137, rad=Math.PI/180; let s=0;
+  for (let i=0;i<a.length-1;i++){ const [x1,y1]=a[i],[x2,y2]=a[i+1]; s += (x2-x1)*rad * (2+Math.sin(y1*rad)+Math.sin(y2*rad)); }
+  return Math.abs(s*R*R/2);
+}
+function areaHa(polis){ return polis.reduce((t,p)=>t + areaAnel(p[0]) - p.slice(1).reduce((h,a)=>h+areaAnel(a),0), 0)/10000; }
+function paraWKT(polis){
+  const anel = a => "(" + a.map(c=>`${c[0].toFixed(7)} ${c[1].toFixed(7)}`).join(",") + ")";
+  return "SRID=4674;MULTIPOLYGON(" + polis.map(p => "(" + p.map(anel).join(",") + ")").join(",") + ")";
+}
+function desenhoSVG(polis, larg=260, alt=200){
+  const pts = polis.flat(2); if (!pts.length) return "";
+  let [x0,y0,x1,y1] = [Infinity,Infinity,-Infinity,-Infinity];
+  pts.forEach(([x,y])=>{ x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y); });
+  const k = Math.cos((y0+y1)/2*Math.PI/180), m=12;
+  const w=(x1-x0)*k||1e-6, h=(y1-y0)||1e-6, e=Math.min((larg-2*m)/w,(alt-2*m)/h);
+  const ox=(larg-w*e)/2, oy=(alt-h*e)/2;
+  const P = ([x,y]) => `${(ox+(x-x0)*k*e).toFixed(1)},${(oy+(y1-y)*e).toFixed(1)}`;
+  const d = polis.map(p => p.map(a => "M"+a.map(P).join("L")+"Z").join("")).join("");
+  return `<svg viewBox="0 0 ${larg} ${alt}" xmlns="http://www.w3.org/2000/svg"><path d="${d}" fill="#c0392b" fill-opacity=".35" stroke="#7a1f1f" stroke-width="1.5" fill-rule="evenodd"/></svg>`;
+}
+function mostrarPoligono(){
+  if (!poligonos.length){ $("#poliInfo").innerHTML=""; return; }
+  const ha = areaHa(poligonos), tot=(num(F("area_int").value)||0)+(num(F("area_ent").value)||0);
+  const dif = tot>0 ? Math.abs(ha-tot)/tot : 0;
+  $("#poliInfo").innerHTML = `<div class="poli">${desenhoSVG(poligonos)}
+    <div class="dados"><div><b>${esc(poliArquivo)}</b></div>
+      <div>${poligonos.length} polígono(s) · <b>${fmtHa(ha)} ha</b> (área calculada)</div>
+      ${tot>0 && dif>0.1 ? `<div class="dica" style="color:var(--alerta)">A área do polígono difere ${Math.round(dif*100)}% do total informado na seção 4 (${fmtHa(tot)} ha). Confira.</div>` : ""}
+      <button type="button" class="btn peq" id="remPoli">remover</button></div></div>`;
+  $("#remPoli").onclick = () => { poligonos=[]; poliArquivo=""; progresso.poli=false; mostrarPoligono(); };
+}
+$("#inPoli").addEventListener("change", async e => {
+  const a = e.target.files[0]; if (!a) return;
+  try{
+    let polis;
+    if (/\.kmz$/i.test(a.name)) polis = await lerKMZ(a);
+    else if (/\.(geo)?json$/i.test(a.name)) polis = lerGeoJSON(await a.text());
+    else polis = lerKML(await a.text());
+    if (!polis.length) throw new Error("nenhum polígono encontrado no arquivo");
+    const fora = polis.flat(2).some(([x,y]) => x<-51.5||x>-39.5||y<-23.5||y>-14);
+    if (fora) throw new Error("o polígono está fora de Minas Gerais (confira o sistema de coordenadas)");
+    poligonos = polis; poliArquivo = a.name; progresso.poli = false;
+    mostrarPoligono();
+  }catch(err){ alert("Não foi possível ler o polígono: " + err.message); }
+  e.target.value = "";
+});
+
+/* ================================================================
+   VALIDAÇÃO E MONTAGEM DO REGISTRO
+   ================================================================ */
+function validar(){
+  $$(".invalido").forEach(el=>el.classList.remove("invalido"));
+  const erros = [];
+  const marca = (n, msg) => { const el=F(n); if (el) el.classList.add("invalido"); erros.push(msg); };
+  $$("#form [required]").forEach(el => {
+    if (el.closest(".desativado")) return;
+    if (!el.value.trim()) marca(el.name, `Preencha: ${el.closest("div").querySelector("label")?.textContent.replace("*","").trim() || el.name}`);
+  });
+  if (!codBdp()) marca("ri","Código BDP incompleto (ano, RI e ROI).");
+  const dh = (d,h) => d ? new Date(`${d}T${h||"00:00"}`) : null;
+  const det = dh(F("dat_detec").value, F("hr_detec").value);
+  const comb = F("sem_combate").checked ? null : dh(F("dat_comb").value, F("hr_comb").value);
+  const fim = dh(F("dat_final").value, F("hr_final").value);
+  if (det && comb && comb < det) marca("dat_comb","O início do combate está antes da detecção.");
+  if (det && fim && fim < det) marca("dat_final","O fim da ocorrência está antes da detecção.");
+  if (comb && fim && fim < comb) marca("dat_final","O fim da ocorrência está antes do início do combate.");
+  if (!F("sem_combate").checked && !F("dat_comb").value) marca("dat_comb","Informe o início do combate ou marque “Não houve combate”.");
+  const c = coords();
+  if (c.lat!==null && (c.lat < -23.5 || c.lat > -14)) marca("lat_g","Latitude fora de Minas Gerais.");
+  if (c.lon!==null && (c.lon < -51.5 || c.lon > -39.5)) marca("lon_g","Longitude fora de Minas Gerais.");
+  return erros;
+}
+
+function registro(){
+  const semComb = F("sem_combate").checked;
+  const evol = semComb ? [] : lerTabela("tabEvol").filter(l => l.data);
+  const fauna = lerTabela("tabFauna").filter(l => txt(l.nome));
+  const c = coords();
+  const r = {
+    cod_bdp: codBdp(), status: "enviado",
+    reds_bos: txt(F("reds_bos").value), base_op: txt(F("base_op").value), ufbio: txt(F("ufbio").value),
+    categoria: txt(F("categoria").value), nome_uc: txt(F("nome_uc").value), grupo: txt(F("grupo").value),
+    municipio: txt(F("municipio").value), bioma_uc: txt(F("bioma_uc").value),
+    gerente_uc: txt(F("gerente_uc").value), responsavel: txt(F("responsavel").value), telefone: txt(F("telefone").value),
+    nome_local: txt(F("nome_local").value), local: txt(F("local").value), distancia: txt(F("distancia").value),
+    lat: c.lat!==null ? Number(c.lat.toFixed(6)) : null, lon: c.lon!==null ? Number(c.lon.toFixed(6)) : null,
+    f_detec: txt(F("f_detec").value), f_detec_quem: txt(F("f_detec_quem").value),
+    dat_detec: txt(F("dat_detec").value), hr_detec: txt(F("hr_detec").value),
+    dat_comb: semComb ? null : txt(F("dat_comb").value), hr_comb: semComb ? null : txt(F("hr_comb").value),
+    dat_final: txt(F("dat_final").value), hr_final: txt(F("hr_final").value),
+    vc_outro: txt(F("vc_outro").value), vc_instituicoes: txt(F("vc_instituicoes").value),
+    veg_outro: txt(F("veg_outro").value), area_int: num(F("area_int").value), area_ent: num(F("area_ent").value),
+    fonte_area: $('[name=fonte_area]:checked')?.value || null, zonas_pm: txt(F("zonas_pm").value),
+    causa_p: txt(F("causa_p").value), causa_out: txt(F("causa_out").value),
+    ag_causal: txt(F("ag_causal").value), ag_out: txt(F("ag_out").value),
+    ind_aut: $('[name=ind_aut]:checked')?.value || null,
+    fn_nome: fauna.length ? fauna.map((f,i)=>`${i+1}-${f.nome.trim()}`).join(", ") : null,
+    fn_qnt:  fauna.length ? fauna.map((f,i)=>`${i+1}-${num(f.qtd)??""}`).join(", ") : null,
+    fn_coord: fauna.length ? fauna.map((f,i)=>`${i+1}-Lat:${(f.lat||"").trim()} Long:${(f.lon||"").trim()}`).join(", ") : null,
+    descricao: txt(F("descricao").value), proprietario: txt(F("proprietario").value), dificuldades: txt(F("dificuldades").value),
+    alim_fornecida: $('[name=alim_fornecida]:checked') ? $('[name=alim_fornecida]:checked').value==="true" : null,
+    alim_cafe_manha: num(F("alim_cafe_manha").value), alim_almoco: num(F("alim_almoco").value),
+    alim_cafe_tarde: num(F("alim_cafe_tarde").value), alim_jantar: num(F("alim_jantar").value),
+    obs: txt(F("obs").value)
+  };
+  VEICULOS.forEach(([,uc,out]) => { if (uc) r[uc]=num(F(uc).value); r[out]=num(F(out).value); });
+  VEGETACAO.forEach(([n]) => r[n]=num(F(n).value));
+  const linhasEvol = evol.map(l => {
+    const o = {cod_bdp: r.cod_bdp, data: l.data, hr_inicio: txt(l.hr_inicio), hr_fim: txt(l.hr_fim)};
+    COMB.forEach(k => o[k] = num(l[k]) ?? 0);
+    return o;
+  });
+  return {r, linhasEvol, fauna};
+}
+
+/* ================================================================
+   ENVIO — em etapas; se uma falhar, "Enviar" retoma de onde parou
+   ================================================================ */
+let progresso = {cod:null, roi:false, evol:false, fotos:[], poli:false};
+$("#btnEnviar").onclick = async () => {
+  const erros = validar();
+  if (erros.length){ status(erros[0] + (erros.length>1 ? ` (+${erros.length-1} pendência(s))` : ""), "erro"); $(".invalido")?.scrollIntoView({behavior:"smooth", block:"center"}); return; }
+  if (!sb){ status("Sem conexão com o banco (biblioteca não carregou). Verifique a internet.", "erro"); return; }
+  const {r, linhasEvol} = registro();
+  if (progresso.cod !== r.cod_bdp) progresso = {cod:r.cod_bdp, roi:false, evol:false, fotos:[], poli:false};
+  const btn = $("#btnEnviar"); btn.disabled = true;
+  try{
+    if (!progresso.roi){
+      status("Enviando o relatório…");
+      const {error} = await sb.from("roi").insert(r);
+      if (error){
+        if (error.code === "23505") throw new Error(`Já existe um ROI com o código ${r.cod_bdp}. Confira os números do RI e do ROI.`);
+        if (error.code === "42501") throw new Error("O banco recusou o registro. Confira o código BDP e a ordem das datas.");
+        throw new Error(error.message);
+      }
+      progresso.roi = true;
+    }
+    if (!progresso.evol && linhasEvol.length){
+      status("Enviando a evolução do combate…");
+      const {error} = await sb.from("roi_evolucao").insert(linhasEvol);
+      if (error) throw new Error("Tabela de combate: " + error.message);
+    }
+    progresso.evol = true;
+    if (!progresso.poli && poligonos.length){
+      status("Enviando o polígono da área queimada…");
+      const {error} = await sb.from("area_queimada").insert({cod_bdp:r.cod_bdp, geom:paraWKT(poligonos), fonte:"SMC"});
+      if (error) throw new Error("Polígono: " + error.message);
+    }
+    progresso.poli = true;
+    for (let i=0; i<fotos.length; i++){
+      if (progresso.fotos[i]) continue;
+      status(`Enviando foto ${i+1} de ${fotos.length}…`);
+      const caminho = `${r.cod_bdp}/foto${i+1}.jpg`;
+      const up = await sb.storage.from(BUCKET).upload(caminho, fotos[i].blob, {contentType:"image/jpeg", upsert:false});
+      if (up.error && !/exists|Duplicate/i.test(up.error.message)) throw new Error(`Foto ${i+1}: ${up.error.message}`);
+      const {error} = await sb.from("roi_foto").insert({cod_bdp:r.cod_bdp, caminho, legenda: txt(fotos[i].legenda), ordem:i+1});
+      if (error && error.code !== "23505") throw new Error(`Foto ${i+1}: ${error.message}`);
+      progresso.fotos[i] = true;
+    }
+    status(`ROI ${r.cod_bdp} enviado com sucesso. Gere o PDF para o SEI.`, "ok");
+    try{ localStorage.removeItem(CHAVE_RASCUNHO); }catch(e){}
+    btn.textContent = "Enviado ✓";
+  }catch(e){
+    status(e.message + (progresso.roi ? " — o relatório já foi gravado; clique em Enviar de novo para completar." : ""), "erro");
+    btn.disabled = false;
+  }
+};
+
+/* ================================================================
+   PDF PARA O SEI (impressão no layout do ROI)
+   ================================================================ */
+function montarRelatorio(){
+  const {r, linhasEvol, fauna} = registro();
+  const v = x => esc(x ?? "");
+  const ano = F("ano").value, nroi = (F("roi_num").value||"").replace(/^0+/,"");
+  const ha = x => x===null||x===undefined ? "0,00 ha" : fmtHa(x)+" ha";
+  const vegLinha = (a,b) => `<tr><td style="width:14%">${ha(r[a[0]])}</td><td>${a[1]}</td><td style="width:14%">${ha(r[b[0]])}</td><td>${b[1]}</td></tr>`;
+  const G = VEGETACAO;
+  const c = coords();
+  const dmsTxt = (g,m,s) => g ? `${g}° ${m||0}' ${s||0}"` : "";
+  const evolHtml = linhasEvol.length ? linhasEvol.map(l => {
+      const tot = COMB.reduce((s,k)=>s+(l[k]||0),0);
+      return `<tr><td>${fmtData(l.data)}</td><td>${v(l.hr_inicio)}</td><td>${v(l.hr_fim)}</td>${COMB.map(k=>`<td style="text-align:center">${l[k]||"-"}</td>`).join("")}<td style="text-align:center"><b>${tot}</b></td></tr>`;
+    }).join("") : `<tr><td colspan="11">${F("sem_combate").checked ? "Não houve combate." : ""}</td></tr>`;
+  const veic = VEICULOS.map(([rot,uc,out]) => `<tr><td style="text-align:center">${uc ? (r[uc]||"") : ""}</td><td style="text-align:center">${r[out]||""}</td><td>${rot}</td></tr>`).join("");
+  const municipioData = (r.municipio||"").split("/")[0].trim();
+  const hoje = new Date().toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"});
+  $("#relatorio").innerHTML = `
+    <div class="cab"><div><b>Governo do Estado de Minas Gerais</b><br>Sistema Estadual de Meio Ambiente<br>Instituto Estadual de Florestas<br>Diretoria de Unidades de Conservação – DIUC</div></div>
+    <h3 class="uc">${v([CATEGORIAS[r.categoria] || r.categoria, r.nome_uc].filter(Boolean).join(" "))}</h3>
+    <h4 class="tit">Relatório de Ocorrência de Incêndio Florestal nº ${v(nroi)}/${v(ano)}</h4>
+    <table style="width:55%;margin-left:auto;margin-bottom:8px"><tr><td>Número REDS ou BOS</td><td>${v(r.reds_bos)}</td></tr>
+      <tr><td>Número RI</td><td>${v((F("ri").value||"").replace(/^0+/,""))}/${v(String(ano).slice(2))} · ${v(r.base_op)}</td></tr>
+      <tr><td>Código BDP</td><td><b>${v(r.cod_bdp)}</b></td></tr></table>
+    <div class="kv">Municípios envolvidos: <b>${v(r.municipio)}</b></div>
+    <div class="kv">Gerente da Unidade: <b>${v(r.gerente_uc)}</b></div>
+    <div class="kv">Responsável pelo preenchimento: <b>${v(r.responsavel)}</b></div>
+    <div class="kv">Telefone de contato: <b>${v(r.telefone)}</b></div>
+    <div class="kv">Nome do local do início do incêndio: <b>${v(r.nome_local)}</b></div>
+    <div class="kv">Localização provável do início do incêndio: <b>${v(r.local)}</b>${r.distancia ? ` · Distância: ${v(r.distancia)}` : ""}</div>
+
+    <div class="sec">1. Forma de detecção</div>
+    <table><tr><th>Quem?</th><th>Forma</th><th>Data</th><th>Hora</th></tr>
+      <tr><td>${v(r.f_detec_quem)}</td><td>${v(r.f_detec)}</td><td>${fmtData(r.dat_detec)}</td><td>${v(r.hr_detec)}</td></tr></table>
+
+    <div class="sec">2. Operação de combate</div>
+    <b>2.1. Coordenadas geográficas do local do incêndio</b>
+    <table><tr><td>Lat. (S)</td><td>${dmsTxt(F("lat_g").value,F("lat_m").value,F("lat_s").value)}</td><td>Long. (W)</td><td>${dmsTxt(F("lon_g").value,F("lon_m").value,F("lon_s").value)}</td>
+      <td>Decimal</td><td>${c.lat!==null&&c.lon!==null ? `${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}` : ""}</td></tr></table>
+    <div style="margin-top:4px">Início do combate: <b>${r.dat_comb ? fmtData(r.dat_comb)+" "+v(r.hr_comb) : "não houve combate"}</b> · Fim da ocorrência: <b>${fmtData(r.dat_final)} ${v(r.hr_final)}</b></div>
+    <b>2.2. Evolução da operação de combate</b>
+    <table><tr><th>Data</th><th>Início</th><th>Fim</th><th>UC</th><th>FTP</th><th>Parc.</th><th>Brig. CFM</th><th>Voluntária</th><th>PM</th><th>BM</th><th>Total</th></tr>${evolHtml}</table>
+
+    <div class="sec">3. Veículos utilizados (quantidade)</div>
+    <table><tr><th style="width:10%">UC</th><th style="width:10%">Outros</th><th>Veículo</th></tr>${veic}
+      <tr><td colspan="3">Outros: ${v(r.vc_outro)}${r.vc_instituicoes ? ` · Instituições: ${v(r.vc_instituicoes)}` : ""}</td></tr></table>
+
+    <div class="sec">4. Vegetação e área atingida pelo incêndio</div>
+    <table><tr><th>Hectares</th><th>Tipo</th><th>Hectares</th><th>Tipo</th></tr>
+      ${vegLinha(G[0],G[5])}${vegLinha(G[1],G[6])}${vegLinha(G[2],G[7])}${vegLinha(G[3],G[8])}${vegLinha(G[4],G[9])}
+      <tr><td colspan="4">Outros: ${v(r.veg_outro)}</td></tr>
+      <tr><td colspan="4"><b>Área interna:</b> ${ha(r.area_int)} · <b>Entorno/Z.A.:</b> ${ha(r.area_ent)} · <b>Total de área queimada:</b> ${ha((r.area_int||0)+(r.area_ent||0))}</td></tr></table>
+    <div class="kv">4.1. Fonte da informação: <b>${v(r.fonte_area)}</b></div>
+    <div class="kv">4.2. Zona(s) definida(s) no Plano de Manejo atingida(s): <b>${v(r.zonas_pm)}</b></div>
+
+    <div class="sec">5. Prováveis causas do incêndio</div>
+    <table><tr><td style="width:32%">Provável causa principal</td><td><b>${v(r.causa_p)}</b></td></tr>
+      <tr><td>Outras prováveis causas</td><td>${v(r.causa_out)}</td></tr>
+      <tr><td>5.1. Provável agente causal</td><td><b>${v(r.ag_causal)}</b>${r.ag_out ? ` · ${v(r.ag_out)}` : ""}</td></tr>
+      <tr><td>Indício de autoria</td><td>${v(r.ind_aut)}</td></tr></table>
+
+    <div class="sec">6. Fauna atingida</div>
+    <table><tr><th style="width:12%">Quantidade</th><th>Identificação de animais mortos</th><th>Lat.</th><th>Long.</th></tr>
+      ${fauna.length ? fauna.map(f=>`<tr><td>${v(f.qtd)}</td><td>${v(f.nome)}</td><td>${v(f.lat)}</td><td>${v(f.lon)}</td></tr>`).join("") : `<tr><td colspan="4">Nenhuma.</td></tr>`}</table>
+
+    <div class="sec">7. Descrição da ocorrência</div><div class="txt">${v(r.descricao)}</div>
+    <div class="sec">8. Identificação do proprietário ou posseiro da área de ocorrência</div><div class="txt">${v(r.proprietario)}</div>
+    <div class="sec">9. Dificuldades encontradas</div><div class="txt">${v(r.dificuldades)}</div>
+    <div class="sec">10. Alimentação</div>
+    <table><tr><td>Houve fornecimento de alimentação?</td><td colspan="4">${r.alim_fornecida===null ? "" : (r.alim_fornecida ? "Sim" : "Não")}</td></tr>
+      <tr><td>Quantidade</td><td>Café da manhã: ${v(r.alim_cafe_manha)}</td><td>Almoço: ${v(r.alim_almoco)}</td><td>Café da tarde: ${v(r.alim_cafe_tarde)}</td><td>Jantar: ${v(r.alim_jantar)}</td></tr></table>
+    ${r.obs ? `<div class="sec">Observações</div><div class="txt">${v(r.obs)}</div>` : ""}
+
+    <div class="sec">11. Fotos</div>
+    ${fotos.length ? fotos.map(f=>`<div class="fotoimp"><img src="${f.url}"><div>${v(f.legenda)}</div></div>`).join("") : `<div class="txt">Sem fotos anexadas.</div>`}
+
+    <div class="sec">12. Polígono georreferenciado da área queimada</div>
+    ${poligonos.length ? `<div class="mapa">${desenhoSVG(poligonos, 460, 320)}<div>${v(poliArquivo)} · ${poligonos.length} polígono(s) · área calculada: <b>${fmtHa(areaHa(poligonos))} ha</b></div></div>` : `<div class="txt">Polígono não anexado.</div>`}
+
+    <div class="assin">${v(municipioData)}, ${hoje}
+      <br><span class="linha">${v(r.responsavel)}<br>Responsável pelo preenchimento</span>
+      <br><span class="linha">${v(r.gerente_uc)}<br>Gerente da UC</span></div>`;
+}
+$("#btnPdf").onclick = () => {
+  montarRelatorio();
+  const imgs = $$("#relatorio img");
+  Promise.all(imgs.map(i => i.complete ? 1 : new Promise(ok => { i.onload = i.onerror = ok; })))
+    .then(() => window.print());
+};
+
+/* ================================================================
+   INÍCIO
+   ================================================================ */
+(async function iniciar(){
+  $("#maxFotos").textContent = MAX_FOTOS;
+  montarVeiculos(); montarVegetacao();
+  await carregarListas();
+  let rasc = null;
+  try{ rasc = JSON.parse(localStorage.getItem(CHAVE_RASCUNHO) || "null"); }catch(e){}
+  if (rasc){ aplicar(rasc); $("#avisoRascunho").hidden = false; aplicarUC(false); }
+  else { F("ano").value = new Date().getFullYear(); linhaEvol(); }
+  $("#form").addEventListener("input", e => { e.target.classList?.remove("invalido"); mudou(); });
+  $("#form").addEventListener("change", mudou);
+  $("#addEvol").onclick = () => { linhaEvol(); mudou(); };
+  $("#addFauna").onclick = () => { linhaFauna(); mudou(); };
+  atualizarDerivados();
+})();
+</script>
+</body>
+</html>
