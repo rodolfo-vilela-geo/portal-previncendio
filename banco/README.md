@@ -1,0 +1,81 @@
+# Banco de dados do Portal Previncêndio
+
+A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja no Supabase, seja num servidor PostgreSQL do Estado (PRODEMGE). O mesmo que roda hoje no projeto Supabase `nhsjsttvxixgfqnweqos`.
+
+**O que NÃO está aqui (de propósito, porque o repositório é público):** os dados das ocorrências (ROIs históricos 2013–2025, RIs, atuações), o cadastro das UCs preenchido pelos gerentes (PIPCIF), a lista da equipe com e-mails e as senhas. Esses dados ficam só no banco. Faça backup deles (veja abaixo).
+
+## Pastas
+
+| Pasta | Conteúdo |
+|---|---|
+| `migracoes/` | Estrutura do banco, na ordem em que deve ser executada: tabelas, visões, funções, regras de acesso (RLS) e listas públicas. |
+| `carga/` | Dados públicos grandes: limites das UCs e zonas de amortecimento (IDE-Sisema) e municípios de MG (IBGE, em `../dados/municipios_mg.geojson`). |
+| `funcoes/usuarios/` | Função do servidor que cria login e gera senha provisória (Supabase Edge Function, Deno). |
+| `ferramentas/` | `migrar_historico.py` (converte a Tabela Principal do BDG em CSV para carga) e `base_postgres_sem_supabase.sql` (para rodar fora do Supabase). |
+
+## Ordem de execução
+
+```
+[fora do Supabase]  ferramentas/base_postgres_sem_supabase.sql
+01_esquema_roi.sql            tabelas do ROI, RI (prazos), evolução, fotos, polígonos, BDG (vw_bdg)
+02_listas_suspensas.sql       listas do formulário (tabela dominio)
+03_poligono_formulario.sql    cálculo do polígono e envio público do ROI
+04_cadastro_ucs.sql           cadastro fixo das UCs (categoria, bioma, regional, base…)
+05_painel_publico.sql         dados do painel histórico
+06_bdg_roi_recente.sql        linha do BDG para o shapefile do ROI recém-enviado
+07_limites_ucs.sql            limites das UCs e ZAs (estrutura)
+  carga/07a…07d_limites_dados.sql   (dados dos limites — rodar um por vez)
+08_cataguas_fernao_dias.sql   correção de nomes (Parque Fernão Dias → Parque Cataguás)
+09_equipe.sql                 equipe interna e permissões
+09b_ajustes_seguranca.sql
+10_ri.sql                     Registro de Incêndio da Sala de Situação
+10b_prazos_sem_cancelados.sql
+11_boletim_publico.sql
+12_atuacoes.sql               catálogo de instituições e atuações por dia/turno
+13_config_listas.sql          configurador das listas (admin) com histórico
+14_cadastro_uc.sql            PIPCIF módulo 1: gerentes, cadastro das UCs, regionais, auditoria
+15_municipios.sql             tabela de municípios
+  carga/carregar_municipios.sql
+16_analise_poligono.sql       cruzamento do polígono de campo com UC e municípios
+```
+
+Depois das migrações: carregar os dados (backup), criar o primeiro administrador
+(`insert into equipe (email, nome, papel) values ('…', '…', 'admin');` e o login correspondente)
+e, no Supabase, publicar a função `funcoes/usuarios` e o bucket de fotos `roi-fotos` (criado no 01).
+
+A sequência completa foi testada do zero num PostgreSQL 16 + PostGIS limpo em 30/09/2026.
+
+## Backup (recomendado semanalmente enquanto o projeto estiver no plano gratuito)
+
+No Supabase: Project Settings → Database → *Connection string*. Com ela, em qualquer computador com PostgreSQL instalado:
+
+```
+pg_dump "postgresql://postgres:[SENHA]@db.nhsjsttvxixgfqnweqos.supabase.co:5432/postgres" \
+  --schema=public --no-owner --format=custom --file=previncendio_AAAA-MM-DD.dump
+```
+
+Guarde o arquivo em local institucional (não neste repositório). As fotos dos ROIs ficam no Storage (bucket `roi-fotos`) e são baixadas pelo painel do Supabase.
+
+## Migrar para os servidores do Estado (PRODEMGE)
+
+**Caminho 1 — Supabase instalado na PRODEMGE** (código aberto, Docker): rodar as migrações (ou restaurar o backup), copiar as fotos, publicar a função `usuarios` e trocar, nas páginas HTML, o endereço e a chave (`SUPABASE_URL` e `SUPABASE_KEY`). Usuários e senhas podem ser levados junto.
+
+**Caminho 2 — PostgreSQL + PostGIS da PRODEMGE com a autenticação do Estado:**
+1. Rodar `ferramentas/base_postgres_sem_supabase.sql` e depois as migrações.
+2. Expor o banco por uma API REST compatível (PostgREST) que valide o login do Estado e entregue o e-mail do usuário em `auth.jwt() ->> 'email'` — todas as permissões usam só isso.
+3. Adaptar nas páginas: o login (hoje `sb.auth…`), o envio de fotos (hoje Storage) e a criação de usuários (hoje a função `usuarios`, dispensável se o Estado gerencia os logins).
+4. Hospedar as bibliotecas externas no próprio servidor (Supabase JS, Leaflet, JSZip, hoje via CDN).
+
+O SMC continua no Google Earth Engine em qualquer caso.
+
+## Onde está a regra de negócio
+
+Quase toda no banco, em SQL padrão — por isso a migração é viável:
+
+- **Classes do BDG** (tempo de resposta, duração, classe de área, dia da semana): visão `vw_bdg` (01).
+- **Prazos dos ROIs**: `vw_prazos` (10b).
+- **Boletim público**: `boletim_publico()` (11/12) — não expõe descrições, informantes nem coordenadas.
+- **Consolidação das atuações** (turnos, horas-homem, recursos por instituição): `vw_atuacao_dia` (12).
+- **Permissões**: `is_equipe()`, `is_usuario()`, `is_gpcif()`, `is_admin()`, `pode_editar_uc()` + políticas RLS em cada tabela.
+- **Histórico de alterações**: gatilho genérico `tg_auditoria()` e tabela `auditoria` (14).
+- **Cruzamento espacial do ROI**: `analisar_poligono()` (16).
