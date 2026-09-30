@@ -120,10 +120,10 @@
   </div>
 
   <section class="bloco">
-    <h2>Comece por aqui · Polígono da área queimada (KML do SMC)</h2>
+    <h2>Comece por aqui · Polígono da área queimada</h2>
     <div class="corpo">
-      <input type="file" id="inPoli" accept=".kml,.kmz,.geojson,.json">
-      <div class="dica">Anexe o KML exportado do SMC (também aceita KMZ e GeoJSON). Os atributos do arquivo — áreas, municípios, UC — preenchem o formulário automaticamente; confira depois. No PDF, o polígono aparece como seção 12.</div>
+      <input type="file" id="inPoli" accept=".kml,.kmz,.geojson,.json,.gpx">
+      <div class="dica">Anexe o <b>KML exportado do SMC</b> ou o <b>polígono coletado em campo</b> (KML, KMZ, GeoJSON ou GPX do GPS). Do SMC, os atributos preenchem o formulário; de um arquivo de campo, o sistema cruza o polígono com o limite da UC e os municípios e calcula as áreas. Só vale <b>polígono</b> — pontos e linhas não delimitam a área queimada. Confira tudo depois. No PDF, o polígono aparece como seção 12.</div>
       <div id="poliInfo"></div>
       <div id="smcAttr"></div>
     </div>
@@ -334,7 +334,7 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.11</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.12</div>
 <div id="relatorio"></div>
 
 <script>
@@ -667,6 +667,11 @@ function lerKML(texto){
     const nm = pm.getElementsByTagNameNS("*", "name")[0]; if (nm && !p.name) p.name = nm.textContent.trim();
     props.push(p);
   }
+  const linhas = [];
+  for (const ls of doc.getElementsByTagNameNS("*", "LineString")) linhas.push(lerCoords(ls.getElementsByTagNameNS("*", "coordinates")[0]?.textContent));
+  for (const tr of doc.getElementsByTagNameNS("*", "Track"))                 // gx:Track (trilha do GPS/Google Earth)
+    linhas.push([...tr.getElementsByTagNameNS("*", "coord")].map(c => c.textContent.trim().split(/\s+/).map(Number)).filter(c => !isNaN(c[0]) && !isNaN(c[1])).map(c => [c[0], c[1]]));
+  const nPontos = doc.getElementsByTagNameNS("*", "Point").length;
   for (const pg of doc.getElementsByTagNameNS("*", "Polygon")){
     const ext = pg.getElementsByTagNameNS("*", "outerBoundaryIs")[0];
     if (!ext) continue;
@@ -675,21 +680,36 @@ function lerKML(texto){
       aneis.push(fecharAnel(lerCoords(inn.getElementsByTagNameNS("*", "coordinates")[0]?.textContent)));
     if (aneis[0].length >= 4) polis.push(aneis);
   }
-  return {polis, props};
+  return {polis, props, linhas: linhas.filter(l => l.length >= 2), nPontos};
 }
+function lerGPX(texto){
+  const doc = new DOMParser().parseFromString(texto, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) throw new Error("arquivo GPX inválido");
+  const pts = seg => [...seg.getElementsByTagNameNS("*", seg.localName === "rte" ? "rtept" : "trkpt")].map(p => [+p.getAttribute("lon"), +p.getAttribute("lat")]).filter(c => !isNaN(c[0]) && !isNaN(c[1]));
+  const linhas = [...doc.getElementsByTagNameNS("*", "trkseg"), ...doc.getElementsByTagNameNS("*", "rte")].map(pts).filter(l => l.length >= 2);
+  return {polis: [], props: [], linhas, nPontos: doc.getElementsByTagNameNS("*", "wpt").length};
+}
+// distância em metros entre dois [lon,lat]
+function distM(a, b){ const R=6371000, r=Math.PI/180, dl=(b[1]-a[1])*r, dn=(b[0]-a[0])*r;
+  const h = Math.sin(dl/2)**2 + Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+function comprimentoM(l){ let t=0; for (let i=1;i<l.length;i++) t += distM(l[i-1], l[i]); return t; }
 function lerGeoJSON(texto){
   const g = JSON.parse(texto), polis = [];
   const feats = g.type==="FeatureCollection" ? g.features : g.type==="Feature" ? [g] : [];
   const props = feats.map(f => f.properties || {});
   const geoms = feats.length ? feats.map(f=>f.geometry) : [g];
+  const linhas = []; let nPontos = 0;
   const add = (geo) => {
     if (!geo) return;
+    if (geo.type==="LineString") linhas.push(geo.coordinates.map(c=>[c[0],c[1]]));
+    else if (geo.type==="MultiLineString") geo.coordinates.forEach(l => linhas.push(l.map(c=>[c[0],c[1]])));
+    else if (geo.type==="Point" || geo.type==="MultiPoint") nPontos++;
     if (geo.type==="Polygon") polis.push(geo.coordinates.map(a => fecharAnel(a.map(c=>[c[0],c[1]]))));
     else if (geo.type==="MultiPolygon") geo.coordinates.forEach(p => polis.push(p.map(a => fecharAnel(a.map(c=>[c[0],c[1]])))));
     else if (geo.type==="GeometryCollection") geo.geometries.forEach(add);
   };
   geoms.forEach(add);
-  return {polis, props};
+  return {polis, props, linhas, nPontos};
 }
 async function carregarJSZip(){
   if (window.JSZip) return;
@@ -942,24 +962,84 @@ function mostrarPoligono(){
       <div>${poligonos.length} polígono(s) · <b>${fmtHa(ha)} ha</b> (área calculada)</div>
       ${tot>0 && dif>0.1 ? `<div class="dica" style="color:var(--alerta)">A área do polígono difere ${Math.round(dif*100)}% do total informado na seção 4 (${fmtHa(tot)} ha). Confira.</div>` : ""}
       <button type="button" class="btn peq" id="remPoli">remover</button></div></div>`;
-  $("#remPoli").onclick = () => { poligonos=[]; poliArquivo=""; limites=[]; chaveLimites=""; progresso.poli=false; $("#smcAttr").innerHTML=""; mostrarPoligono(); };
+  $("#remPoli").onclick = () => { poligonos=[]; poliArquivo=""; fontePoligono="SMC"; ultimaAnalise=null; limites=[]; chaveLimites=""; progresso.poli=false; $("#smcAttr").innerHTML=""; mostrarPoligono(); };
 }
-let ultimoSMC = null;
+let ultimoSMC = null, fontePoligono = "SMC", ultimaAnalise = null;
+/* Polígono de campo (sem atributos do SMC): o banco cruza com o limite da UC e os municípios (IBGE) */
+function poligonosGeoJSON(){ return {type:"MultiPolygon", coordinates: poligonos.map(p => p.map(a => a.map(c => [+c[0].toFixed(7), +c[1].toFixed(7)])))}; }
+async function cruzarPoligono(avisoGeo="", soAreas=false){
+  if (!poligonos.length) return;
+  if (!sb){ $("#smcAttr").innerHTML = `<div class="dica" style="color:var(--alerta)">Sem conexão com o banco: preencha áreas e municípios manualmente.</div>`; return; }
+  $("#smcAttr").innerHTML = `<div class="dica">Cruzando o polígono com o limite da UC e os municípios…</div>`;
+  let r;
+  try{
+    const resp = await comPrazo(sb.rpc("analisar_poligono", {p_geojson: poligonosGeoJSON(), p_nome_uc: F("nome_uc").value || null}), 20000);
+    if (resp.error) throw new Error(resp.error.message);
+    r = resp.data;
+  }catch(e){ $("#smcAttr").innerHTML = `<div class="dica" style="color:var(--alerta)">⚠ Não foi possível cruzar o polígono (${esc(e.message)}). Preencha áreas e municípios manualmente.</div>`; return; }
+  ultimaAnalise = r;
+  const feitos = [], avisos = [], vazio = n => !F(n).value || !String(F(n).value).trim();
+  const munVazio = vazio("municipio");                  // antes de a UC preencher o município padrão dela
+  if (!soAreas && r.uc && UCS[r.uc] && vazio("nome_uc")){ F("nome_uc").value = r.uc; aplicarUC(true);
+    feitos.push(r.area_int > 0 ? `UC ${r.uc} (onde está a maior parte da área)` : `UC ${r.uc} (a mais próxima, a ${fmtHa(r.distancia_km)} km)`); }
+  if (r.area_int != null){ F("area_int").value = Number(r.area_int).toFixed(2); F("area_ent").value = Number(r.area_ent).toFixed(2);
+    feitos.push(`dentro da UC ${fmtHa(r.area_int)} ha`, `fora da UC ${fmtHa(r.area_ent)} ha`); }
+  if (r.local && [...F("local").options].some(o => o.value === r.local) && (vazio("local") || soAreas)){ F("local").value = r.local; feitos.push(`localização ${r.local}`); }
+  if (soAreas && r.municipios?.length){ F("municipio").value = r.municipios.map(m => m.nome).join("/"); }   // municípios vêm do polígono, não da UC
+  if (!soAreas && r.municipios?.length && (munVazio || feitos.some(f => f.startsWith("UC ")))){ F("municipio").value = r.municipios.map(m => m.nome).join("/"); feitos.push(`municípios ${r.municipios.map(m => m.nome).join(", ")}`); }
+  if (r.distancia_km != null && vazio("distancia")) F("distancia").value = `${fmtHa(r.distancia_km)} km`;
+  if (r.uc_informada && r.distancia_km != null && r.distancia_km > 10) avisos.push(`o polígono está a ${fmtHa(r.distancia_km)} km da UC ${r.uc_informada} — confira a UC ou o arquivo`);
+  if (r.outras_ucs?.length) avisos.push(`o polígono também atinge ${r.outras_ucs.map(o => `${o.nome_uc} (${fmtHa(o.area_ha)} ha)`).join(", ")}`);
+  let html = `<div class="dica" style="color:var(--ok)">✓ Calculado a partir do polígono de campo: ${esc(feitos.join(" · ") || "sem campos a preencher")}. Confira nas seções abaixo.</div>`;
+  html += `<div class="dica">Área total do polígono: <b>${fmtHa(r.area_ha)} ha</b>${r.municipios?.length > 1 ? " · por município: " + esc(r.municipios.map(m => `${m.nome} ${fmtHa(m.area_ha)} ha`).join("; ")) : ""}${r.na_za_pm ? " · atinge a zona de amortecimento do plano de manejo" : r.na_za_3km ? " · atinge o raio de 3 km da UC" : ""}.</div>`;
+  if (avisoGeo) html += `<div class="dica" style="color:var(--alerta)">⚠ ${esc(avisoGeo)}</div>`;
+  if (avisos.length) html += `<div class="dica" style="color:var(--alerta)">⚠ ${esc(avisos.join(" · "))}.</div>`;
+  html += `<div class="dica">Limites: UC — IDE-Sisema; municípios — IBGE. Sem atributos do SMC, o histórico de reincidência da área não é informado.</div>`;
+  $("#smcAttr").innerHTML = html;
+  mudou();
+  if (!soAreas) preencherDoRI();
+}
+// trocar a UC depois de anexar um polígono de campo: recalcula dentro/fora para a nova UC
+F("nome_uc").addEventListener("change", () => { if (poligonos.length && fontePoligono === "campo") cruzarPoligono("", true); });
 $("#inPoli").addEventListener("change", async e => {
   const a = e.target.files[0]; if (!a) return;
   try{
     let lido;
     if (/\.kmz$/i.test(a.name)) lido = await lerKMZ(a);
     else if (/\.(geo)?json$/i.test(a.name)) lido = lerGeoJSON(await a.text());
+    else if (/\.gpx$/i.test(a.name)) lido = lerGPX(await a.text());
     else lido = lerKML(await a.text());
-    const polis = lido.polis;
-    if (!polis.length) throw new Error("nenhum polígono encontrado no arquivo");
+    let polis = lido.polis, avisoGeo = "";
+    const nL = (lido.linhas||[]).length, nP = lido.nPontos || 0;
+    const qtd = (n, s, p) => `${n} ${n===1 ? s : p}`;
+    if (!polis.length){
+      // trilha de GPS em volta da queimada: se a linha fecha (ou quase), pode virar polígono
+      const fechaveis = (lido.linhas||[]).filter(l => l.length >= 4).map(l => ({l, gap: distM(l[0], l[l.length-1]), per: comprimentoM(l)}))
+                          .filter(x => x.gap <= Math.max(50, x.per * 0.05));
+      if (fechaveis.length){
+        const gapMax = Math.max(...fechaveis.map(x => x.gap));
+        if (!confirm(`O arquivo não tem polígono: tem ${qtd(nL, "linha", "linhas")}${nP ? " e " + qtd(nP, "ponto", "pontos") : ""}.\n\n` +
+                     `${qtd(fechaveis.length, "linha contorna", "linhas contornam")} uma área (o fim fica a ${Math.round(gapMax)} m do início), como a trilha do GPS percorrendo o perímetro da queimada.\n\nUsar ${fechaveis.length===1 ? "esse contorno" : "esses contornos"} como polígono da área queimada?`))
+          throw new Error("o ROI precisa do polígono da área queimada. Converta o arquivo em polígono ou use o SMC.");
+        polis = fechaveis.map(x => [fecharAnel(x.l.map(c => [c[0], c[1]]))]);
+        avisoGeo = `Polígono criado a partir de ${qtd(fechaveis.length, "trilha fechada", "trilhas fechadas")} do arquivo.`;
+      } else if (nL || nP){
+        throw new Error(`o arquivo tem ${[nL ? qtd(nL, "linha", "linhas") : "", nP ? qtd(nP, "ponto", "pontos") : ""].filter(Boolean).join(" e ")}, mas nenhum polígono.\n\n` +
+          `O ROI só aceita o POLÍGONO da área queimada. Se você percorreu o perímetro com o GPS, a trilha precisa fechar (terminar perto de onde começou); ` +
+          `pontos soltos não delimitam a área. Você pode desenhar o polígono no SMC ou no Google Earth / QGIS e anexar de novo.`);
+      } else throw new Error("nenhum polígono encontrado no arquivo");
+    } else if (nL || nP){
+      avisoGeo = `${[nL ? qtd(nL, "linha foi ignorada", "linhas foram ignoradas") : "", nP ? qtd(nP, "ponto foi ignorado", "pontos foram ignorados") : ""].filter(Boolean).join(" e ")} — só o polígono é usado.`;
+    }
     const fora = polis.flat(2).some(([x,y]) => x<-51.5||x>-39.5||y<-23.5||y>-14);
     if (fora) throw new Error("o polígono está fora de Minas Gerais (confira o sistema de coordenadas)");
     poligonos = polis; poliArquivo = a.name; progresso.poli = false;
     mostrarPoligono();
     ultimoSMC = lido.props;
-    preencherDoSMC(lido.props);
+    const ehSMC = ["area_int","area_ent","municipio","nome_uc"].some(k => pegar((lido.props||[]).filter(p=>Object.keys(p).length), k) !== null);
+    fontePoligono = ehSMC ? "SMC" : "campo";
+    if (ehSMC){ preencherDoSMC(lido.props); if (avisoGeo) $("#smcAttr").insertAdjacentHTML("afterbegin", `<div class="dica" style="color:var(--alerta)">⚠ ${esc(avisoGeo)}</div>`); }
+    else await cruzarPoligono(avisoGeo);
   }catch(err){ alert("Não foi possível ler o polígono: " + err.message); }
   e.target.value = "";
 });
@@ -1062,7 +1142,7 @@ $("#btnEnviar").onclick = async () => {
     progresso.evol = true;
     if (!progresso.poli && poligonos.length){
       status("Enviando o polígono da área queimada…");
-      const {error} = await sb.from("area_queimada").insert({cod_bdp:r.cod_bdp, geom:paraWKT(poligonos), fonte:"SMC"});
+      const {error} = await sb.from("area_queimada").insert({cod_bdp:r.cod_bdp, geom:paraWKT(poligonos), fonte: fontePoligono === "campo" ? "campo" : "SMC"});
       if (error) throw new Error("Polígono: " + error.message);
     }
     progresso.poli = true;
@@ -1080,7 +1160,7 @@ $("#btnEnviar").onclick = async () => {
     try{ localStorage.removeItem(CHAVE_RASCUNHO); }catch(e){}
     btn.textContent = "Enviado ✓";
     $("#btnShp").disabled = !poligonos.length;
-    $("#btnShp").title = poligonos.length ? "Baixar o polígono com os atributos do BDG" : "Anexe o KML do SMC para gerar o shapefile";
+    $("#btnShp").title = poligonos.length ? "Baixar o polígono com os atributos do BDG" : "Anexe o polígono (KML do SMC ou de campo) para gerar o shapefile";
   }catch(e){
     status(e.message + (progresso.roi ? " — o relatório já foi gravado; clique em Enviar de novo para completar." : ""), "erro");
     btn.disabled = false;
@@ -1167,7 +1247,7 @@ function montarDBF(linha, nRegistros){
 }
 $("#btnShp").onclick = async () => {
   const cod = codBdp();
-  if (!poligonos.length){ status("Anexe o KML do SMC (seção 12) para gerar o shapefile.", "alerta"); return; }
+  if (!poligonos.length){ status("Anexe o polígono da área queimada (seção 12) para gerar o shapefile.", "alerta"); return; }
   try{
     status("Buscando os atributos do BDG no banco…");
     const {data, error} = await sb.rpc("roi_bdg_recente", {p_cod: cod});
