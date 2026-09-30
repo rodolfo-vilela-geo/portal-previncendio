@@ -329,7 +329,7 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.8</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.9</div>
 <div id="relatorio"></div>
 
 <script>
@@ -520,6 +520,20 @@ async function preencherDoRI(){
   if (data.lat!=null && data.lon!=null && vazio("lat_g")){
     const [g1,m1,s1]=decParaDMS(+data.lat), [g2,m2,s2]=decParaDMS(+data.lon);
     F("lat_g").value=g1; F("lat_m").value=m1; F("lat_s").value=s1; F("lon_g").value=g2; F("lon_m").value=m2; F("lon_s").value=s2; feitos.push("coordenadas"); }
+  // apoios registrados pela sala (atuações): evolução diária, início do combate, veículos e instituições
+  if (data.evolucao?.length && !F("sem_combate").checked && !lerTabela("tabEvol").some(l => l.data)){
+    $("#tabEvol tbody").innerHTML = "";
+    data.evolucao.forEach(d => linhaEvol(Object.fromEntries(Object.entries(d).map(([k,v]) => [k, v===0 ? "" : v]))));
+    feitos.push(`evolução do combate (${data.evolucao.length} ${data.evolucao.length===1?"dia":"dias"})`);
+    const e0 = data.evolucao[0];
+    if (vazio("dat_comb")){ F("dat_comb").value = e0.data; if (e0.hr_inicio && vazio("hr_comb")) F("hr_comb").value = e0.hr_inicio; }
+  }
+  if (data.veiculos){
+    let v = false;
+    Object.entries(data.veiculos).forEach(([k,x]) => { if (x && F(k) && vazio(k)){ F(k).value = x; v = true; } });
+    if (v) feitos.push("veículos");
+  }
+  if (data.instituicoes && vazio("vc_instituicoes")) F("vc_instituicoes").value = data.instituicoes;
   const uc = data.nome_uc ? `${data.nome_uc}${data.municipio ? " · "+data.municipio : ""}` : "";
   $("#riInfo").innerHTML = `<div class="dica" style="color:var(--ok)">✓ RI ${esc(data.ri)}/${data.ano} da Sala de Situação: ${esc(uc)}${feitos.length ? ` — preenchido: ${esc(feitos.join(", "))}` : ""}.</div>`
     + (data.status === "andamento" ? `<div class="dica" style="color:var(--alerta)">⚠ Este RI ainda está em andamento na sala. Confirme com a sala o fim do incêndio.</div>` : "")

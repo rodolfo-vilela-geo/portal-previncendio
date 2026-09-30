@@ -170,6 +170,7 @@ const uc = r => `${SIGLA_UC[r.categoria] || r.categoria || ""} ${r.nome_uc || ""
 const base = r => SIGLA_BASE[r.base_op] || r.base_op || "—";
 function recursos(r){
   const linhas = REC.filter(([k]) => r.rec && r.rec[k]).map(([k,t]) => `${String(r.rec[k]).padStart(2,"0")} ${t};`);
+  if (r.fonte === "atuacoes" && r.recursos_txt) return esc(r.recursos_txt);   // atuações: nomes padronizados por instituição
   if (r.importado && r.recursos_txt) return esc(r.recursos_txt.replace(/\s*\n\s*/g,"\n").trim());   // texto original da planilha
   return esc([...linhas, r.recursos_txt || ""].filter(Boolean).join("\n"));
 }
