@@ -67,7 +67,7 @@
   #status.ok{color:var(--ok)} #status.erro{color:var(--erro)} #status.alerta{color:var(--alerta)}
   .desativado{opacity:.45;pointer-events:none}
   #relatorio{display:none}
-  .poli{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:14px;align-items:start;margin-top:12px}
+  .poli{display:grid;grid-template-columns:minmax(260px,480px) 1fr;gap:14px;align-items:start;margin-top:12px}
   .poli svg{width:100%;height:auto;background:#f1ece6;border:1px solid var(--linha);border-radius:8px}
   .poli .dados div{margin-bottom:4px}
   @media (max-width:560px){ .poli{grid-template-columns:1fr} }
@@ -81,7 +81,7 @@
   @media print{
     @page{size:A4;margin:14mm 12mm}
     body{background:#fff;font:10.5pt/1.3 Arial,Helvetica,sans-serif}
-    header.topo,main,.barra-envio{display:none!important}
+    header.topo,main,.barra-envio,#versao{display:none!important}
     #relatorio{display:block}
   }
   #relatorio .cab{display:flex;gap:10px;align-items:flex-start;font-size:9.5pt;line-height:1.25}
@@ -328,6 +328,7 @@
   </div>
 </div>
 
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.3</div>
 <div id="relatorio"></div>
 
 <script>
@@ -830,7 +831,9 @@ function mostrarPoligono(){
   if (!poligonos.length){ $("#poliInfo").innerHTML=""; return; }
   const ha = areaHa(poligonos), tot=(num(F("area_int").value)||0)+(num(F("area_ent").value)||0);
   const dif = tot>0 ? Math.abs(ha-tot)/tot : 0;
-  $("#poliInfo").innerHTML = `<div class="poli">${desenhoSVG(poligonos)}
+  const cc = coords(), cod = codBdp() || "", u = UCS[F("nome_uc").value];
+  const nomeUC = F("nome_uc").value ? [CATEGORIAS[u?.categoria] || u?.categoria, F("nome_uc").value].filter(Boolean).join(" ") : "";
+  $("#poliInfo").innerHTML = `<div class="poli">${desenhoMapa(poligonos, {ponto: (cc.lat!==null && cc.lon!==null) ? cc : null, codigo: cod, uc: nomeUC})}
     <div class="dados"><div><b>${esc(poliArquivo)}</b></div>
       <div>${poligonos.length} polígono(s) · <b>${fmtHa(ha)} ha</b> (área calculada)</div>
       ${tot>0 && dif>0.1 ? `<div class="dica" style="color:var(--alerta)">A área do polígono difere ${Math.round(dif*100)}% do total informado na seção 4 (${fmtHa(tot)} ha). Confira.</div>` : ""}
