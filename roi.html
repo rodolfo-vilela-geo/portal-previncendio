@@ -321,14 +321,14 @@
   <div class="dentro">
     <span id="status">Rascunho salvo automaticamente neste navegador.</span>
     <span>
-      <button type="button" class="btn" id="btnShp" hidden>Baixar shapefile (BDG)</button>
+      <button type="button" class="btn" id="btnShp" disabled title="Disponível após enviar o ROI (com o KML do SMC anexado)">Baixar shapefile (BDG)</button>
       <button type="button" class="btn" id="btnPdf">Gerar PDF para o SEI</button>
       <button type="button" class="btn primario" id="btnEnviar">Enviar ROI</button>
     </span>
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.6</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.7</div>
 <div id="relatorio"></div>
 
 <script>
@@ -1029,7 +1029,8 @@ $("#btnEnviar").onclick = async () => {
     status(`ROI ${r.cod_bdp} enviado com sucesso. Gere o PDF para o SEI.`, "ok");
     try{ localStorage.removeItem(CHAVE_RASCUNHO); }catch(e){}
     btn.textContent = "Enviado ✓";
-    $("#btnShp").hidden = !poligonos.length;
+    $("#btnShp").disabled = !poligonos.length;
+    $("#btnShp").title = poligonos.length ? "Baixar o polígono com os atributos do BDG" : "Anexe o KML do SMC para gerar o shapefile";
   }catch(e){
     status(e.message + (progresso.roi ? " — o relatório já foi gravado; clique em Enviar de novo para completar." : ""), "erro");
     btn.disabled = false;
