@@ -1,6 +1,6 @@
 -- =====================================================================
 --  PORTAL PREVINCÊNDIO — ESQUEMA DO BANCO DE ROIs (Supabase / PostgreSQL)
---  IEF-MG / DIUC / GPCIF
+--  IEF-MG / DIUC / Previncêndio
 --
 --  Como usar: Supabase → SQL Editor → New query → colar tudo → Run.
 --  Rodar UMA vez, num projeto novo. Depois rodar 02_listas_suspensas.sql.

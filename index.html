@@ -239,7 +239,7 @@
   <!-- 3. UNIDADES DE CONSERVAÇÃO -->
   <section>
     <div class="tit"><h2>Unidades de Conservação</h2>
-      <span class="cadeado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>login · gerentes e GPCIF</span></div>
+      <span class="cadeado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>login · gerentes e Previncêndio</span></div>
     <p class="sub">Painel de indicadores e cadastro de cada UC, em módulos.</p>
     <a class="card largo" href="painel_uc.html" style="margin-bottom:12px">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
@@ -309,7 +309,7 @@ const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
     let n = 0;
     document.querySelectorAll("#secGestao [data-papeis]").forEach(a => { const ok = a.dataset.papeis.split(" ").includes(p.papel); a.hidden = !ok; n += ok; });
     if (!n) return;
-    document.getElementById("gQuem").textContent = `${p.nome} · ${({gerente:"gerente",sala:"Sala de Situação",gpcif:"GPCIF",admin:"administrador"})[p.papel] || p.papel}`;
+    document.getElementById("gQuem").textContent = `${p.nome} · ${({gerente:"gerente",sala:"Sala de Situação",gpcif:"Previncêndio",admin:"administrador"})[p.papel] || p.papel}`;
     document.getElementById("secGestao").hidden = false;
   }catch(e){}
 })();

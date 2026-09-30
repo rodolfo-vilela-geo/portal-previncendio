@@ -11,7 +11,7 @@ create table equipe (
   ativo      boolean not null default true,
   criado_em  timestamptz not null default now()
 );
-comment on table equipe is 'Membros com acesso à área interna (sala de situação, GPCIF). Login sem cadastro aqui não acessa nada.';
+comment on table equipe is 'Membros com acesso à área interna (sala de situação, Previncêndio). Login sem cadastro aqui não acessa nada.';
 
 create or replace function is_equipe() returns boolean
 language sql stable security definer set search_path = public as $$

@@ -558,7 +558,7 @@ function aplicarUC(trocouUC){
     } else el.disabled = false;
   });
   $("#dicaUC").innerHTML = u
-    ? `🔒 Categoria, grupo, bioma, regional e base vêm do cadastro da UC. Algo errado? Avise a GPCIF para corrigir o cadastro.`
+    ? `🔒 Categoria, grupo, bioma, regional e base vêm do cadastro da UC. Algo errado? Avise o Previncêndio para corrigir o cadastro.`
     : `Ao escolher a unidade, os dados fixos são preenchidos pelo cadastro de UCs.`;
   if (!u) return;
   const mun = [...(u.mun||[]), ...[...$("#listaMun").options].map(o=>o.value).filter(m => !(u.mun||[]).includes(m))];

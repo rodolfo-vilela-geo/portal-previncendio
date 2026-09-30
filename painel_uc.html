@@ -104,13 +104,13 @@
 <body>
 <header class="topo">
   <div class="marca"><a href="index.html" class="logo" title="SIGFogo"><img src="img/logo_portal_selo.png" alt="SIGFogo"></a>
-    <div><div class="inst"><a href="index.html">← SIGFogo</a> · GPCIF · IEF-MG</div><h1>Painel da Unidade de Conservação</h1></div></div>
+    <div><div class="inst"><a href="index.html">← SIGFogo</a> · Previncêndio · IEF-MG</div><h1>Painel da Unidade de Conservação</h1></div></div>
   <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn" id="sair">Sair</button></div>
 </header>
 
 <section id="telaLogin" hidden>
   <h2 style="margin:0 0 4px;font-size:19px">Entrar</h2>
-  <p style="margin:0 0 14px;font-size:13px;color:var(--suave)">Painel para os gestores das UCs e a equipe da GPCIF.</p>
+  <p style="margin:0 0 14px;font-size:13px;color:var(--suave)">Painel para os gestores das UCs e a equipe do Previncêndio.</p>
   <form id="formLogin">
     <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
     <div style="height:10px"></div>
@@ -151,7 +151,7 @@ async function entrar(){
   const {data:{session}} = await sb.auth.getSession();
   if (!session){ $("#telaLogin").hidden = false; $("#app").hidden = true; return; }
   const {data, error} = await sb.rpc("meu_perfil");
-  if (error || !data){ $("#erroLogin").textContent = "Seu e-mail não está cadastrado. Fale com a GPCIF."; await sb.auth.signOut(); $("#telaLogin").hidden = false; return; }
+  if (error || !data){ $("#erroLogin").textContent = "Seu e-mail não está cadastrado. Fale com o Previncêndio."; await sb.auth.signOut(); $("#telaLogin").hidden = false; return; }
   perfil = data; $("#quem").textContent = perfil.nome; $("#usuario").hidden = false; $("#telaLogin").hidden = true; $("#app").hidden = false;
   const {data: ucs} = await sb.from("uc").select("nome_uc,categoria,ufbio").eq("ativo", true).order("nome_uc");
   const minhas = new Set(perfil.ucs || []), regs = {};

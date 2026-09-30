@@ -5,7 +5,7 @@
 --  Módulo 4 · Rede de apoio: 6 parceiros (e outros contatos), 7 prestadores
 --    de serviço, 8 colaboradores/moradores, 9 brigadistas voluntários.
 --  Mesmas regras dos módulos 1 e 2: todos os usuários logados veem; o
---  gerente edita as suas UCs; GPCIF/admin editam todas; tudo vai para a
+--  gerente edita as suas UCs; Previncêndio/admin editam todas; tudo vai para a
 --  auditoria. Nada disso é público (nomes e telefones de terceiros).
 -- =====================================================================
 

@@ -4,7 +4,7 @@
 --  · todos os usuários logados VEEM todas as UCs; EDITAM só as suas
 --    (gerente) ou todas (gpcif/admin);
 --  · cadastro da UC = seção 3 do PIPCIF + sede (4.1);
---  · regionais (URFBio) com coordenador e contatos, editadas pela GPCIF;
+--  · regionais (URFBio) com coordenador e contatos, editadas pelo Previncêndio;
 --  · histórico de alterações genérico (quem, quando, antes → depois),
 --    reaproveitado pelos próximos módulos.
 -- =====================================================================
@@ -18,7 +18,7 @@ alter table equipe add column telefone text,
                    add column trocar_senha boolean not null default false,
                    add column atualizado_em timestamptz not null default now();
 
--- equipe interna (sala, GPCIF, admin): continua sendo quem acessa RI, ROI, atuações...
+-- equipe interna (sala, Previncêndio, admin): continua sendo quem acessa RI, ROI, atuações...
 create or replace function is_equipe() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from equipe

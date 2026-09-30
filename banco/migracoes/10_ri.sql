@@ -1,6 +1,6 @@
 -- =====================================================================
 --  PORTAL PREVINCÊNDIO — RI (REGISTRO DE INCÊNDIO) DA SALA DE SITUAÇÃO
---  Documento da GPCIF: dá início à ocorrência e, depois, ao ROI da UC.
+--  Documento do Previncêndio: dá início à ocorrência e, depois, ao ROI da UC.
 --    ri         = cabeçalho (nº sequencial único no ano, UC, detecção, fim...)
 --    ri_evento  = log de ligações/atualizações com recursos empenhados
 --    vw_boletim = situação atual de cada RI (recursos do último evento)

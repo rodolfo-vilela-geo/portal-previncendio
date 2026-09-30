@@ -149,13 +149,13 @@
 <body>
 <header class="topo">
   <div class="marca"><a href="index.html" class="logo" title="SIGFogo"><img src="img/logo_portal_selo.png" alt="SIGFogo"></a>
-    <div><div class="inst"><a href="index.html">← SIGFogo</a> · GPCIF · IEF-MG</div><h1>Cadastro das UCs</h1></div></div>
+    <div><div class="inst"><a href="index.html">← SIGFogo</a> · Previncêndio · IEF-MG</div><h1>Cadastro das UCs</h1></div></div>
   <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn peq" id="btnSenha">Trocar senha</button><button class="btn peq" id="sair">Sair</button></div>
 </header>
 
 <section id="telaLogin">
   <h2>Entrar</h2>
-  <p class="dica" style="margin:0 0 14px">Acesso para os gerentes das UCs e a equipe da GPCIF.</p>
+  <p class="dica" style="margin:0 0 14px">Acesso para os gerentes das UCs e a equipe do Previncêndio.</p>
   <form id="formLogin">
     <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
     <div style="height:10px"></div>
@@ -163,7 +163,7 @@
     <div style="height:14px"></div>
     <button class="btn primario" style="width:100%">Entrar</button>
     <p id="erroLogin" class="dica" style="color:var(--erro);min-height:18px"></p>
-    <p class="dica">Esqueceu a senha ou ainda não tem acesso? Fale com a GPCIF, que gera uma senha provisória.</p>
+    <p class="dica">Esqueceu a senha ou ainda não tem acesso? Fale com o Previncêndio, que gera uma senha provisória.</p>
   </form>
 </section>
 
@@ -190,7 +190,7 @@
   </section>
 
   <section class="painel" id="aba-regionais">
-    <p class="dica" style="margin-top:0">Dados da Unidade Regional de Florestas e Biodiversidade que aparecem no PIPCIF de todas as UCs da regional. Editados pela GPCIF.</p>
+    <p class="dica" style="margin-top:0">Dados da Unidade Regional de Florestas e Biodiversidade que aparecem no PIPCIF de todas as UCs da regional. Editados pelo Previncêndio.</p>
     <div class="cartoes" id="cartoesRegionais"></div>
   </section>
 
@@ -198,7 +198,7 @@
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
       <button class="btn primario" id="novoUsuario">+ Novo usuário</button>
       <input id="uBusca" placeholder="Buscar nome, e-mail ou UC" style="max-width:320px">
-      <span class="dica">Gerentes editam só as UCs marcadas; GPCIF e admin editam todas; sala só visualiza. Todos veem todas as UCs.</span>
+      <span class="dica">Gerentes editam só as UCs marcadas; Previncêndio e admin editam todas; sala só visualiza. Todos veem todas as UCs.</span>
     </div>
     <div id="editorUsuario"></div>
     <div class="tab-wrap"><table class="tab" id="tabUsuarios"></table></div>
@@ -233,7 +233,7 @@ let tMsg; function msg(t, tipo=""){ const m=$("#msg"); m.textContent=t; m.classN
 const CATS = {PAR:"Parque Estadual", APA:"Área de Proteção Ambiental", MONA:"Monumento Natural", ESEC:"Estação Ecológica", REBIO:"Reserva Biológica",
               RVS:"Refúgio de Vida Silvestre", FLOE:"Floresta Estadual", RDS:"Reserva de Desenvolvimento Sustentável", APE:"Área de Proteção Especial"};
 const SIGLA = {PAR:"PE", APA:"APA", MONA:"MN", ESEC:"EE", REBIO:"REBIO", RVS:"REVS", FLOE:"FE", RDS:"RDS", APE:"APE"};
-const PAPEIS = {gerente:"Gerente de UC", sala:"Sala de Situação", gpcif:"GPCIF", admin:"Administrador"};
+const PAPEIS = {gerente:"Gerente de UC", sala:"Sala de Situação", gpcif:"Previncêndio", admin:"Administrador"};
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const BIOMAS = ["Cerrado","Mata Atlântica","Caatinga"];
 const ROTULOS = {gerente_nome:"Gerente", gerente_contatos:"Contatos do gerente", func_adm:"Funcionários administrativos", func_oper:"Funcionários operacionais",
@@ -255,7 +255,7 @@ async function entrar(){
   const {data:{session}} = await sb.auth.getSession();
   if (!session){ $("#telaLogin").style.display="block"; $("#app").style.display="none"; $("#usuario").hidden=true; return; }
   const {data, error} = await sb.rpc("meu_perfil");
-  if (error || !data){ $("#erroLogin").textContent = "Seu e-mail não está cadastrado. Fale com a GPCIF."; await sb.auth.signOut(); $("#telaLogin").style.display="block"; return; }
+  if (error || !data){ $("#erroLogin").textContent = "Seu e-mail não está cadastrado. Fale com o Previncêndio."; await sb.auth.signOut(); $("#telaLogin").style.display="block"; return; }
   perfil = data;
   $("#quem").textContent = `${perfil.nome} · ${PAPEIS[perfil.papel]||perfil.papel}`; $("#usuario").hidden = false;
   $("#telaLogin").style.display = "none"; $("#app").style.display = "block";
@@ -327,7 +327,7 @@ function desenharLista(){
       <div class="n"><span>${esc(rotuloUC(u))}</span>${m.has(u.nome_uc) ? `<span class="minha">minha</span>` : ""}</div>
       <div class="sub">${esc(u.ufbio||"")}${u.gerente_nome ? " · "+esc(u.gerente_nome) : ""}</div>
       <div class="barra-pct ${u.completo_pct < 50 ? "baixo":""}" title="${u.completo_pct}% da seção 3 preenchida"><i style="width:${u.completo_pct}%"></i></div>
-    </div>`).join("") : `<div class="vazio">${filtroMinhas ? "Nenhuma UC ligada ao seu login. Veja “Todas” ou fale com a GPCIF." : "Nenhuma UC encontrada."}</div>`;
+    </div>`).join("") : `<div class="vazio">${filtroMinhas ? "Nenhuma UC ligada ao seu login. Veja “Todas” ou fale com o Previncêndio." : "Nenhuma UC encontrada."}</div>`;
   $$(".item").forEach(el => el.onclick = () => abrirUC(el.dataset.uc));
 }
 $$("#segMinhas button").forEach(b => b.onclick = () => { filtroMinhas = b.dataset.v === "minhas"; $$("#segMinhas button").forEach(x => x.setAttribute("aria-pressed", x===b)); desenharLista(); });
@@ -424,7 +424,7 @@ async function abrirUC(nome){
         <div><span>Base operacional</span>${esc(u.base_op||"—")}</div><div><span>Área pelo limite oficial (IDE-Sisema)</span>${u.area_limite_ha ? fmtNum(u.area_limite_ha)+" ha" : "sem limite cadastrado"}</div>
         <div><span>Login de gerente</span>${gerentes.length ? esc(gerentes.join(", ")) : "nenhum"}</div>
       </div>
-      <p class="dica" style="margin:8px 0 0">Vêm do cadastro fixo usado no ROI e no BDG. Correções: fale com a GPCIF.</p>
+      <p class="dica" style="margin:8px 0 0">Vêm do cadastro fixo usado no ROI e no BDG. Correções: fale com o Previncêndio.</p>
     </fieldset>
 
     <fieldset><legend>Gestão</legend>
@@ -487,7 +487,7 @@ async function abrirUC(nome){
     <fieldset><legend>Observações</legend><textarea data-k="obs" ${ed?"":"disabled"}>${esc(d.obs||"")}</textarea></fieldset>
 
     ${ed ? `<div class="acoes"><button class="btn primario" id="salvarUC">Salvar cadastro</button><span class="dica" id="estadoSalvo">${d.atualizado_em ? `Última alteração: ${esc(nomePor(d.atualizado_por))} em ${fmtDH(d.atualizado_em)}` : ""}</span></div>`
-         : `<p class="dica" style="margin-top:12px">${d.atualizado_em ? `Última alteração: ${esc(nomePor(d.atualizado_por))} em ${fmtDH(d.atualizado_em)}.` : ""} Para editar esta UC, o seu login precisa estar ligado a ela (fale com a GPCIF).</p>`}
+         : `<p class="dica" style="margin-top:12px">${d.atualizado_em ? `Última alteração: ${esc(nomePor(d.atualizado_por))} em ${fmtDH(d.atualizado_em)}.` : ""} Para editar esta UC, o seu login precisa estar ligado a ela (fale com o Previncêndio).</p>`}
 
     <details class="historico"><summary>Histórico de alterações (${(hist||[]).length})</summary>${htmlHistorico(hist||[])}</details>
     </div><div id="mod-conteudo"></div>`;

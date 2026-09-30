@@ -4,7 +4,7 @@
 --  4.3 vigilância, 4.7 pistas de pouso, 4.8 helipontos, 4.9 estações
 --  meteorológicas e 4.10 hidrantes/pontos de água (uc_ponto, georreferenciados).
 --  Mesmas regras do cadastro: todos os usuários veem; gerente edita as suas
---  UCs; GPCIF/admin editam todas; toda alteração vai para a auditoria.
+--  UCs; Previncêndio/admin editam todas; toda alteração vai para a auditoria.
 -- =====================================================================
 
 -- auditoria: referência legível do item alterado (ex.: "Heliponto: Campo de futebol")

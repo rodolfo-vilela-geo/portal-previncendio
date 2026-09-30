@@ -32,7 +32,7 @@ insert into dominio_campo (campo, rotulo, editavel, motivo, ordem) values
  ('municipio', 'Município',                     true,  'Ao corrigir a grafia, o cadastro de UCs e os RIs também são atualizados.', 4),
  ('local',     'Localização (interno/entorno)', false, 'Usada nas classes e no cálculo de área interna/entorno do BDG.', 10),
  ('ind_aut',   'Auto de infração',              false, 'Lista Sim/Não.', 11),
- ('nome_uc',   'Unidade de Conservação',        false, 'Vem do cadastro de UCs e dos limites; mudanças de nome/categoria são feitas pela GPCIF com migração.', 12),
+ ('nome_uc',   'Unidade de Conservação',        false, 'Vem do cadastro de UCs e dos limites; mudanças de nome/categoria são feitas pelo Previncêndio com migração.', 12),
  ('categoria', 'Categoria da UC',               false, 'Categorias do SNUC; estrutural.', 13),
  ('grupo',     'Grupo (PI/US)',                 false, 'Estrutural (SNUC).', 14),
  ('bioma_uc',  'Bioma',                         false, 'Estrutural.', 15),
