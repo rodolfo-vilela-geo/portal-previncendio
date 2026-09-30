@@ -103,6 +103,7 @@
   .marca{display:flex;align-items:center;gap:12px;min-width:0}
   .logo img{height:50px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
+<script src="fluxo.js?v=20260930d" data-passo="roi"></script>
 </head>
 <body>
 
@@ -513,6 +514,7 @@ async function preencherDoRI(){
   let data = null;
   try{ const r = await comPrazo(sb.rpc("ri_para_roi", {p_ano: ano, p_ri: ri}), 10000); if (!r.error) data = r.data; }catch(e){ return; }
   if (chave !== chaveRI) return;
+  if (data) window.fluxoRI?.(ano, ri);
   if (!data){ $("#riInfo").innerHTML = `<div class="dica" style="color:var(--alerta)">RI ${esc(chave.slice(5))}/${ano} não encontrado no registro da Sala de Situação. Confira o número com a sala.</div>`; return; }
   const vazio = n => !F(n).value || !String(F(n).value).trim(), feitos = [];
   if (data.nome_uc && UCS[data.nome_uc] && F("nome_uc").value !== data.nome_uc){

@@ -96,6 +96,7 @@
   .marca{display:flex;align-items:center;gap:12px;min-width:0}
   .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
+<script src="fluxo.js?v=20260930d" data-passo="ri"></script>
 </head>
 <body>
 <header class="topo">
@@ -427,7 +428,7 @@ async function abrirRI(ano, ri){
     sb.from("ri_evento").select("*").eq("ano", ano).eq("ri", ri).order("data_hora", {ascending:true, nullsFirst:true}).order("id")
   ]);
   if (error){ msg("RI não encontrado: " + error.message, "erro"); return; }
-  atual = r; desenharLista();
+  atual = r; desenharLista(); window.fluxoRI?.(r.ano, r.ri);
   const ultimo = [...(evs||[])].reverse().find(e => e.recursos_txt || PESSOAS.some(([k])=>e[k]!=null)) || null;
   const prazo = r.dat_final ? new Date(new Date(r.dat_final+"T12:00").getTime() + 10*864e5).toISOString().slice(0,10) : null;
   const linkROI = `roi.html?ano=${r.ano}&ri=${r.ri}`;
@@ -435,7 +436,7 @@ async function abrirRI(ano, ri){
     <h2>RI ${r.ri}/${r.ano} <span class="selo ${r.status}">${r.status}</span> <span style="font-weight:500">${esc(rotuloUC(r.nome_uc))}</span></h2>
     <div class="dica">${esc(r.base_op||"")} · ${esc(r.municipio||"")} · criado por ${esc(r.criado_por||"—")}</div>
     <div class="dica" style="margin-top:4px">${prazo ? `Prazo do ROI: <b>${fmtD(prazo)}</b> · ` : "Prazo do ROI começa a contar quando o fim for registrado · "}
-      <a href="${linkROI}" target="_blank">abrir o formulário do ROI com este RI ↗</a></div>
+      <a href="smc.html">mapear no SMC</a> · <a href="${linkROI}">abrir o ROI deste RI</a></div>
     <div class="bloco" id="atuacoes"><h3>Apoios empenhados (atuações)</h3><div class="dica">Carregando…</div></div>
     <div class="bloco"><h3>Linha do tempo (${(evs||[]).length})</h3>
       <ul class="linha-tempo">${(evs||[]).map(e => `<li>
