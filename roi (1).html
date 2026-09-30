@@ -114,6 +114,16 @@
     <button type="button" class="btn peq" id="btnDescartar">Começar do zero</button>
   </div>
 
+  <section class="bloco">
+    <h2>Comece por aqui · Polígono da área queimada (KML do SMC)</h2>
+    <div class="corpo">
+      <input type="file" id="inPoli" accept=".kml,.kmz,.geojson,.json">
+      <div class="dica">Anexe o KML exportado do SMC (também aceita KMZ e GeoJSON). Os atributos do arquivo — áreas, municípios, UC — preenchem o formulário automaticamente; confira depois. No PDF, o polígono aparece como seção 12.</div>
+      <div id="poliInfo"></div>
+      <div id="smcAttr"></div>
+    </div>
+  </section>
+
   <!-- ============ IDENTIFICAÇÃO ============ -->
   <section class="bloco">
     <h2>Identificação</h2>
@@ -300,14 +310,6 @@
     </div>
   </section>
 
-  <section class="bloco">
-    <h2>12. Polígono georreferenciado da área queimada</h2>
-    <div class="corpo">
-      <input type="file" id="inPoli" accept=".kml,.kmz,.geojson,.json">
-      <div class="dica">Anexe o KML exportado do SMC (também aceita KMZ e GeoJSON). Pode conter mais de um polígono.</div>
-      <div id="poliInfo"></div>
-    </div>
-  </section>
 
   <section class="bloco">
     <h2>Observações</h2>
@@ -319,6 +321,7 @@
   <div class="dentro">
     <span id="status">Rascunho salvo automaticamente neste navegador.</span>
     <span>
+      <button type="button" class="btn" id="btnShp" hidden>Baixar shapefile (BDG)</button>
       <button type="button" class="btn" id="btnPdf">Gerar PDF para o SEI</button>
       <button type="button" class="btn primario" id="btnEnviar">Enviar ROI</button>
     </span>
@@ -602,7 +605,14 @@ function lerCoords(txt){
 function lerKML(texto){
   const doc = new DOMParser().parseFromString(texto, "application/xml");
   if (doc.getElementsByTagName("parsererror").length) throw new Error("arquivo KML inválido");
-  const polis = [];
+  const polis = [], props = [];
+  for (const pm of doc.getElementsByTagNameNS("*", "Placemark")){        // atributos (ExtendedData)
+    const p = {};
+    for (const d of pm.getElementsByTagNameNS("*", "Data")) p[d.getAttribute("name")] = d.getElementsByTagNameNS("*","value")[0]?.textContent?.trim();
+    for (const d of pm.getElementsByTagNameNS("*", "SimpleData")) p[d.getAttribute("name")] = d.textContent.trim();
+    const nm = pm.getElementsByTagNameNS("*", "name")[0]; if (nm && !p.name) p.name = nm.textContent.trim();
+    props.push(p);
+  }
   for (const pg of doc.getElementsByTagNameNS("*", "Polygon")){
     const ext = pg.getElementsByTagNameNS("*", "outerBoundaryIs")[0];
     if (!ext) continue;
@@ -611,11 +621,13 @@ function lerKML(texto){
       aneis.push(fecharAnel(lerCoords(inn.getElementsByTagNameNS("*", "coordinates")[0]?.textContent)));
     if (aneis[0].length >= 4) polis.push(aneis);
   }
-  return polis;
+  return {polis, props};
 }
 function lerGeoJSON(texto){
   const g = JSON.parse(texto), polis = [];
-  const geoms = g.type==="FeatureCollection" ? g.features.map(f=>f.geometry) : g.type==="Feature" ? [g.geometry] : [g];
+  const feats = g.type==="FeatureCollection" ? g.features : g.type==="Feature" ? [g] : [];
+  const props = feats.map(f => f.properties || {});
+  const geoms = feats.length ? feats.map(f=>f.geometry) : [g];
   const add = (geo) => {
     if (!geo) return;
     if (geo.type==="Polygon") polis.push(geo.coordinates.map(a => fecharAnel(a.map(c=>[c[0],c[1]]))));
@@ -623,13 +635,15 @@ function lerGeoJSON(texto){
     else if (geo.type==="GeometryCollection") geo.geometries.forEach(add);
   };
   geoms.forEach(add);
-  return polis;
+  return {polis, props};
+}
+async function carregarJSZip(){
+  if (window.JSZip) return;
+  await new Promise((ok, falha) => { const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"; s.onload=ok; s.onerror=()=>falha(new Error("sem internet para carregar o compactador")); document.head.appendChild(s); });
 }
 async function lerKMZ(arquivo){
-  if (!window.JSZip){
-    await new Promise((ok, falha) => { const s=document.createElement("script");
-      s.src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"; s.onload=ok; s.onerror=()=>falha(new Error("sem internet para abrir KMZ")); document.head.appendChild(s); });
-  }
+  await carregarJSZip();
   const zip = await JSZip.loadAsync(arquivo);
   const kml = Object.values(zip.files).find(f => /\.kml$/i.test(f.name));
   if (!kml) throw new Error("o KMZ não contém KML");
@@ -657,6 +671,50 @@ function desenhoSVG(polis, larg=260, alt=200){
   const d = polis.map(p => p.map(a => "M"+a.map(P).join("L")+"Z").join("")).join("");
   return `<svg viewBox="0 0 ${larg} ${alt}" xmlns="http://www.w3.org/2000/svg"><path d="${d}" fill="#c0392b" fill-opacity=".35" stroke="#7a1f1f" stroke-width="1.5" fill-rule="evenodd"/></svg>`;
 }
+/* Atributos do SMC -> campos do ROI (nomes reconhecidos sem acento/maiúscula) */
+const norm = k => String(k||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+const SINONIMOS = {
+  area_int: ["area_int","area_interna","area_interna_ha","area_int_ha","interna_ha","area_uc","area_dentro","area_dentro_uc"],
+  area_ent: ["area_ent","area_entorno","area_entorno_ha","area_ent_ha","entorno_ha","area_za","area_fora","area_fora_uc"],
+  area_tot: ["area_ha","area_total","area_total_ha","area","areaha","area_queimada","area_queimada_ha"],
+  municipio:["municipio","municipios","nm_mun","nome_mun","nm_municip","mun","cidade"],
+  nome_uc:  ["nome_uc","uc","nm_uc","unidade","unidade_conservacao","nome_da_uc"]
+};
+function pegar(props, chave){
+  for (const p of props){ for (const [k,v] of Object.entries(p)) if (SINONIMOS[chave].includes(norm(k)) && v!=null && String(v).trim()!=="") return v; }
+  return null;
+}
+function somar(props, chave){
+  let t=null; props.forEach(p => { for (const [k,v] of Object.entries(p)) if (SINONIMOS[chave].includes(norm(k))) { const n=num(v); if (n!==null) t=(t||0)+n; } });
+  return t;
+}
+function preencherDoSMC(props){
+  props = (props||[]).filter(p => Object.keys(p).length);
+  const feitos = [];
+  const ai = somar(props,"area_int"), ae = somar(props,"area_ent");
+  if (ai!==null){ F("area_int").value = ai.toFixed(2); feitos.push(`área interna ${fmtHa(ai)} ha`); }
+  if (ae!==null){ F("area_ent").value = ae.toFixed(2); feitos.push(`entorno ${fmtHa(ae)} ha`); }
+  const mun = [...new Set(props.flatMap(p => { const v = pegar([p],"municipio"); return v ? String(v).split(/\s*[\/;,]\s*/) : []; }).filter(Boolean))];
+  if (mun.length){ F("municipio").value = mun.join("/"); feitos.push(`municípios ${mun.join(", ")}`); }
+  const uc = pegar(props,"nome_uc");
+  if (uc && !F("nome_uc").value){
+    // nome exato primeiro; senão, o nome MAIS LONGO contido no texto (ex.: "PE Serra do Cabral").
+    // Assim "Rio Pandeiros" nunca vira "Pandeiros".
+    const nomes = Object.keys(UCS), u = norm(uc);
+    const alvo = nomes.find(n => norm(n) === u)
+      || nomes.filter(n => u.endsWith("_" + norm(n)) || u === norm(n)).sort((x,y) => y.length - x.length)[0];
+    if (alvo){ F("nome_uc").value = alvo; aplicarUC(true); if (mun.length) F("municipio").value = mun.join("/"); feitos.push(`UC ${alvo}`); }
+  }
+  const tot = somar(props,"area_tot");
+  const ha = areaHa(poligonos);
+  const lista = props.length ? Object.entries(props[0]).map(([k,v]) => `${k}: ${v}`).join(" · ") : "";
+  $("#smcAttr").innerHTML = feitos.length
+    ? `<div class="dica" style="color:var(--ok)">✓ Preenchido pelo SMC: ${esc(feitos.join(" · "))}. Confira nas seções abaixo.</div>`
+    : `<div class="dica">Nenhum atributo reconhecido no arquivo para preencher o formulário${tot!==null ? ` (área total no arquivo: ${fmtHa(tot)} ha)` : ""}.</div>`;
+  if (lista) $("#smcAttr").innerHTML += `<details style="margin-top:4px"><summary class="dica" style="cursor:pointer">Atributos do arquivo</summary><div class="dica">${esc(lista)}</div></details>`;
+  mudou();
+}
+
 function mostrarPoligono(){
   if (!poligonos.length){ $("#poliInfo").innerHTML=""; return; }
   const ha = areaHa(poligonos), tot=(num(F("area_int").value)||0)+(num(F("area_ent").value)||0);
@@ -666,20 +724,22 @@ function mostrarPoligono(){
       <div>${poligonos.length} polígono(s) · <b>${fmtHa(ha)} ha</b> (área calculada)</div>
       ${tot>0 && dif>0.1 ? `<div class="dica" style="color:var(--alerta)">A área do polígono difere ${Math.round(dif*100)}% do total informado na seção 4 (${fmtHa(tot)} ha). Confira.</div>` : ""}
       <button type="button" class="btn peq" id="remPoli">remover</button></div></div>`;
-  $("#remPoli").onclick = () => { poligonos=[]; poliArquivo=""; progresso.poli=false; mostrarPoligono(); };
+  $("#remPoli").onclick = () => { poligonos=[]; poliArquivo=""; progresso.poli=false; $("#smcAttr").innerHTML=""; mostrarPoligono(); };
 }
 $("#inPoli").addEventListener("change", async e => {
   const a = e.target.files[0]; if (!a) return;
   try{
-    let polis;
-    if (/\.kmz$/i.test(a.name)) polis = await lerKMZ(a);
-    else if (/\.(geo)?json$/i.test(a.name)) polis = lerGeoJSON(await a.text());
-    else polis = lerKML(await a.text());
+    let lido;
+    if (/\.kmz$/i.test(a.name)) lido = await lerKMZ(a);
+    else if (/\.(geo)?json$/i.test(a.name)) lido = lerGeoJSON(await a.text());
+    else lido = lerKML(await a.text());
+    const polis = lido.polis;
     if (!polis.length) throw new Error("nenhum polígono encontrado no arquivo");
     const fora = polis.flat(2).some(([x,y]) => x<-51.5||x>-39.5||y<-23.5||y>-14);
     if (fora) throw new Error("o polígono está fora de Minas Gerais (confira o sistema de coordenadas)");
     poligonos = polis; poliArquivo = a.name; progresso.poli = false;
     mostrarPoligono();
+    preencherDoSMC(lido.props);
   }catch(err){ alert("Não foi possível ler o polígono: " + err.message); }
   e.target.value = "";
 });
@@ -799,10 +859,108 @@ $("#btnEnviar").onclick = async () => {
     status(`ROI ${r.cod_bdp} enviado com sucesso. Gere o PDF para o SEI.`, "ok");
     try{ localStorage.removeItem(CHAVE_RASCUNHO); }catch(e){}
     btn.textContent = "Enviado ✓";
+    $("#btnShp").hidden = !poligonos.length;
   }catch(e){
     status(e.message + (progresso.roi ? " — o relatório já foi gravado; clique em Enviar de novo para completar." : ""), "erro");
     btn.disabled = false;
   }
+};
+
+/* ================================================================
+   SHAPEFILE NO FORMATO DO BDG (atributos vindos do banco: vw_bdg)
+   ================================================================ */
+const PRJ_SIRGAS = 'GEOGCS["GCS_SIRGAS_2000",DATUM["D_SIRGAS_2000",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
+const NOMES_SHP = {vc_trator_d:"vc_tratord"};           // nomes com mais de 10 caracteres
+const CAMPOS_INT = /^(id|ano|comb_.*|total_comb|vc_(?!outro).*|a_air_tr|a_helicop)$/;
+const CAMPOS_DEC = /^(veg_(?!outro).*|area_int|area_ent|soma_area)$/;
+const dataBR = v => v ? v.slice(0,10).split("-").reverse().join("/") : "";
+function intervaloHMS(v){                                 // "6 days 19:55:00" -> "163:55:00"
+  if (!v) return "";
+  const m = String(v).match(/(?:(-?\d+) days? ?)?(-?\d+):(\d{2}):(\d{2})/); if (!m) return String(v);
+  const h = (+m[1]||0)*24 + (+m[2]); return `${h}:${m[3]}:${m[4]}`;
+}
+function valorShp(k, v){
+  if (v===null || v===undefined) return "";
+  if (/^(dat_|data_atua)/.test(k)) return dataBR(v);
+  if (/^dh_/.test(k)) return dataBR(v) + " " + String(v).slice(11,19);
+  if (/^(dur_ocor|tp_resp)$/.test(k)) return intervaloHMS(v);
+  if (typeof v === "boolean") return v ? "Sim" : "Não";
+  return v;
+}
+const enc = new TextEncoder();
+function cortarBytes(s, max=254){ s=String(s); while (enc.encode(s).length > max) s = s.slice(0,-1); return s; }
+function areaAssinada(a){ let s=0; for (let i=0;i<a.length-1;i++) s += a[i][0]*a[i+1][1] - a[i+1][0]*a[i][1]; return s/2; }
+function orientar(p){                                     // externo horário, buracos anti-horário (padrão ESRI)
+  return p.map((a,i) => { const cw = areaAssinada(a) < 0; return (i===0) === cw ? a : [...a].reverse(); });
+}
+function montarSHP(polis){
+  const regs = polis.map(orientar);
+  const bb = pts => pts.reduce((b,[x,y])=>[Math.min(b[0],x),Math.min(b[1],y),Math.max(b[2],x),Math.max(b[3],y)],[Infinity,Infinity,-Infinity,-Infinity]);
+  const conteudos = regs.map(p => { const pts=p.flat(); return 44 + 4*p.length + 16*pts.length; });
+  const tamShp = 100 + conteudos.reduce((s,c)=>s+8+c,0), tamShx = 100 + 8*regs.length;
+  const shp = new DataView(new ArrayBuffer(tamShp)), shx = new DataView(new ArrayBuffer(tamShx));
+  const caixa = bb(regs.flat(2));
+  [[shp,tamShp],[shx,tamShx]].forEach(([d,t]) => {
+    d.setInt32(0,9994); d.setInt32(24,t/2); d.setInt32(28,1000,true); d.setInt32(32,5,true);
+    caixa.forEach((v,i)=>d.setFloat64(36+8*i,v,true));
+  });
+  let o = 100;
+  regs.forEach((p,i) => {
+    const pts = p.flat(), b = bb(pts);
+    shx.setInt32(100+8*i, o/2); shx.setInt32(104+8*i, conteudos[i]/2);
+    shp.setInt32(o, i+1); shp.setInt32(o+4, conteudos[i]/2); o += 8;
+    shp.setInt32(o,5,true); b.forEach((v,j)=>shp.setFloat64(o+4+8*j,v,true));
+    shp.setInt32(o+36,p.length,true); shp.setInt32(o+40,pts.length,true); o += 44;
+    let ini=0; p.forEach(a => { shp.setInt32(o,ini,true); o+=4; ini+=a.length; });
+    pts.forEach(([x,y]) => { shp.setFloat64(o,x,true); shp.setFloat64(o+8,y,true); o+=16; });
+  });
+  return {shp: shp.buffer, shx: shx.buffer, n: regs.length};
+}
+function montarDBF(linha, nRegistros){
+  const chaves = Object.keys(linha);
+  const campos = chaves.map(k => {
+    const nome = (NOMES_SHP[k] || k).slice(0,10);
+    const v = valorShp(k, linha[k]);
+    if (CAMPOS_INT.test(k)) return {k, nome, tipo:"N", tam:10, dec:0, txt: v==="" ? "" : String(Math.round(Number(v)))};
+    if (CAMPOS_DEC.test(k)) return {k, nome, tipo:"N", tam:16, dec:2, txt: v==="" ? "" : Number(v).toFixed(2)};
+    const t = cortarBytes(v);
+    return {k, nome, tipo:"C", tam: Math.max(1, enc.encode(t).length), dec:0, txt:t};
+  });
+  const tamCab = 32 + 32*campos.length + 1, tamReg = 1 + campos.reduce((s,c)=>s+c.tam,0);
+  const buf = new Uint8Array(tamCab + tamReg*nRegistros + 1), d = new DataView(buf.buffer), hoje = new Date();
+  buf[0]=3; buf[1]=hoje.getFullYear()-1900; buf[2]=hoje.getMonth()+1; buf[3]=hoje.getDate();
+  d.setUint32(4,nRegistros,true); d.setUint16(8,tamCab,true); d.setUint16(10,tamReg,true);
+  campos.forEach((c,i) => { const b=32+32*i; enc.encode(c.nome).forEach((x,j)=>buf[b+j]=x);
+    buf[b+11]=c.tipo.charCodeAt(0); buf[b+16]=c.tam; buf[b+17]=c.dec; });
+  buf[tamCab-1] = 0x0D;
+  for (let r=0; r<nRegistros; r++){
+    let o = tamCab + r*tamReg; buf[o++] = 0x20;
+    campos.forEach(c => {
+      const bytes = enc.encode(c.txt), cel = new Uint8Array(c.tam).fill(0x20);
+      if (c.tipo==="N") cel.set(bytes, c.tam - bytes.length); else cel.set(bytes, 0);
+      buf.set(cel, o); o += c.tam;
+    });
+  }
+  buf[buf.length-1] = 0x1A;
+  return buf.buffer;
+}
+$("#btnShp").onclick = async () => {
+  const cod = codBdp();
+  if (!poligonos.length){ status("Anexe o KML do SMC (seção 12) para gerar o shapefile.", "alerta"); return; }
+  try{
+    status("Buscando os atributos do BDG no banco…");
+    const {data, error} = await sb.rpc("roi_bdg_recente", {p_cod: cod});
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("o banco só libera o shapefile nas 24 h seguintes ao envio.");
+    const {shp, shx, n} = montarSHP(poligonos);
+    await carregarJSZip();
+    const zip = new JSZip();
+    zip.file(`${cod}.shp`, shp); zip.file(`${cod}.shx`, shx); zip.file(`${cod}.dbf`, montarDBF(data, n));
+    zip.file(`${cod}.prj`, PRJ_SIRGAS); zip.file(`${cod}.cpg`, "UTF-8");
+    const blob = await zip.generateAsync({type:"blob"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${cod}_BDG.zip`; a.click();
+    status(`Shapefile ${cod}_BDG.zip gerado (${n} polígono(s), atributos do BDG).`, "ok");
+  }catch(e){ status("Shapefile: " + e.message, "erro"); }
 };
 
 /* ================================================================
