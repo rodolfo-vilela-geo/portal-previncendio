@@ -385,25 +385,7 @@ function preencherSelect(sel, valores, vazio="— selecione —"){
   sel.innerHTML = `<option value="">${vazio}</option>` + valores.map(v=>`<option>${esc(v)}</option>`).join("");
   if (atual) sel.value = atual;
 }
-async function carregarListas(){
-  let listas = LISTAS_RESERVA;
-  if (sb){
-    try{
-      const {data, error} = await sb.from("dominio").select("campo,valor,ordem").eq("ativo", true).order("ordem");
-      if (!error && data?.length){
-        listas = {};
-        data.forEach(r => (listas[r.campo] ??= []).push(r.valor));
-      }
-    }catch(e){ /* usa reserva */ }
-    try{
-      const {data, error} = await sb.from("uc").select("*").eq("ativo", true);
-      if (!error && data?.length){
-        UCS = {};
-        data.forEach(u => UCS[u.nome_uc] = {categoria:u.categoria, grupo:u.grupo, bioma_uc:u.bioma_uc, ufbio:u.ufbio,
-                                             base_op:u.base_op, mun:u.municipios||[], gerente:u.gerente, telefone:u.telefone});
-      }
-    }catch(e){ /* usa reserva */ }
-  }
+function aplicarListas(listas){
   $$("select[data-lista]").forEach(s => preencherSelect(s, listas[s.dataset.lista] || []));
   // Lista de UCs com a categoria à frente (evita confundir APA Pandeiros x RVS Rio Pandeiros)
   const selUC = F("nome_uc"), atualUC = selUC.value;
@@ -412,6 +394,28 @@ async function carregarListas(){
     .map(n => `<option value="${esc(n)}">${esc(n)}${UCS[n].categoria ? ` (${esc(UCS[n].categoria)})` : ""}</option>`).join("");
   if (atualUC) selUC.value = atualUC;
   $("#listaMun").innerHTML = (listas.municipio||[]).map(m=>`<option value="${esc(m)}">`).join("");
+  if (selUC.value) aplicarUC(false);
+}
+const comPrazo = (promessa, ms) => Promise.race([promessa, new Promise((_,f) => setTimeout(() => f(new Error("tempo esgotado")), ms))]);
+async function carregarListas(){
+  aplicarListas(LISTAS_RESERVA);                 // 1º: cópia embutida — listas disponíveis na hora
+  let listas = LISTAS_RESERVA;
+  if (sb){
+    const [dom, ucs] = await Promise.allSettled([            // as duas consultas em paralelo
+      comPrazo(sb.from("dominio").select("campo,valor,ordem").eq("ativo", true).order("ordem"), 10000),
+      comPrazo(sb.from("uc").select("*").eq("ativo", true), 10000)
+    ]);
+    if (dom.status==="fulfilled" && !dom.value.error && dom.value.data?.length){
+      listas = {}; dom.value.data.forEach(r => (listas[r.campo] ??= []).push(r.valor));
+    }
+    if (ucs.status==="fulfilled" && !ucs.value.error && ucs.value.data?.length){
+      UCS = {};
+      ucs.value.data.forEach(u => UCS[u.nome_uc] = {categoria:u.categoria, grupo:u.grupo, bioma_uc:u.bioma_uc, ufbio:u.ufbio,
+                                           base_op:u.base_op, mun:u.municipios||[], gerente:u.gerente, telefone:u.telefone});
+    }
+  }
+  aplicarListas(listas);                         // 2º: versão do banco (mantém o que já foi escolhido)
+  if (ultimoSMC && !F("nome_uc").value) preencherDoSMC(ultimoSMC);   // UC só existente no banco: refaz
 }
 
 function montarVeiculos(){
@@ -787,6 +791,7 @@ function mostrarPoligono(){
       <button type="button" class="btn peq" id="remPoli">remover</button></div></div>`;
   $("#remPoli").onclick = () => { poligonos=[]; poliArquivo=""; progresso.poli=false; $("#smcAttr").innerHTML=""; mostrarPoligono(); };
 }
+let ultimoSMC = null;
 $("#inPoli").addEventListener("change", async e => {
   const a = e.target.files[0]; if (!a) return;
   try{
@@ -800,6 +805,7 @@ $("#inPoli").addEventListener("change", async e => {
     if (fora) throw new Error("o polígono está fora de Minas Gerais (confira o sistema de coordenadas)");
     poligonos = polis; poliArquivo = a.name; progresso.poli = false;
     mostrarPoligono();
+    ultimoSMC = lido.props;
     preencherDoSMC(lido.props);
   }catch(err){ alert("Não foi possível ler o polígono: " + err.message); }
   e.target.value = "";
