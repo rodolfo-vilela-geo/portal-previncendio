@@ -328,7 +328,7 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.5</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-09-30.6</div>
 <div id="relatorio"></div>
 
 <script>
@@ -861,13 +861,16 @@ function desenhoMapa(polis, {larg=680, alt=470, ponto=null, codigo="", uc="", li
 }
 
 /* Limites da UC / ZA vindos do banco para o recorte do mapa */
-let limites = [], chaveLimites = "";
-async function buscarLimites(ponto){
+let limites = [], chaveLimites = "", limitesPromessa = Promise.resolve();
+function buscarLimites(ponto){
   const nome = F("nome_uc").value, ext = extensaoMapa(poligonos, ponto);
-  if (!sb || !nome || !ext){ if (limites.length){ limites=[]; chaveLimites=""; } return; }
+  if (!sb || !nome || !ext){ if (limites.length){ limites=[]; chaveLimites=""; } return limitesPromessa = Promise.resolve(); }
   const chave = nome + "|" + ext.map(v=>v.toFixed(4)).join(",");
-  if (chave === chaveLimites) return;
+  if (chave === chaveLimites) return limitesPromessa;       // mesmo recorte: reaproveita o pedido (em andamento ou pronto)
   chaveLimites = chave;
+  return limitesPromessa = buscarLimitesAgora(nome, ext, chave);
+}
+async function buscarLimitesAgora(nome, ext, chave){
   try{
     const {data, error} = await comPrazo(sb.rpc("uc_mapa", {p_nome:nome, x0:ext[0], y0:ext[1], x1:ext[2], y1:ext[3]}), 10000);
     if (chave !== chaveLimites) return;                     // chegou resposta de um pedido antigo
@@ -1215,7 +1218,13 @@ function montarRelatorio(){
       <br><span class="linha">${v(r.responsavel)}<br>Responsável pelo preenchimento</span>
       <br><span class="linha">${v(r.gerente_uc)}<br>Gerente da UC</span></div>`;
 }
-$("#btnPdf").onclick = () => {
+$("#btnPdf").onclick = async () => {
+  const b = $("#btnPdf"); b.disabled = true;
+  if (poligonos.length){                                   // garante os limites da UC antes de montar o mapa
+    const cc = coords(); await buscarLimites((cc.lat!==null && cc.lon!==null) ? cc : null);
+    try{ await comPrazo(limitesPromessa, 8000); }catch(e){}
+  }
+  b.disabled = false;
   montarRelatorio();
   const imgs = $$("#relatorio img");
   Promise.all(imgs.map(i => i.complete ? 1 : new Promise(ok => { i.onload = i.onerror = ok; })))
