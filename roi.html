@@ -671,49 +671,110 @@ function desenhoSVG(polis, larg=260, alt=200){
   const d = polis.map(p => p.map(a => "M"+a.map(P).join("L")+"Z").join("")).join("");
   return `<svg viewBox="0 0 ${larg} ${alt}" xmlns="http://www.w3.org/2000/svg"><path d="${d}" fill="#c0392b" fill-opacity=".35" stroke="#7a1f1f" stroke-width="1.5" fill-rule="evenodd"/></svg>`;
 }
-/* Atributos do SMC -> campos do ROI (nomes reconhecidos sem acento/maiúscula) */
-const norm = k => String(k||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+/* Atributos do SMC -> campos do ROI
+   Formato do KML exportado pelo SMC (versão 2026-09): identificacao, nome_uc, municipios,
+   area_uc_ha, area_fora_ha, localizacao, ponto_lat/lon, data_fim, regional_ief, bioma...
+   Nomes reconhecidos sem acento/maiúscula; outros formatos comuns também. */
+const norm = k => String(k||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
 const SINONIMOS = {
-  area_int: ["area_int","area_interna","area_interna_ha","area_int_ha","interna_ha","area_uc","area_dentro","area_dentro_uc"],
-  area_ent: ["area_ent","area_entorno","area_entorno_ha","area_ent_ha","entorno_ha","area_za","area_fora","area_fora_uc"],
-  area_tot: ["area_ha","area_total","area_total_ha","area","areaha","area_queimada","area_queimada_ha"],
-  municipio:["municipio","municipios","nm_mun","nome_mun","nm_municip","mun","cidade"],
-  nome_uc:  ["nome_uc","uc","nm_uc","unidade","unidade_conservacao","nome_da_uc"]
+  cod:      ["identificacao","cod_bdp","codigo","name"],
+  area_int: ["area_uc_ha","area_uc","area_int","area_interna","area_interna_ha","area_int_ha","interna_ha","area_dentro"],
+  area_ent: ["area_fora_ha","area_fora","area_ent","area_entorno","area_entorno_ha","area_ent_ha","entorno_ha","area_za"],
+  area_tot: ["area_ha","area_total","area_total_ha","area","area_queimada","area_queimada_ha"],
+  municipio:["municipios","municipio","nm_mun","nome_mun","mun"],
+  nome_uc:  ["nome_uc","uc","uc_informada","nm_uc","unidade"],
+  local:    ["localizacao","local"],
+  lat:      ["ponto_lat","lat","latitude"],
+  lon:      ["ponto_lon","lon","longitude"],
+  dat_final:["data_fim","dat_final"],
+  distancia:["dist_uc_km"],
+  regional: ["regional_ief","regional","ufbio"],
+  bioma:    ["bioma","bioma_uc"]
 };
 function pegar(props, chave){
-  for (const p of props){ for (const [k,v] of Object.entries(p)) if (SINONIMOS[chave].includes(norm(k)) && v!=null && String(v).trim()!=="") return v; }
+  for (const p of props) for (const [k,v] of Object.entries(p))
+    if (SINONIMOS[chave].includes(norm(k)) && v!=null && String(v).trim()!=="" && !/^n[aã]o informad/i.test(v)) return String(v).trim();
   return null;
 }
 function somar(props, chave){
-  let t=null; props.forEach(p => { for (const [k,v] of Object.entries(p)) if (SINONIMOS[chave].includes(norm(k))) { const n=num(v); if (n!==null) t=(t||0)+n; } });
+  let t=null; props.forEach(p => { const v = pegar([p], chave); const n = num(v); if (n!==null) t=(t||0)+n; });
   return t;
 }
+const semArea = v => String(v).replace(/\s*\([^)]*\)/g,"").trim();                 // "Buenópolis (371.03 ha)" -> "Buenópolis"
+const CAT_PREFIXO = [["PAR",/^parque_estadual/],["APA",/^(area_de_protecao_ambiental|apa)_/],["RVS",/^(refugio|rvs|revs)_/],
+  ["MONA",/^(monumento_natural|mona)_/],["ESEC",/^(estacao_ecologica|esec)_/],["REBIO",/^(reserva_biologica|rebio)_/],
+  ["FLOE",/^(floresta_estadual|floe)_/],["RDS",/^(reserva_de_desenvolvimento|rds)_/],["APE",/^(area_de_protecao_especial|ape)_/],["PAR",/^(par|pe)_/]];
+function acharUC(texto){
+  const u = norm(texto), cat = (CAT_PREFIXO.find(([,re]) => re.test(u)) || [])[0];
+  let nomes = Object.keys(UCS);
+  if (cat && nomes.some(n => UCS[n].categoria === cat)) nomes = nomes.filter(n => UCS[n].categoria === cat);  // "Parque Estadual…" só entre parques
+  return nomes.find(n => norm(n) === u)
+      || nomes.filter(n => u.endsWith("_" + norm(n))).sort((x,y) => y.length - x.length)[0] || null;
+}
+function decParaDMS(d){ const a=Math.abs(d), g=Math.floor(a), m=Math.floor((a-g)*60), s=((a-g)*60-m)*60; return [g, m, s.toFixed(1).replace(".",",")]; }
+
 function preencherDoSMC(props){
   props = (props||[]).filter(p => Object.keys(p).length);
-  const feitos = [];
-  const ai = somar(props,"area_int"), ae = somar(props,"area_ent");
-  if (ai!==null){ F("area_int").value = ai.toFixed(2); feitos.push(`área interna ${fmtHa(ai)} ha`); }
-  if (ae!==null){ F("area_ent").value = ae.toFixed(2); feitos.push(`entorno ${fmtHa(ae)} ha`); }
-  const mun = [...new Set(props.flatMap(p => { const v = pegar([p],"municipio"); return v ? String(v).split(/\s*[\/;,]\s*/) : []; }).filter(Boolean))];
-  if (mun.length){ F("municipio").value = mun.join("/"); feitos.push(`municípios ${mun.join(", ")}`); }
-  const uc = pegar(props,"nome_uc");
-  if (uc && !F("nome_uc").value){
-    // nome exato primeiro; senão, o nome MAIS LONGO contido no texto (ex.: "PE Serra do Cabral").
-    // Assim "Rio Pandeiros" nunca vira "Pandeiros".
-    const nomes = Object.keys(UCS), u = norm(uc);
-    const alvo = nomes.find(n => norm(n) === u)
-      || nomes.filter(n => u.endsWith("_" + norm(n)) || u === norm(n)).sort((x,y) => y.length - x.length)[0];
-    if (alvo){ F("nome_uc").value = alvo; aplicarUC(true); if (mun.length) F("municipio").value = mun.join("/"); feitos.push(`UC ${alvo}`); }
+  const feitos = [], avisos = [];
+  const vazio = n => !F(n).value || !String(F(n).value).trim();
+
+  // código BDP
+  const cod = pegar(props,"cod"), m = cod && cod.match(/^(\d{4})-([0-9A-Z]{4})-(\d{3})$/);
+  if (m && (vazio("ri") || vazio("roi_num"))){ F("ano").value=m[1]; F("ri").value=m[2]; F("roi_num").value=m[3]; feitos.push(`código ${cod}`); }
+  // UC (com categoria) -> cadastro
+  const ucTxt = pegar(props,"nome_uc");
+  if (ucTxt){
+    const alvo = acharUC(ucTxt);
+    if (alvo && F("nome_uc").value !== alvo){ F("nome_uc").value = alvo; aplicarUC(true); }
+    if (alvo) feitos.push(`UC ${alvo} (${UCS[alvo].categoria})`); else avisos.push(`UC “${ucTxt}” não encontrada no cadastro — escolha manualmente`);
   }
+  // municípios
+  const munTxt = pegar(props,"municipio");
+  if (munTxt){ const mun = [...new Set(munTxt.split(/\s*[;\/|]\s*|,\s*(?=[A-ZÀ-Ú])/).map(semArea).filter(Boolean))];
+    F("municipio").value = mun.join("/"); feitos.push(`municípios ${mun.join(", ")}`); }
+  // áreas
+  const ai = somar(props,"area_int"), ae = somar(props,"area_ent");
+  if (ai!==null){ F("area_int").value = ai.toFixed(2); feitos.push(`área na UC ${fmtHa(ai)} ha`); }
+  if (ae!==null){ F("area_ent").value = ae.toFixed(2); feitos.push(`fora da UC ${fmtHa(ae)} ha`); }
+  // localização do início
+  const loc = norm(pegar(props,"local"));
+  if (loc){ const v = /interi|intern/.test(loc) && /entorno|za|fora/.test(loc) ? "Interno/Entorno" : /interi|intern/.test(loc) ? "Interno" : /entorno|za|fora/.test(loc) ? "Entorno" : null;
+    if (v && [...F("local").options].some(o=>o.value===v)){ F("local").value = v; feitos.push(`localização ${v}`); } }
+  const dist = num(pegar(props,"distancia"));
+  if (dist && vazio("distancia")) F("distancia").value = `${fmtHa(dist)} km`;
+  // ponto de campo -> coordenadas 2.1
+  const la = num(pegar(props,"lat")), lo = num(pegar(props,"lon"));
+  if (la!==null && lo!==null && vazio("lat_g")){
+    const [g1,m1,s1]=decParaDMS(la), [g2,m2,s2]=decParaDMS(lo);
+    F("lat_g").value=g1; F("lat_m").value=m1; F("lat_s").value=s1; F("lon_g").value=g2; F("lon_m").value=m2; F("lon_s").value=s2;
+    feitos.push("coordenadas do ponto de campo");
+  }
+  // fim da ocorrência
+  const df = pegar(props,"dat_final");
+  if (df && /^\d{4}-\d{2}-\d{2}/.test(df) && vazio("dat_final")){ F("dat_final").value = df.slice(0,10); feitos.push(`fim em ${fmtData(df.slice(0,10))} (confira a hora)`); }
+  // conferência com o cadastro da UC
+  const uc = UCS[F("nome_uc").value];
+  const reg = pegar(props,"regional"), bio = pegar(props,"bioma");
+  if (uc && reg && norm(semArea(reg.split(/[;,]/)[0])) !== norm(uc.ufbio)) avisos.push(`o SMC indica regional “${semArea(reg)}”, o cadastro da UC diz “${uc.ufbio}”`);
+  if (uc && bio && !/[;,]/.test(bio) && norm(semArea(bio)) !== norm(uc.bioma_uc)) avisos.push(`o SMC indica bioma “${semArea(bio)}”, o cadastro da UC diz “${uc.bioma_uc}”`);
+  // histórico (só informativo)
+  const p0 = props[0] || {}, hist = [];
+  if (norm(p0.reincidencia)==="sim") hist.push(`reincidência: fogo em ${p0.n_anos_anteriores||"?"} anos anteriores (${p0.anos_anteriores||""}); último em ${p0.ultimo_fogo_ano||"?"}`);
+  if (p0.area_reinc_ha) hist.push(`${fmtHa(num(p0.area_reinc_ha))} ha já queimados antes`);
+
   const tot = somar(props,"area_tot");
-  const ha = areaHa(poligonos);
-  const lista = props.length ? Object.entries(props[0]).map(([k,v]) => `${k}: ${v}`).join(" · ") : "";
-  $("#smcAttr").innerHTML = feitos.length
+  let html = feitos.length
     ? `<div class="dica" style="color:var(--ok)">✓ Preenchido pelo SMC: ${esc(feitos.join(" · "))}. Confira nas seções abaixo.</div>`
-    : `<div class="dica">Nenhum atributo reconhecido no arquivo para preencher o formulário${tot!==null ? ` (área total no arquivo: ${fmtHa(tot)} ha)` : ""}.</div>`;
-  if (lista) $("#smcAttr").innerHTML += `<details style="margin-top:4px"><summary class="dica" style="cursor:pointer">Atributos do arquivo</summary><div class="dica">${esc(lista)}</div></details>`;
+    : `<div class="dica">Nenhum atributo reconhecido para preencher o formulário.</div>`;
+  if (tot!==null) html += `<div class="dica">Área total medida no SMC: <b>${fmtH(tot)}</b>.</div>`;
+  if (avisos.length) html += `<div class="dica" style="color:var(--alerta)">⚠ ${esc(avisos.join(" · "))}.</div>`;
+  if (hist.length) html += `<div class="dica">Histórico da área (SMC): ${esc(hist.join(" · "))}.</div>`;
+  const lista = props.length ? Object.entries(props[0]).map(([k,v]) => `${k}: ${v}`).join("\n") : "";
+  if (lista) html += `<details style="margin-top:4px"><summary class="dica" style="cursor:pointer">Todos os atributos do arquivo</summary><pre class="dica" style="white-space:pre-wrap;margin:4px 0">${esc(lista)}</pre></details>`;
+  $("#smcAttr").innerHTML = html;
   mudou();
 }
+const fmtH = n => fmtHa(n) + " ha";
 
 function mostrarPoligono(){
   if (!poligonos.length){ $("#poliInfo").innerHTML=""; return; }
