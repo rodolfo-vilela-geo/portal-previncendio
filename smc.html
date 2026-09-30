@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
 <title>SMC — Sistema de Mapeamento de Cicatrizes</title>
 <style>
   :root{ --verde:#2e5603; --verde-esc:#1e3a02; --fundo:#eef0e6; --tinta:#1f231a; }
@@ -22,14 +23,16 @@
   iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
   .carregando{position:absolute;inset:0;display:grid;place-items:center;color:#55594d;font-size:14px;pointer-events:none}
   @media (max-width:600px){ header h1 small{display:none} nav a.nova{display:none} }
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:44px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
 </head>
 <body>
 <header>
-  <div>
+  <div class="marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a><div>
     <div class="inst"><a href="index.html">← Portal Previncêndio</a> · IEF-MG · GPCIF</div>
     <h1>SMC <small>— Sistema de Mapeamento de Cicatrizes</small></h1>
-  </div>
+  </div></div>
   <nav>
     <a class="nova" href="https://area-queimada-previncendio.projects.earthengine.app/view/cicatrizes-previncendio" target="_blank" rel="noopener" title="Abre o SMC sozinho, em tela cheia">Tela cheia ↗</a>
     <a class="prox" href="roi.html">Próximo: registrar o ROI →</a>

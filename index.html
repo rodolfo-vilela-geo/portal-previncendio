@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
 <title>Portal Previncêndio</title>
 <style>
   :root{
@@ -45,14 +46,21 @@
   .prazo{background:var(--papel);border:1px solid var(--linha);border-left:4px solid var(--marca-2);border-radius:10px;padding:14px 16px;margin-top:22px;font-size:14.5px}
   .prazo b{color:var(--marca-2)}
   footer{padding:24px 16px 32px;color:var(--suave);font-size:12.5px}
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:50px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .logo.grande img{height:96px}
+  @media (max-width:600px){ .logo.grande img{height:64px} }
 </style>
 </head>
 <body>
 <header>
-  <div class="dentro">
+  <div class="dentro marca">
+    <a href="index.html" class="logo grande" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
+    <div>
     <div class="inst">Governo de Minas Gerais · Instituto Estadual de Florestas · DIUC</div>
     <h1>Portal Previncêndio</h1>
     <p>Serviços da Gerência de Prevenção e Combate a Incêndios Florestais para as Unidades de Conservação estaduais.</p>
+    </div>
   </div>
 </header>
 

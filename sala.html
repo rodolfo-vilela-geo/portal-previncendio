@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
 <title>Sala de Situação — Previncêndio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -92,11 +93,13 @@
   table.tab input,table.tab select{padding:4px 5px;font-size:13px}
   @media (max-width:820px){ .registros{grid-template-columns:1fr} .itens{max-height:320px} }
   @media print{ header.topo,.abas,.barra,.lista,#formEvento,.nao-imprime{display:none!important} .painel{padding:0} .tab-wrap{max-height:none;overflow:visible;border:0} }
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
 </head>
 <body>
 <header class="topo">
-  <div><div class="inst"><a href="index.html">← Portal Previncêndio</a> · GPCIF · IEF-MG</div><h1>Sala de Situação — Registro de Incêndios</h1></div>
+  <div class="marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a><div><div class="inst"><a href="index.html">← Portal Previncêndio</a> · GPCIF · IEF-MG</div><h1>Sala de Situação — Registro de Incêndios</h1></div></div>
   <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn peq" id="sair">Sair</button></div>
 </header>
 

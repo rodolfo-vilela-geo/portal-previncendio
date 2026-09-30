@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
 <title>Painel Informativo da Força Tarefa Previncêndio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -81,13 +82,16 @@
   table.mini{border-collapse:collapse;width:100%;font-size:11.5px;margin-top:8px;font-variant-numeric:tabular-nums}
   table.mini td,table.mini th{padding:2px 3px;text-align:center;border-bottom:1px solid var(--cinza-linha)}
   table.mini th{font-weight:600;color:var(--suave)}
+  @media (max-width:520px){ .topo .ief{display:none} }
   @media (max-width:860px){ .duas,.mensal{grid-template-columns:minmax(0,1fr)} .topo .dentro{grid-template-columns:1fr auto} .topo .gov{display:none} .kpis{grid-template-columns:1fr 1fr} h1{font-size:20px} }
   @media print{ body{background:#fff} .mais .btn,#ano{display:none} .tab-wrap{overflow:visible} }
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:58px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
 </head>
 <body>
 <header class="topo"><div class="dentro">
-  <div class="sala"><a href="index.html" style="text-decoration:none">← Portal</a> · Sala de Situação<b>Força Tarefa Previncêndio</b></div>
+  <div class="sala marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a><div><a href="index.html" style="text-decoration:none">← Portal</a> · Sala de Situação<b>Força Tarefa Previncêndio</b></div></div>
   <div class="gov">Governo do Estado de Minas Gerais<br>Sistema Estadual de Meio Ambiente e Recursos Hídricos – SISEMA<br>Instituto Estadual de Florestas – IEF-MG<br>Diretoria de Unidades de Conservação – DIUC<br>Gerência de Prevenção e Combate a Incêndios Florestais – PREVINCÊNDIO</div>
   <div class="ief">IEF<small>INSTITUTO ESTADUAL DE FLORESTAS</small></div>
 </div></header>

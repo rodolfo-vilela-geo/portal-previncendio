@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
 <title>Painel de Ocorrências — Previncêndio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -87,13 +88,17 @@
   .carregando{opacity:.45;transition:opacity .2s}
 
   @media (max-width:760px){ .grade{grid-template-columns:1fr} header h1{font-size:18px} }
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:58px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
 </head>
 <body>
-<header>
+<header class="marca">
+  <a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a><div>
   <div class="inst"><a href="index.html" style="color:#fff;text-decoration:none;opacity:.95">← Portal Previncêndio</a> · Governo de Minas Gerais · IEF · DIUC</div>
   <h1>Painel de ocorrências de incêndio em UCs estaduais</h1>
   <div class="atual" id="atual">Carregando dados…</div>
+  </div>
 </header>
 
 <main>
