@@ -253,7 +253,8 @@ async function entrar(){
   await Promise.all([carregarUCs(), carregarInst()]); montarFiltros(); await carregarLista();
   const q = new URLSearchParams(location.search);
   if (q.get("ri")) abrirRI(+q.get("ano")||new Date().getFullYear(), q.get("ri").padStart(4,"0"));
-  if (q.get("aba")) $(`.abas button[data-aba="${q.get("aba")}"]`)?.click();
+  const aba = q.get("aba") && $(`.abas button[data-aba="${q.get("aba")}"]`);
+  if (aba && !aba.hidden) aba.click();
 }
 $("#formLogin").onsubmit = async e => {
   e.preventDefault(); $("#erroLogin").textContent = "";

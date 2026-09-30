@@ -229,6 +229,8 @@ async function entrar(){
   if (perfil.trocar_senha) abrirSenha(true);
   await Promise.all([carregarUCs(), carregarRegionais(), carregarGeo(), carregarEquipe()]);
   const q = new URLSearchParams(location.search);
+  const aba = q.get("aba") && $(`.abas button[data-aba="${q.get("aba")}"]`);
+  if (aba && !aba.hidden) aba.click();
   if (q.get("uc")) abrirUC(q.get("uc"));
   else if (perfil.ucs.length === 1) abrirUC(perfil.ucs[0]);
 }
