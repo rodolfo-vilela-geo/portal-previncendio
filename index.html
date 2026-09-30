@@ -34,12 +34,12 @@
   /* cabeçalho: IEF + Previncêndio */
   header.inst{background:var(--papel);border-bottom:1px solid var(--linha)}
   header.inst .dentro{max-width:1040px;margin:0 auto;padding:14px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
-  .logos{display:flex;align-items:center;gap:16px}
-  .logos a{text-decoration:none}
-  .logos .ief{height:52px;width:auto;display:block}
-  .logos .ief-txt{font:800 30px/1 system-ui,sans-serif;color:var(--marca);letter-spacing:.02em}
-  .logos .sep{width:1px;height:54px;background:var(--linha)}
-  .logos .prev{height:64px;width:auto;display:block}
+  header.inst .dentro{flex-wrap:nowrap}
+  .prev-link{flex:none;text-decoration:none}
+  .prev{height:76px;width:auto;display:block}
+  .titulo{flex:1;min-width:0}
+  .ief-link{flex:none;margin-left:auto;align-self:center;text-decoration:none}
+  .ief{height:36px;width:auto;display:block}
   .titulo .org{font-size:12.5px;color:var(--suave);letter-spacing:.02em}
   .titulo h1{margin:2px 0 0;font-size:26px;line-height:1.15;font-weight:750;color:var(--marca-2)}
   .titulo p{margin:2px 0 0;color:var(--suave);font-size:14px;max-width:620px}
@@ -110,7 +110,7 @@
     .fluxo{grid-template-columns:1fr} .seta{height:30px} .seta svg{transform:rotate(90deg)}
     .modulos{grid-template-columns:1fr}
   }
-  @media (max-width:600px){ .logos .ief{height:38px} .logos .prev{height:50px} .logos .sep{height:42px} .titulo h1{font-size:22px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
+  @media (max-width:600px){ .prev{height:54px} .ief{height:24px} .titulo .org{display:none} .titulo p{display:none} .titulo h1{font-size:21px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
 </style>
 </head>
 <body>
@@ -123,17 +123,14 @@
   </nav>
 </div></div>
 <header class="inst"><div class="dentro">
-  <div class="logos">
-    <a href="https://www.ief.mg.gov.br/" target="_blank" rel="noopener" title="Instituto Estadual de Florestas">
-      <picture><source srcset="img/logo_ief_branco.png" media="(prefers-color-scheme: dark)"><img class="ief" src="img/logo_ief.png" alt="IEF — Instituto Estadual de Florestas"></picture></a>
-    <span class="sep" aria-hidden="true"></span>
-    <a href="index.html" title="Portal Previncêndio"><img class="prev" src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
-  </div>
+  <a href="index.html" class="prev-link" title="Portal Previncêndio"><img class="prev" src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
   <div class="titulo">
     <div class="org">Diretoria de Unidades de Conservação · Gerência de Prevenção e Combate a Incêndios Florestais</div>
     <h1>Portal Previncêndio</h1>
     <p>Serviços da Gerência de Prevenção e Combate a Incêndios Florestais para as Unidades de Conservação estaduais.</p>
   </div>
+  <a href="https://www.ief.mg.gov.br/" target="_blank" rel="noopener" class="ief-link" title="Instituto Estadual de Florestas">
+    <picture><source srcset="img/logo_ief_branco.png" media="(prefers-color-scheme: dark)"><img class="ief" src="img/logo_ief.png" alt="IEF — Instituto Estadual de Florestas"></picture></a>
 </div></header>
 <nav class="menu" aria-label="Menu institucional"><ul>
   <li><a href="index.html" aria-current="page">Início</a></li>
@@ -226,6 +223,17 @@
     </div>
   </section>
 
+  <!-- GESTÃO: só aparece para quem está logado como equipe -->
+  <section id="secGestao" hidden>
+    <div class="tit"><h2>Gestão do sistema</h2><span class="cadeado" id="gQuem"></span></div>
+    <div class="gestao">
+      <a href="sala.html?aba=apoios" data-papeis="sala gpcif admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/></svg>Apoios e atuações <small>instituições e efetivo por dia</small></a>
+      <a href="ucs.html?aba=regionais" data-papeis="gerente sala gpcif admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/></svg>Regionais (URFBio)</a>
+      <a href="sala.html?aba=listas" data-papeis="admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Listas suspensas <small>admin</small></a>
+      <a href="ucs.html?aba=usuarios" data-papeis="admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Usuários e gerentes <small>admin</small></a>
+    </div>
+  </section>
+
   <!-- AJUDA -->
   <section>
     <div class="tit"><h2>Ajuda</h2></div>
@@ -245,5 +253,21 @@
     <div><a href="sala.html" style="color:inherit">Acesso da equipe</a> · <a href="manual.html" style="color:inherit">Manual</a> · <a href="https://www.ief.mg.gov.br/acessibilidade" target="_blank" rel="noopener" style="color:inherit">Acessibilidade</a></div>
   </div>
 </footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// a gestão só aparece para quem já entrou com login da equipe (mesmo login da Sala e do Cadastro das UCs)
+(async () => {
+  try{
+    const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+    const {data:{session}} = await sb.auth.getSession(); if (!session) return;
+    const {data: p} = await sb.rpc("meu_perfil"); if (!p) return;
+    let n = 0;
+    document.querySelectorAll("#secGestao [data-papeis]").forEach(a => { const ok = a.dataset.papeis.split(" ").includes(p.papel); a.hidden = !ok; n += ok; });
+    if (!n) return;
+    document.getElementById("gQuem").textContent = `${p.nome} · ${({gerente:"gerente",sala:"Sala de Situação",gpcif:"GPCIF",admin:"administrador"})[p.papel] || p.papel}`;
+    document.getElementById("secGestao").hidden = false;
+  }catch(e){}
+})();
+</script>
 </body>
 </html>

@@ -34,12 +34,12 @@
   /* cabeçalho: IEF + Previncêndio */
   header.inst{background:var(--papel);border-bottom:1px solid var(--linha)}
   header.inst .dentro{max-width:1040px;margin:0 auto;padding:14px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
-  .logos{display:flex;align-items:center;gap:16px}
-  .logos a{text-decoration:none}
-  .logos .ief{height:52px;width:auto;display:block}
-  .logos .ief-txt{font:800 30px/1 system-ui,sans-serif;color:var(--marca);letter-spacing:.02em}
-  .logos .sep{width:1px;height:54px;background:var(--linha)}
-  .logos .prev{height:64px;width:auto;display:block}
+  header.inst .dentro{flex-wrap:nowrap}
+  .prev-link{flex:none;text-decoration:none}
+  .prev{height:76px;width:auto;display:block}
+  .titulo{flex:1;min-width:0}
+  .ief-link{flex:none;margin-left:auto;align-self:center;text-decoration:none}
+  .ief{height:36px;width:auto;display:block}
   .titulo .org{font-size:12.5px;color:var(--suave);letter-spacing:.02em}
   .titulo h1{margin:2px 0 0;font-size:26px;line-height:1.15;font-weight:750;color:var(--marca-2)}
   .titulo p{margin:2px 0 0;color:var(--suave);font-size:14px;max-width:620px}
@@ -110,7 +110,7 @@
     .fluxo{grid-template-columns:1fr} .seta{height:30px} .seta svg{transform:rotate(90deg)}
     .modulos{grid-template-columns:1fr}
   }
-  @media (max-width:600px){ .logos .ief{height:38px} .logos .prev{height:50px} .logos .sep{height:42px} .titulo h1{font-size:22px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
+  @media (max-width:600px){ .prev{height:54px} .ief{height:24px} .titulo .org{display:none} .titulo p{display:none} .titulo h1{font-size:21px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
 
   main.manual{max-width:1040px;margin:0 auto;padding:22px 16px 10px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start}
   .sumario{position:sticky;top:12px;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:14px 14px 10px}
@@ -156,17 +156,14 @@
   </nav>
 </div></div>
 <header class="inst"><div class="dentro">
-  <div class="logos">
-    <a href="https://www.ief.mg.gov.br/" target="_blank" rel="noopener" title="Instituto Estadual de Florestas">
-      <picture><source srcset="img/logo_ief_branco.png" media="(prefers-color-scheme: dark)"><img class="ief" src="img/logo_ief.png" alt="IEF — Instituto Estadual de Florestas"></picture></a>
-    <span class="sep" aria-hidden="true"></span>
-    <a href="index.html" title="Portal Previncêndio"><img class="prev" src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
-  </div>
+  <a href="index.html" class="prev-link" title="Portal Previncêndio"><img class="prev" src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
   <div class="titulo">
     <div class="org">Diretoria de Unidades de Conservação · Gerência de Prevenção e Combate a Incêndios Florestais</div>
     <h1>Portal Previncêndio</h1>
     <p>Serviços da Gerência de Prevenção e Combate a Incêndios Florestais para as Unidades de Conservação estaduais.</p>
   </div>
+  <a href="https://www.ief.mg.gov.br/" target="_blank" rel="noopener" class="ief-link" title="Instituto Estadual de Florestas">
+    <picture><source srcset="img/logo_ief_branco.png" media="(prefers-color-scheme: dark)"><img class="ief" src="img/logo_ief.png" alt="IEF — Instituto Estadual de Florestas"></picture></a>
 </div></header>
 <nav class="menu" aria-label="Menu institucional"><ul>
   <li><a href="index.html">Início</a></li>
@@ -325,7 +322,7 @@
 
     <section id="admin">
       <h2>Administração</h2>
-      <p class="quem">Quem usa: administradores da GPCIF · acesso pelo rodapé (<b>Acesso da equipe</b>)</p>
+      <p class="quem">Quem usa: administradores da GPCIF · depois de entrar com o login, o bloco <b>Gestão do sistema</b> aparece na página inicial (também há o link <b>Acesso da equipe</b> no rodapé)</p>
       <ul>
         <li><b>Usuários e gerentes</b> (Cadastro das UCs → aba Usuários): criar login, gerar senha provisória, definir o papel e as UCs que cada gerente edita, desativar acesso.</li>
         <li><b>Listas suspensas</b> (Sala → aba Listas): incluir, ordenar e desativar valores. Renomear oferece <b>corrigir a grafia</b> (atualiza o histórico) ou <b>substituir</b> (mantém o histórico). Listas estruturais do BDG ficam travadas. Nada é apagado.</li>
