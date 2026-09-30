@@ -92,25 +92,42 @@
   .card .ir{margin-top:auto;font-weight:600;color:var(--marca-2);font-size:14px}
 
   .modulos{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1.4fr);gap:14px;align-items:stretch}
-  .breve{background:var(--papel);border:1px dashed var(--linha);border-radius:12px;padding:16px 18px}
-  .breve h3{margin:0 0 8px;font-size:14px;color:var(--suave);font-weight:600}
-  .breve ol{margin:0;padding:0;list-style:none;display:grid;gap:6px}
-  .breve li{display:flex;gap:8px;align-items:baseline;font-size:14px;color:var(--suave)}
-  .breve li b{color:var(--tinta);font-weight:600}
-  .breve li span.s{font-size:11px;font-weight:700;color:var(--suave);border:1px solid var(--linha);border-radius:99px;padding:0 7px;white-space:nowrap}
 
   .gestao{display:flex;flex-wrap:wrap;gap:8px}
   .gestao a{display:inline-flex;align-items:center;gap:8px;background:var(--papel);border:1px solid var(--linha);border-radius:10px;padding:9px 13px;color:inherit;text-decoration:none;font-size:14px}
   .gestao a:hover{border-color:var(--marca-2)}
   .gestao a small{color:var(--suave);font-size:12px}
   .gestao svg{width:16px;height:16px;color:var(--marca-2)}
+  .pip-uc{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .pip-uc label{font-weight:600;font-size:14px}
+  .pip-uc input{flex:1 1 260px;font:inherit;color:inherit;background:var(--fundo);border:1px solid var(--linha);border-radius:8px;padding:8px 10px}
+  .btn-pip{font:inherit;font-weight:700;border:0;border-radius:8px;background:var(--marca);color:#fff;padding:9px 14px;cursor:pointer}
+  .pip-grade{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .mod{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+  .mod.breve{border-style:dashed}
+  .mod .cab{display:flex;align-items:center;gap:10px}
+  .mod .num{width:28px;height:28px;border-radius:50%;background:var(--marca);color:#fff;font-weight:800;font-size:14px;display:grid;place-items:center;flex:none}
+  .mod.breve .num{background:var(--suave)}
+  .mod h3{margin:0;font-size:16px;flex:1}
+  .mod .st{font-size:11px;font-weight:700;border-radius:99px;padding:2px 8px;white-space:nowrap}
+  .mod .st.ok{background:var(--realce);color:var(--marca-2)} .mod .st.em{border:1px solid var(--linha);color:var(--suave)}
+  .mod ul{list-style:none;margin:2px 0 0;padding:0;display:grid;gap:6px}
+  .mod li{display:grid;grid-template-columns:34px 1fr;gap:2px 6px;font-size:13.5px;line-height:1.35}
+  .mod li .s{font-weight:700;color:var(--marca-2);font-variant-numeric:tabular-nums}
+  .mod li small{grid-column:2;color:var(--suave);font-size:12.5px}
+  .mod li .geo{font-size:11px;font-weight:700;color:var(--laranja);margin-left:4px;white-space:nowrap}
+  .mod .rod{margin-top:auto;padding-top:6px;font-size:12.5px;color:var(--suave);display:flex;justify-content:space-between;gap:8px}
+  .mod .rod a{color:var(--marca-2);font-weight:700;text-decoration:none}
+  /* conta no alto */
+  .gov .conta{display:inline-flex;gap:10px;align-items:center;margin-left:14px;padding-left:14px;border-left:1px solid rgba(255,255,255,.25)}
+  .gov .conta a{font-weight:700}
   footer{padding:28px 16px 32px;color:var(--suave);font-size:12.5px}
 
   @media (max-width:860px){
     .fluxo{grid-template-columns:1fr} .seta{height:30px} .seta svg{transform:rotate(90deg)}
     .modulos{grid-template-columns:1fr}
   }
-  @media (max-width:600px){ .prev{height:54px} .ief{height:24px} .titulo .org{display:none} .titulo p{display:none} .titulo h1{font-size:21px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
+  @media (max-width:600px){ .prev{height:54px} .ief{height:24px} .titulo .org{display:none} .titulo p{display:none} .titulo h1{font-size:21px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav>a{display:none} .gov .conta{margin:0;padding:0;border:0} }
 </style>
 </head>
 <body>
@@ -120,6 +137,7 @@
     <a href="https://www.ouvidoriageral.mg.gov.br/simplifique-oge" target="_blank" rel="noopener">Simplifique</a>
     <a href="https://www.mg.gov.br/estrutura-governamental" target="_blank" rel="noopener">Órgãos do Governo</a>
     <a href="https://www.transparencia.mg.gov.br/" target="_blank" rel="noopener">Portal da Transparência</a>
+    <span class="conta" id="conta"><a href="ucs.html">Entrar (equipe e gerentes)</a></span>
   </nav>
 </div></div>
 <header class="inst"><div class="dentro">
@@ -172,55 +190,45 @@
         <span class="ir">Novo ROI →</span>
       </a>
     </div>
-    <div class="extra">
-      <div class="aviso">O ROI deve ser enviado em até <b>10 dias</b> após o fim do incêndio (debelado, após o rescaldo). O rascunho fica salvo no navegador enquanto você preenche.</div>
-      <a class="atalho" href="sala.html?aba=prazos"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-        <span><b>Prazos dos ROIs</b><br><small style="color:var(--suave)">pendentes, a vencer e atrasados · login</small></span></a>
-    </div>
   </section>
 
   <!-- 2. ACOMPANHAMENTO -->
   <section>
-    <div class="tit"><h2>Acompanhamento</h2><span class="cadeado" style="border-style:dashed">aberto ao público</span></div>
+    <div class="tit"><h2>Acompanhamento</h2></div>
     <div class="cards">
       <a class="card" href="boletim.html">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 1-5 1 1 2 2 3 2 0-2 0-4 0-6z"/><path d="M5 21h14"/></svg></div>
         <h3>Boletim da Força Tarefa</h3>
-        <p>Mapa das UCs com incêndio em andamento, recursos empenhados e comparação com a média histórica. Atualiza sozinho.</p>
+        <p>Mapa das UCs com incêndio em andamento, recursos empenhados e comparação com a média histórica. Público.</p>
         <span class="ir">Abrir o boletim →</span>
       </a>
       <a class="card" href="painel.html">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16V11M12 16V7M17 16v-4"/></svg></div>
         <h3>Painel histórico</h3>
-        <p>Estatísticas das ocorrências de 2013 até hoje: por ano, mês, UC, regional, causa, tempo de resposta e área queimada.</p>
+        <p>Estatísticas das ocorrências de 2013 até hoje: por ano, mês, UC, regional, causa, tempo de resposta e área queimada. Público.</p>
         <span class="ir">Abrir o painel →</span>
+      </a>
+      <a class="card" href="sala.html?aba=prazos">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <h3>Prazos dos ROIs <span class="cadeado" style="vertical-align:2px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>login</span></h3>
+        <p>ROIs pendentes, a vencer e atrasados, contados a partir do fim do incêndio registrado no RI.</p>
+        <span class="ir">Abrir os prazos →</span>
       </a>
     </div>
   </section>
 
   <!-- 3. PLANEJAMENTO -->
   <section>
-    <div class="tit"><h2>Planejamento · PIPCIF</h2>
+    <div class="tit"><h2>Planejamento · PIPCIF por Unidade de Conservação</h2>
       <span class="cadeado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>login · gerentes e GPCIF</span></div>
-    <p class="sub">Plano Integrado de Prevenção e Combate a Incêndios Florestais, preenchido por módulos direto no sistema.</p>
-    <div class="modulos">
-      <a class="card" href="ucs.html">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
-        <h3>Cadastro das UCs</h3>
-        <p>Informações gerais e sede de cada UC (seção 3). Cada gerente edita as suas; toda alteração fica registrada.</p>
-        <span class="ir">Entrar →</span>
-      </a>
-      <div class="breve">
-        <h3>Próximos módulos</h3>
-        <ol>
-          <li><span class="s">em breve</span><span><b>Infraestrutura</b> — alojamento, torres, pistas, helipontos, estações meteorológicas e rádios, no mapa</span></li>
-          <li><span class="s">em breve</span><span><b>Recursos</b> — veículos, ferramentas e EPIs, com estado e disponibilidade</span></li>
-          <li><span class="s">em breve</span><span><b>Rede de apoio</b> — parceiros, prestadores, colaboradores e brigadistas voluntários</span></li>
-          <li><span class="s">em breve</span><span><b>Plano anual</b> — aceiros, cronograma, plano operacional e geração do PIPCIF</span></li>
-          <li><span class="s">em breve</span><span><b>Mapa de risco</b> — setores, histórico de cicatrizes e infraestrutura de apoio</span></li>
-        </ol>
-      </div>
-    </div>
+    <p class="sub">Cada UC tem o seu Plano Integrado de Prevenção e Combate a Incêndios Florestais, preenchido direto no sistema, módulo a módulo. <span id="pipResumo"></span></p>
+    <form class="pip-uc" id="pipForm">
+      <label for="pipUC">Unidade de Conservação</label>
+      <input id="pipUC" list="pipLista" placeholder="Digite o nome da UC" autocomplete="off">
+      <datalist id="pipLista"></datalist>
+      <button class="btn-pip">Abrir o PIPCIF da UC →</button>
+    </form>
+    <div class="pip-grade" id="pipGrade"></div>
   </section>
 
   <!-- GESTÃO: só aparece para quem está logado como equipe -->
@@ -253,14 +261,39 @@
     <div><a href="sala.html" style="color:inherit">Acesso da equipe</a> · <a href="manual.html" style="color:inherit">Manual</a> · <a href="https://www.ief.mg.gov.br/acessibilidade" target="_blank" rel="noopener" style="color:inherit">Acessibilidade</a></div>
   </div>
 </footer>
+<script src="pipcif_modulos.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// a gestão só aparece para quem já entrou com login da equipe (mesmo login da Sala e do Cadastro das UCs)
+const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// módulos do PIPCIF (estrutura, mesmo sem estarem prontos)
+(() => {
+  const M = window.PIPCIF_MODULOS || [];
+  const nb = M.reduce((t,m) => t + m.blocos.length, 0), ng = M.reduce((t,m) => t + m.blocos.filter(b => b.mapa).length, 0);
+  document.getElementById("pipResumo").textContent = `São ${M.length} módulos e ${nb} blocos (${ng} com dados no mapa).`;
+  document.getElementById("pipGrade").innerHTML = M.map(m => `<div class="mod ${m.pronto ? "" : "breve"}">
+    <div class="cab"><span class="num">${m.n}</span><h3>${esc(m.nome)}</h3><span class="st ${m.pronto ? "ok" : "em"}">${m.pronto ? "disponível" : "em breve"}</span></div>
+    <ul>${m.blocos.map(b => `<li><span class="s">${esc(b.s)}</span><span>${esc(b.t)}${b.mapa ? `<span class="geo" title="dados georreferenciados">◉ mapa</span>` : ""}</span>${b.d ? `<small>${esc(b.d)}</small>` : ""}</li>`).join("")}</ul>
+    <div class="rod"><span>${m.blocos.length} ${m.blocos.length === 1 ? "bloco" : "blocos"}</span>${m.pronto ? `<a href="ucs.html">Preencher →</a>` : ""}</div>
+  </div>`).join("");
+})();
 (async () => {
+  let sb; try{ sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39"); }catch(e){ return; }
+  // lista de UCs para abrir o PIPCIF (cadastro fixo é público)
+  const SIG = {PAR:"PE", APA:"APA", MONA:"MN", ESEC:"EE", REBIO:"REBIO", RVS:"REVS", FLOE:"FE", RDS:"RDS", APE:"APE"};
+  const nomes = {};
+  sb.from("uc").select("nome_uc,categoria").eq("ativo", true).order("nome_uc").then(({data}) => {
+    (data||[]).forEach(u => nomes[`${SIG[u.categoria]||u.categoria||""} ${u.nome_uc}`.trim()] = u.nome_uc);
+    document.getElementById("pipLista").innerHTML = Object.keys(nomes).map(n => `<option value="${esc(n)}">`).join("");
+  });
+  document.getElementById("pipForm").onsubmit = e => { e.preventDefault();
+    const v = document.getElementById("pipUC").value.trim(), n = nomes[v] || Object.values(nomes).find(x => x.toLowerCase() === v.toLowerCase());
+    location.href = "ucs.html" + (n ? "?uc=" + encodeURIComponent(n) : ""); };
+  // sessão: conta no alto e gestão conforme o papel
   try{
-    const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
     const {data:{session}} = await sb.auth.getSession(); if (!session) return;
     const {data: p} = await sb.rpc("meu_perfil"); if (!p) return;
+    document.getElementById("conta").innerHTML = `<span>${esc(p.nome)}</span><a href="#" id="sairConta">Sair</a>`;
+    document.getElementById("sairConta").onclick = async ev => { ev.preventDefault(); await sb.auth.signOut(); location.reload(); };
     let n = 0;
     document.querySelectorAll("#secGestao [data-papeis]").forEach(a => { const ok = a.dataset.papeis.split(" ").includes(p.papel); a.hidden = !ok; n += ok; });
     if (!n) return;
