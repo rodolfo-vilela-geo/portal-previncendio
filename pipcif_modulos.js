@@ -2,35 +2,35 @@
 // O PIPCIF passa a ser um relatório gerado a partir desses módulos (ver PIPCIF_RELATORIO).
 // Usado na página inicial e no Cadastro das UCs. mapa = bloco com dados georreferenciados.
 window.PIPCIF_MODULOS = [
-  {n:1, ic:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>', id:"cadastro", sintese:"Gerente e contatos, equipe, decretos, ambiente, meses críticos, situação fundiária e sede no mapa.", nome:"Cadastro da UC", pronto:true, blocos:[
+  {n:1, ic:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>', id:"cadastro", tom:"verde", sintese:"Gerente e contatos, equipe, decretos, ambiente, meses críticos, situação fundiária e sede no mapa.", nome:"Cadastro da UC", pronto:true, blocos:[
     {s:"3",   t:"Informações gerais", d:"gerente e contatos, funcionários, responsáveis na ausência, decretos, ambiente, meses críticos, situação fundiária"},
     {s:"4.1", t:"Sede da UC", d:"endereço e coordenadas", mapa:true}]},
-  {n:2, ic:'<path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M10 21v-6h4v6"/>', id:"infraestrutura", sintese:"Alojamento e camping; torres, pistas de pouso, helipontos, estações meteorológicas e pontos de água no mapa.", nome:"Infraestrutura", pronto:true, blocos:[
+  {n:2, ic:'<path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M10 21v-6h4v6"/>', id:"infraestrutura", tom:"azul", sintese:"Alojamento e camping; torres, pistas de pouso, helipontos, estações meteorológicas e pontos de água no mapa.", nome:"Infraestrutura", pronto:true, blocos:[
     {s:"4.2", t:"Alojamento e camping", d:"camas, roupa de cama, sanitários, cozinha, barracas, energia"},
     {s:"4.3", t:"Vigilância", d:"torres e postos de observação", mapa:true},
     {s:"4.7", t:"Pistas de pouso", d:"dimensões, pavimentação, reservatório de água, situação", mapa:true},
     {s:"4.8", t:"Heliportos e helipontos", d:"áreas para operação de helicóptero", mapa:true},
     {s:"4.9", t:"Estações meteorológicas", d:"responsável, localização e situação", mapa:true},
     {s:"4.10", t:"Hidrantes e pontos de água", d:"hidrantes, represas, poços e outros pontos de abastecimento", mapa:true}]},
-  {n:3, ic:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4M10 14.5h4"/>', id:"recursos", sintese:"Veículos, rádios (repetidoras, fixos, móveis e HT), ferramentas, equipamentos e EPIs.", nome:"Recursos e comunicação", pronto:true, blocos:[
+  {n:3, ic:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4M10 14.5h4"/>', id:"recursos", tom:"roxo", sintese:"Veículos, rádios (repetidoras, fixos, móveis e HT), ferramentas, equipamentos e EPIs.", nome:"Recursos e comunicação", pronto:true, blocos:[
     {s:"4.4", t:"Veículos", d:"tipo, marca/modelo, estado de conservação, disponibilidade"},
     {s:"4.5", t:"Radiocomunicação da UC", d:"repetidoras, rádios fixos, móveis e portáteis (HT)", mapa:true},
     {s:"4.6", t:"Rádios com parceiros", d:"fixos, móveis e portáteis disponibilizados por parceiros", mapa:true},
     {s:"5",   t:"Materiais e equipamentos", d:"ferramentas manuais, equipamentos especiais e EPIs — quantidade e situação"}]},
-  {n:4, ic:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/>', id:"apoio", sintese:"Parceiros e apoios, prestadores (alimentação, saúde, combustível), colaboradores e brigadistas voluntários.", nome:"Rede de apoio", pronto:true, blocos:[
+  {n:4, ic:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/>', id:"apoio", tom:"teal", sintese:"Parceiros e apoios, prestadores (alimentação, saúde, combustível), colaboradores e brigadistas voluntários.", nome:"Rede de apoio", pronto:true, blocos:[
     {s:"6", t:"Parceiros e apoios disponíveis", d:"responsável, contatos, localização e apoio oferecido; outros contatos importantes", mapa:true},
     {s:"7", t:"Prestadores de serviço", d:"alimentação, unidades de saúde, abastecimento e outros", mapa:true},
     {s:"8", t:"Colaboradores e moradores", d:"propriedades, atividade e tipo de apoio", mapa:true},
     {s:"9", t:"Brigadistas voluntários", d:"nome, município e contato"}]},
-  {n:5, ic:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>', id:"prevencao", sintese:"Aceiros, estradas e trilhas no mapa, cronograma de ações preventivas, projetos no entorno e atuação dos brigadistas.", nome:"Prevenção e plano anual", blocos:[
+  {n:5, ic:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>', id:"prevencao", tom:"ambar", sintese:"Aceiros, estradas e trilhas no mapa, cronograma de ações preventivas, projetos no entorno e atuação dos brigadistas.", nome:"Prevenção e plano anual", blocos:[
     {s:"10", t:"Aceiros, estradas e trilhas", d:"construção e manutenção, com traçado no mapa", mapa:true},
     {s:"11", t:"Elementos favoráveis e adversos", d:"à prevenção e ao combate"},
     {s:"12", t:"Cronograma de ações preventivas", d:"capacitação e sensibilização — período, local e público"},
     {s:"13", t:"Projetos de sustentabilidade", d:"dentro e no entorno da UC", mapa:true},
     {s:"16", t:"Atuação dos brigadistas contratados", d:"rondas, escala, plantão e pontos estratégicos"}]},
-  {n:6, ic:'<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>', id:"risco", sintese:"Setores de risco da UC, com fatores favoráveis e adversos e o histórico de cicatrizes do BDG.", nome:"Mapa de risco", blocos:[
+  {n:6, ic:'<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>', id:"risco", tom:"verm", sintese:"Setores de risco da UC, com fatores favoráveis e adversos e o histórico de cicatrizes do BDG.", nome:"Mapa de risco", blocos:[
     {s:"14", t:"Setores de risco", d:"fatores favoráveis e adversos por setor, com o histórico de cicatrizes do BDG", mapa:true}]},
-  {n:7, ic:'<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.3-3.7 1.5-5.5 1.2 1 2 2.2 2.5 2.5.2-2.4-.3-4.6 1-7z"/>', id:"operacional", sintese:"Procedimentos de combate: inicial, grandes incêndios, parceiros e pós-incêndio.", nome:"Plano operacional", blocos:[
+  {n:7, ic:'<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.3-3.7 1.5-5.5 1.2 1 2 2.2 2.5 2.5.2-2.4-.3-4.6 1-7z"/>', id:"operacional", tom:"fogo", sintese:"Procedimentos de combate: inicial, grandes incêndios, parceiros e pós-incêndio.", nome:"Plano operacional", blocos:[
     {s:"15", t:"Plano operacional de combate", d:"procedimentos iniciais, intermediários (grandes incêndios), dos parceiros e pós-incêndio"}]}
 ];
 
