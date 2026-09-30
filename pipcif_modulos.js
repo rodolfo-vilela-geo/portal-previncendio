@@ -5,12 +5,13 @@ window.PIPCIF_MODULOS = [
   {n:1, id:"cadastro", nome:"Cadastro da UC", pronto:true, blocos:[
     {s:"3",   t:"Informações gerais", d:"gerente e contatos, funcionários, responsáveis na ausência, decretos, ambiente, meses críticos, situação fundiária"},
     {s:"4.1", t:"Sede da UC", d:"endereço e coordenadas", mapa:true}]},
-  {n:2, id:"infraestrutura", nome:"Infraestrutura", blocos:[
+  {n:2, id:"infraestrutura", nome:"Infraestrutura", pronto:true, blocos:[
     {s:"4.2", t:"Alojamento e camping", d:"camas, roupa de cama, sanitários, cozinha, barracas, energia"},
     {s:"4.3", t:"Vigilância", d:"torres e postos de observação", mapa:true},
     {s:"4.7", t:"Pistas de pouso", d:"dimensões, pavimentação, reservatório de água, situação", mapa:true},
     {s:"4.8", t:"Heliportos e helipontos", d:"áreas para operação de helicóptero", mapa:true},
-    {s:"4.9", t:"Estações meteorológicas", d:"responsável, localização e situação", mapa:true}]},
+    {s:"4.9", t:"Estações meteorológicas", d:"responsável, localização e situação", mapa:true},
+    {s:"4.10", t:"Hidrantes e pontos de água", d:"hidrantes, represas, poços e outros pontos de abastecimento", mapa:true}]},
   {n:3, id:"recursos", nome:"Recursos e comunicação", blocos:[
     {s:"4.4", t:"Veículos", d:"tipo, marca/modelo, estado de conservação, disponibilidade"},
     {s:"4.5", t:"Radiocomunicação da UC", d:"repetidoras, rádios fixos, móveis e portáteis (HT)", mapa:true},

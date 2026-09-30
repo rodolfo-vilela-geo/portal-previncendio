@@ -141,6 +141,7 @@ const fmtD = d => d ? d.slice(0,10).split("-").reverse().join("/") : "";
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const CATS = {PAR:"Parque Estadual", APA:"Área de Proteção Ambiental", MONA:"Monumento Natural", ESEC:"Estação Ecológica", REBIO:"Reserva Biológica",
               RVS:"Refúgio de Vida Silvestre", FLOE:"Floresta Estadual", RDS:"Reserva de Desenvolvimento Sustentável", APE:"Área de Proteção Especial"};
+const INFRA = {vigilancia:["Vigilância","#ffd33d"], pista:["Pista de pouso","#4da3ff"], heliponto:["Heliponto","#ff7a1a"], estacao:["Estação meteorológica","#c9a2ff"], agua:["Ponto de água","#35d0ff"]};
 const SIG = {PAR:"PE", APA:"APA", MONA:"MN", ESEC:"EE", REBIO:"REBIO", RVS:"REVS", FLOE:"FE", RDS:"RDS", APE:"APE"};
 let perfil = null, D = null, mapa = null;
 
@@ -173,7 +174,9 @@ async function carregar(){
   const nome = $("#selUC").value; if (!nome) return;
   $("#btnCadastro").href = "ucs.html?uc=" + encodeURIComponent(nome);
   $("#conteudo").innerHTML = `<div class="carregando">Carregando o painel de ${esc(nome)}…</div>`;
-  const {data, error} = await sb.rpc("painel_uc", {p_nome_uc: nome});
+  const [{data, error}, {data: infra}] = await Promise.all([sb.rpc("painel_uc", {p_nome_uc: nome}),
+    sb.from("vw_uc_ponto").select("tipo,nome,lat,lon,situacao,dist_uc_km").eq("nome_uc", nome)]);
+  if (data) data.infra = infra || [];
   if (error){ $("#conteudo").innerHTML = `<div class="carregando" style="color:var(--erro)">${esc(error.message)}</div>`; return; }
   D = data; desenhar();
 }
@@ -207,6 +210,8 @@ function desenhar(){
           <dt>Biomas</dt><dd>${esc((u.biomas||[u.bioma_uc]).filter(Boolean).join(", ") || "—")}</dd>
           <dt>Área (decreto / limite)</dt><dd>${u.area_decreto_ha ? fmtN(u.area_decreto_ha) : "—"} / ${u.area_limite_ha ? fmtN(u.area_limite_ha) : "—"} ha</dd>
         </dl>
+        <h4>Infraestrutura cadastrada</h4>
+        ${(D.infra||[]).length ? `<div style="font-size:13px">${Object.entries(INFRA).map(([t,[r]]) => { const n = D.infra.filter(x => x.tipo === t).length; return n ? `${n} ${r.toLowerCase()}${n>1 && !r.endsWith("s") ? "s" : ""}` : null; }).filter(Boolean).join(" · ")}</div>` : `<div class="vazio">Nada cadastrado no módulo Infraestrutura.</div>`}
         <h4>Meses críticos declarados</h4>
         <div class="meses">${MESES.map((m,i) => `<span class="${(u.meses_criticos||[]).includes(i+1) ? "on" : ""}">${m}</span>`).join("")}</div>
         ${!(u.meses_criticos||[]).length ? `<div class="vazio">Ainda não informados no cadastro.</div>` : ""}
@@ -306,6 +311,12 @@ function montarMapa(){
     cam[`RIs de ${D.ano_atual}`] = L.featureGroup(ris.map(r => L.circleMarker([r.lat, r.lon], {radius:6, color:"#fff", weight:1.5, fillColor: r.status==="andamento" ? "#ff1f1f" : "#ff7a1a", fillOpacity:1})
       .bindTooltip(`RI ${r.ri} · ${fmtD(r.data)} · ${esc(r.status)}`))).addTo(mapa);
     leg.push(`<i style="background:#ff7a1a;border-radius:50%;width:10px"></i>RIs de ${D.ano_atual} (${ris.length})`);
+  }
+  const inf = (D.infra||[]).filter(x => x.lat != null);
+  if (inf.length){
+    cam["Infraestrutura"] = L.featureGroup(inf.map(x => L.circleMarker([x.lat, x.lon], {radius:6, color:"#1d1d1f", weight:1.5, fillColor:INFRA[x.tipo][1], fillOpacity:1})
+      .bindTooltip(`${INFRA[x.tipo][0]}: ${esc(x.nome)}${x.situacao && x.situacao !== "operante" ? " · " + x.situacao : ""}`))).addTo(mapa);
+    [...new Set(inf.map(x => x.tipo))].forEach(t => leg.push(`<i style="background:${INFRA[t][1]};border-radius:50%;width:10px;border:1px solid #1d1d1f"></i>${INFRA[t][0]}`));
   }
   const pts = [];
   if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: L.divIcon({className:"", html:`<div style="width:13px;height:13px;background:#fff;border:3px solid #1f6feb;box-shadow:0 0 3px #000"></div>`, iconSize:[13,13], iconAnchor:[6,6]})}).bindTooltip("Sede da UC")); leg.push(`<i style="background:#fff;border:3px solid #1f6feb;width:10px;height:10px"></i>Sede`); }

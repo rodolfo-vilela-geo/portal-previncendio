@@ -38,6 +38,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
   carga/carregar_municipios.sql
 16_analise_poligono.sql       cruzamento do polígono de campo com UC e municípios
 17_painel_uc.sql              dados do Painel da UC (gestores)
+18_infraestrutura.sql         módulo 2: alojamento/camping e pontos de infraestrutura (4.2–4.10)
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador

@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="pipcif_modulos.js"></script>
 <style>
   :root{
     --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --mudo:#7a7a72; --linha:#dcd8d0;
@@ -111,6 +112,26 @@
   .senha-box code{font-size:18px;font-weight:700;letter-spacing:.05em;background:#fff;padding:2px 8px;border-radius:6px;border:1px solid #e8d9a8}
   dialog{border:0;border-radius:12px;padding:20px;max-width:400px;width:92vw;box-shadow:0 12px 40px rgba(0,0,0,.3)}
   dialog::backdrop{background:rgba(0,0,0,.45)}
+  .abas-mod{display:flex;gap:4px;flex-wrap:wrap;margin:14px 0 0;border-bottom:1px solid var(--linha)}
+  .abas-mod button{font:inherit;font-size:13.5px;font-weight:600;border:0;background:transparent;color:var(--suave);padding:8px 11px;border-bottom:3px solid transparent;cursor:pointer;display:flex;gap:6px;align-items:center}
+  .abas-mod button .n{width:20px;height:20px;border-radius:50%;background:#dcdcd4;color:#fff;font-size:11.5px;display:grid;place-items:center}
+  .abas-mod button[aria-selected=true]{color:var(--verde);border-bottom-color:var(--verde)} .abas-mod button[aria-selected=true] .n,.abas-mod button.pronto .n{background:var(--verde)}
+  .abas-mod button:disabled{cursor:default;opacity:.55}
+  .breve-mod{border:1px dashed var(--linha);border-radius:10px;padding:14px 16px;margin-top:14px;color:var(--suave)}
+  .breve-mod ul{margin:8px 0 0;padding-left:18px}
+  .infra-grade{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:14px;align-items:start}
+  #mapaInfra{height:460px;border-radius:8px;background:#1b1f17}
+  .tipo-bloco{border:1px solid var(--linha);border-radius:10px;margin-bottom:10px;overflow:hidden}
+  .tipo-bloco .th{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f6f8ef;font-weight:650;font-size:13.5px}
+  .tipo-bloco .th .cor{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #999;flex:none}
+  .tipo-bloco .th .sp{flex:1}
+  .tipo-bloco .th label{margin:0;font-weight:500;font-size:12px;display:flex;gap:4px;align-items:center;color:var(--suave)}
+  .tipo-bloco .th label input{width:auto}
+  .pt{padding:7px 10px;border-top:1px solid #eee;cursor:pointer;font-size:13px;display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+  .pt:hover,.pt.sel{background:#eef3e2} .pt .d{grid-column:1/-1;font-size:12px;color:var(--suave)}
+  .pt .sit{font-size:11px;font-weight:700;border-radius:99px;padding:1px 7px;white-space:nowrap}
+  .sit.operante{background:#e3f0dc;color:#2e6b1a} .sit.parcial{background:#fff4cc;color:#8a5a00} .sit.inoperante{background:#fdecea;color:#b3261e}
+  .editor-pt{border:2px solid var(--verde);border-radius:10px;padding:12px;margin-bottom:12px;background:#fbfdf7}
   @media (max-width:880px){ .layout{grid-template-columns:1fr} .lista{position:static} .itens{max-height:300px} .grade .duplo{grid-column:auto} .coord{grid-template-columns:1fr 1fr} }
 </style>
 </head>
@@ -210,7 +231,11 @@ const ROTULOS = {gerente_nome:"Gerente", gerente_contatos:"Contatos do gerente",
   ref_lat:"Latitude (UC)", ref_lon:"Longitude (UC)", altitude_min:"Altitude mínima", altitude_max:"Altitude máxima", fundiaria_pct:"Regularização fundiária (%)",
   fundiaria_ha:"Regularização fundiária (ha)", fundiaria_obs:"Situação fundiária", sede_municipio:"Município da sede", sede_endereco:"Endereço da sede",
   sede_lat:"Latitude (sede)", sede_lon:"Longitude (sede)", obs:"Observações", sigla:"Sigla", telefones:"Telefones", coordenador:"Coordenador(a)",
-  coord_contatos:"Contatos do coordenador", endereco:"Endereço"};
+  coord_contatos:"Contatos do coordenador", endereco:"Endereço",
+  nome:"Identificação", tipo:"Tipo", lat:"Latitude", lon:"Longitude", altitude_m:"Altitude (m)", ponto_ref:"Ponto de referência", situacao:"Situação", atributos:"Detalhes",
+  tem_alojamento:"Possui alojamento", camas:"Camas/colchões", roupa_cama:"Roupa de cama/banho", sanitarios:"Sanitários/banhos (alojamento)", cozinha:"Cozinha e utensílios",
+  tem_camping:"Possui área de camping", barracas:"Barracas", camping_sanitarios:"Sanitários/banho (camping)", camping_energia:"Energia elétrica (camping)",
+  alojamento_obs:"Obs. alojamento", nao_possui:"Declarou não possuir"};
 
 let perfil = null, UCS = [], REG = {}, EQUIPE = [], GEO = null, atual = null, filtroMinhas = true, sujo = false;
 
@@ -369,7 +394,7 @@ async function abrirUC(nome){
   ]);
   if (error) return msg(error.message, "erro");
   atual = {...u, cad: c || {nome_uc: nome, gerente_contatos: [], responsaveis: []}};
-  history.replaceState(null, "", "?uc=" + encodeURIComponent(nome));
+  history.replaceState(null, "", "?uc=" + encodeURIComponent(nome) + (new URLSearchParams(location.search).get("mod") ? "&mod=" + new URLSearchParams(location.search).get("mod") : ""));
   desenharLista();
   const ed = podeEditar(nome), r = REG[u.ufbio] || {}, d = atual.cad;
   const gerentes = (u.gerentes_login||[]).map(e => EQUIPE.find(x=>x.email===e)?.nome || e);
@@ -378,6 +403,8 @@ async function abrirUC(nome){
       <h2>${esc(CATS[u.categoria] ? CATS[u.categoria] + " " + u.nome_uc : u.nome_uc)}</h2>
       <div class="dica">${esc(u.ufbio||"")} · ${esc((u.municipios||[]).join(", "))}</div></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><a class="btn peq" href="painel_uc.html?uc=${encodeURIComponent(nome)}">Painel da UC →</a>${ed ? `<span class="selo">Você pode editar</span>` : `<span class="selo ro">Somente leitura</span>`}</div></div>
+    ${abasModulos()}
+    <div id="mod-cadastro">
 
     <fieldset><legend>Dados fixos</legend>
       <div class="fixos">
@@ -451,13 +478,17 @@ async function abrirUC(nome){
     ${ed ? `<div class="acoes"><button class="btn primario" id="salvarUC">Salvar cadastro</button><span class="dica" id="estadoSalvo">${d.atualizado_em ? `Última alteração: ${esc(nomePor(d.atualizado_por))} em ${fmtDH(d.atualizado_em)}` : ""}</span></div>`
          : `<p class="dica" style="margin-top:12px">${d.atualizado_em ? `Última alteração: ${esc(nomePor(d.atualizado_por))} em ${fmtDH(d.atualizado_em)}.` : ""} Para editar esta UC, o seu login precisa estar ligado a ela (fale com a GPCIF).</p>`}
 
-    <details class="historico"><summary>Histórico de alterações (${(hist||[]).length})</summary>${htmlHistorico(hist||[])}</details>`;
+    <details class="historico"><summary>Histórico de alterações (${(hist||[]).length})</summary>${htmlHistorico(hist||[])}</details>
+    </div><div id="mod-conteudo"></div>`;
+  ligarAbasModulos(nome);
 
   const getContatos = repetidor($("#repContatos"), (d.gerente_contatos||[]).map(x=>({...x})), CONTATO, ed, {tipo:"tel", valor:"", obs:""});
   const getResp = repetidor($("#repResp"), (d.responsaveis||[]).map(x=>({...x})), RESP, ed, {nome:"", telefone:"", email:""});
   $$("#meses button, #biomas button").forEach(b => b.onclick = () => { b.setAttribute("aria-pressed", b.getAttribute("aria-pressed")!=="true"); marcarSujo(); });
   $$("#detalhe [data-k]").forEach(el => { if (!el.closest(".rep")) el.addEventListener("input", marcarSujo); });
   montarMapa(u, d, ed);
+  const modURL = new URLSearchParams(location.search).get("mod");
+  if (modURL && modURL !== "cadastro") setTimeout(() => $(`.abas-mod [data-mod="${modURL}"]`)?.click(), 0);
   if (!ed) return;
   $("#salvarUC").onclick = async () => {
     const g = k => $(`#detalhe [data-k="${k}"]`)?.value;
@@ -493,14 +524,18 @@ function fmtValor(k, v){
   if (k === "meses_criticos") return v.map(m => MESES[m-1]).join(", ");
   if (k === "gerente_contatos" || k === "coord_contatos") return v.map(x => x.valor + (x.obs ? ` (${x.obs})` : "")).join("; ");
   if (k === "responsaveis") return v.map(x => [x.nome, x.telefone, x.email].filter(Boolean).join(" · ")).join("; ");
+  if (k === "nao_possui") return v.map(t => TIPOS_PONTO[t]?.rot || t).join(", ");
+  if (k === "situacao") return SITUACOES[v] || v;
+  if (k === "atributos" && typeof v === "object") return Object.entries(v).filter(([,x]) => x !== "" && x != null).map(([a,x]) => `${ROT_ATRIB[a]||a}: ${x}`).join("; ") || "vazio";
+  if (typeof v === "boolean") return v ? "sim" : "não";
   if (Array.isArray(v)) return v.join(", ");
   if (typeof v === "number") return fmtNum(v, 6);
   const s = String(v); return s.length > 140 ? s.slice(0,140) + "…" : s;
 }
 function htmlHistorico(H){
   if (!H.length) return `<p class="dica">Sem alterações registradas.</p>`;
-  return `<ul class="hist" style="padding-left:18px;margin-top:8px">${H.map(h => `<li><span class="q">${fmtDH(h.quando)} · ${esc(nomePor(h.quem))}</span>
-    ${h.operacao === "alterar" ? `<ul class="mud">${(h.campos||[]).map(k => `<li><b>${esc(ROTULOS[k]||k)}:</b> <del>${esc(fmtValor(k, h.antes?.[k]))}</del> → <ins>${esc(fmtValor(k, h.depois?.[k]))}</ins></li>`).join("")}</ul>`
+  return `<ul class="hist" style="padding-left:18px;margin-top:8px">${H.map(h => `<li><span class="q">${fmtDH(h.quando)} · ${esc(nomePor(h.quem))}</span>${h.ref ? ` · <b>${esc(refLegivel(h.ref))}</b>` : ""}
+    ${h.tabela === "uc_ponto" && h.operacao !== "alterar" ? ` — ${h.operacao === "incluir" ? "incluído" : "excluído"}` : h.operacao === "alterar" ? `<ul class="mud">${(h.campos||[]).map(k => `<li><b>${esc(ROTULOS[k]||k)}:</b> <del>${esc(fmtValor(k, h.antes?.[k]))}</del> → <ins>${esc(fmtValor(k, h.depois?.[k]))}</ins></li>`).join("")}</ul>`
       : ` — ${h.operacao === "incluir" ? "cadastro criado" : "cadastro excluído"}`}</li>`).join("")}</ul>`;
 }
 
@@ -538,6 +573,211 @@ function montarMapa(u, d, ed){
     const [la, lo] = utmParaGeo(z, EE, NN);
     $(`[data-k="${p}_lat"]`).value = la.toFixed(6); $(`[data-k="${p}_lon"]`).value = lo.toFixed(6); atualizar(p); marcarSujo();
   });
+}
+
+
+/* ============================ MÓDULOS DA UC ============================ */
+function abasModulos(){
+  const M = window.PIPCIF_MODULOS || [];
+  return `<nav class="abas-mod" role="tablist">${M.map(m => `<button type="button" data-mod="${m.id}" class="${m.pronto ? "pronto" : ""}" aria-selected="${m.id === "cadastro"}" ${m.pronto ? "" : `title="Em construção"`}><span class="n">${m.n}</span>${esc(m.nome)}</button>`).join("")}</nav>`;
+}
+function ligarAbasModulos(nome){
+  $$(".abas-mod button").forEach(b => b.onclick = async () => {
+    if (sujo && !confirm("Há alterações não salvas. Trocar de módulo assim mesmo?")) return;
+    sujo = false;
+    $$(".abas-mod button").forEach(x => x.setAttribute("aria-selected", x === b));
+    const id = b.dataset.mod, q = new URLSearchParams(location.search); q.set("mod", id); history.replaceState(null, "", "?" + q);
+    $("#mod-cadastro").hidden = id !== "cadastro";
+    if (id === "cadastro"){ $("#mod-conteudo").innerHTML = ""; if (mapa) setTimeout(() => mapa.invalidateSize(), 30); return; }
+    if (id === "infraestrutura") return abrirInfra(nome);
+    const m = (window.PIPCIF_MODULOS||[]).find(x => x.id === id);
+    $("#mod-conteudo").innerHTML = `<div class="breve-mod"><b>Módulo ${m.n} · ${esc(m.nome)}</b> — em construção. Vai reunir:<ul>${m.blocos.map(bl => `<li><b>${esc(bl.s)}</b> ${esc(bl.t)}${bl.d ? ` — ${esc(bl.d)}` : ""}</li>`).join("")}</ul></div>`;
+  });
+}
+
+const SITUACOES = {operante:"Operante", parcial:"Parcialmente operante", inoperante:"Inoperante"};
+const TIPOS_PONTO = {
+  vigilancia:{s:"4.3", rot:"Vigilância — torres e postos de observação", curto:"Vigilância", cor:"#ffd33d", sit:false,
+    campos:[["estrutura","Estrutura",["Torre","Posto de observação","Mirante","Câmera","Outro"]],["localizacao","Localização"]]},
+  pista:{s:"4.7", rot:"Pistas de pouso (dentro, no entorno ou que atendem a UC)", curto:"Pista de pouso", cor:"#4da3ff", sit:true,
+    campos:[["largura_m","Largura (m)","num"],["comprimento_m","Comprimento (m)","num"],["pavimentacao","Pavimentação",["Asfalto","Cascalho compactado","Terra","Grama","Sem pavimentação","Outro"]],
+            ["conservacao","Estado de conservação",["Excelente","Bom","Regular","Ruim"]],["reservatorio","Reservatório de água",["Sim","Não"]]]},
+  heliponto:{s:"4.8", rot:"Heliportos e helipontos (áreas para operação de helicóptero)", curto:"Heliponto", cor:"#ff7a1a", sit:true,
+    campos:[["dimensoes","Dimensões / área"],["piso","Piso"]]},
+  estacao:{s:"4.9", rot:"Estações meteorológicas", curto:"Estação meteorológica", cor:"#c9a2ff", sit:true,
+    campos:[["responsavel","Responsável"],["localizacao","Localização"]]},
+  agua:{s:"4.10", rot:"Hidrantes e pontos de água", curto:"Ponto de água", cor:"#35d0ff", sit:true,
+    campos:[["tipo_agua","Tipo",["Hidrante","Represa / açude","Rio / córrego","Poço","Caixa d’água","Outro"]],["responsavel","Responsável"],["localizacao","Localização"]]}
+};
+const ROT_ATRIB = Object.fromEntries(Object.values(TIPOS_PONTO).flatMap(t => t.campos.map(c => [c[0], c[1]])));
+const refLegivel = r => { const [t, ...n] = String(r).split(": "); return TIPOS_PONTO[t] ? `${TIPOS_PONTO[t].curto}: ${n.join(": ")}` : r; };
+
+let INF = null, mapaInf = null, camadaInf = null, editando = null, alvoInf = false;
+async function abrirInfra(nome){
+  const u = UCS.find(x => x.nome_uc === nome), ed = podeEditar(nome);
+  $("#mod-conteudo").innerHTML = `<div class="dica" style="padding:20px">Carregando a infraestrutura…</div>`;
+  const [{data: inf}, {data: pts, error}, {data: hist}] = await Promise.all([
+    sb.from("uc_infra").select("*").eq("nome_uc", nome).maybeSingle(),
+    sb.from("vw_uc_ponto").select("*").eq("nome_uc", nome).order("tipo").order("nome"),
+    sb.from("auditoria").select("*").in("tabela", ["uc_infra","uc_ponto"]).eq("chave", nome).order("quando", {ascending:false}).limit(80)
+  ]);
+  if (error) return $("#mod-conteudo").innerHTML = `<div class="dica" style="color:var(--erro)">${esc(error.message)}</div>`;
+  INF = {nome, u, ed, inf: inf || {nome_uc: nome, nao_possui: []}, pts: pts || [], novo: !inf};
+  const i = INF.inf, dis = ed ? "" : "disabled";
+  const simNao = (k, v) => `<select data-k="${k}" ${dis}><option value="" ${v==null?"selected":""}>—</option><option value="true" ${v===true?"selected":""}>Sim</option><option value="false" ${v===false?"selected":""}>Não</option></select>`;
+  $("#mod-conteudo").innerHTML = `
+    <fieldset id="fsAloj"><legend>4.2 Alojamento e camping</legend>
+      <div class="grade">
+        <div><label>Possui alojamento?</label>${simNao("tem_alojamento", i.tem_alojamento)}</div>
+        <div><label>Camas / colchões</label><input data-k="camas" type="number" min="0" value="${i.camas??""}" ${dis}></div>
+        <div><label>Sanitários / banhos</label><input data-k="sanitarios" type="number" min="0" value="${i.sanitarios??""}" ${dis}></div>
+        <div><label>Roupa de cama / banho</label><input data-k="roupa_cama" value="${esc(i.roupa_cama||"")}" ${dis}></div>
+        <div class="duplo"><label>Cozinha e utensílios</label><input data-k="cozinha" value="${esc(i.cozinha||"")}" ${dis}></div>
+        <div><label>Possui área de camping?</label>${simNao("tem_camping", i.tem_camping)}</div>
+        <div><label>Barracas</label><input data-k="barracas" type="number" min="0" value="${i.barracas??""}" ${dis}></div>
+        <div><label>Sanitários / banho (camping)</label><input data-k="camping_sanitarios" type="number" min="0" value="${i.camping_sanitarios??""}" ${dis}></div>
+        <div><label>Energia elétrica (camping)</label>${simNao("camping_energia", i.camping_energia)}</div>
+        <div class="largo"><label>Observações</label><input data-k="alojamento_obs" value="${esc(i.alojamento_obs||"")}" ${dis}></div>
+      </div>
+      ${ed ? `<button class="btn primario peq" id="salvarAloj" style="margin-top:10px">Salvar alojamento</button>` : ""}
+    </fieldset>
+    <fieldset><legend>Pontos de infraestrutura no mapa (4.3 a 4.10)</legend>
+      <p class="dica" style="margin:0 0 8px">Clique num item para ver ou editar. ${ed ? "Use “+ adicionar” em cada tipo; a coordenada pode ser digitada (decimal, graus-minutos-segundos ou UTM) ou marcada no mapa." : ""} Pistas e helipontos que atendem a UC podem ficar fora do limite.</p>
+      <div class="infra-grade">
+        <div><div id="mapaInfra"></div><div class="dica" style="margin-top:4px" id="legInfra"></div></div>
+        <div><div id="editorPt"></div><div id="listaPts"></div></div>
+      </div>
+    </fieldset>
+    <details class="historico"><summary>Histórico de alterações da infraestrutura (${(hist||[]).length})</summary>${htmlHistorico(hist||[])}</details>`;
+  $$("#fsAloj [data-k]").forEach(el => el.addEventListener("input", marcarSujo));
+  $("#salvarAloj")?.addEventListener("click", salvarAloj);
+  desenharPontos(); montarMapaInfra();
+}
+async function salvarAloj(){
+  const g = k => $(`#fsAloj [data-k="${k}"]`).value, bool = v => v === "" ? null : v === "true", int = v => v === "" ? null : Math.max(0, Math.round(+v));
+  const o = {tem_alojamento: bool(g("tem_alojamento")), camas: int(g("camas")), sanitarios: int(g("sanitarios")), roupa_cama: txt(g("roupa_cama")), cozinha: txt(g("cozinha")),
+    tem_camping: bool(g("tem_camping")), barracas: int(g("barracas")), camping_sanitarios: int(g("camping_sanitarios")), camping_energia: bool(g("camping_energia")), alojamento_obs: txt(g("alojamento_obs"))};
+  const {error} = INF.novo ? await sb.from("uc_infra").insert({nome_uc: INF.nome, nao_possui: INF.inf.nao_possui || [], ...o}) : await sb.from("uc_infra").update(o).eq("nome_uc", INF.nome);
+  if (error) return msg("Não foi possível salvar: " + error.message, "erro");
+  sujo = false; msg("Alojamento salvo."); abrirInfra(INF.nome);
+}
+function desenharPontos(){
+  const ed = INF.ed, np = new Set(INF.inf.nao_possui || []);
+  $("#listaPts").innerHTML = Object.entries(TIPOS_PONTO).map(([t, T]) => {
+    const L = INF.pts.filter(p => p.tipo === t);
+    return `<div class="tipo-bloco"><div class="th"><span class="cor" style="background:${T.cor}"></span><span class="sp">${T.s} ${esc(T.rot)} <span class="dica">(${L.length})</span></span>
+      ${!L.length ? `<label title="Marque se a UC não possui este tipo — conta como informado"><input type="checkbox" data-np="${t}" ${np.has(t)?"checked":""} ${ed?"":"disabled"}> não possui</label>` : ""}
+      ${ed ? `<button class="btn peq" type="button" data-add="${t}">+ adicionar</button>` : ""}</div>
+      ${L.map(p => `<div class="pt ${editando && editando.id === p.id ? "sel" : ""}" data-id="${p.id}"><span><b>${esc(p.nome)}</b></span>${T.sit && p.situacao ? `<span class="sit ${p.situacao}">${esc(SITUACOES[p.situacao])}</span>` : "<span></span>"}
+        <span class="d">${p.lat != null ? (p.dist_uc_km > 0 ? `a ${fmtNum(p.dist_uc_km,1)} km da UC` : "dentro da UC") : "sem coordenada"}${p.ponto_ref ? " · " + esc(p.ponto_ref) : ""}</span></div>`).join("")}
+      ${!L.length && np.has(t) ? `<div class="pt" style="cursor:default"><span class="d">A UC declarou não possuir.</span></div>` : ""}</div>`;
+  }).join("");
+  $$("#listaPts [data-id]").forEach(el => el.onclick = () => editarPt(INF.pts.find(p => p.id === +el.dataset.id)));
+  $$("#listaPts [data-add]").forEach(b => b.onclick = e => { e.stopPropagation(); editarPt({tipo: b.dataset.add, atributos: {}, _novo: true}); });
+  $$("#listaPts [data-np]").forEach(c => c.onchange = async () => {
+    const s = new Set(INF.inf.nao_possui || []); c.checked ? s.add(c.dataset.np) : s.delete(c.dataset.np);
+    const {error} = INF.novo ? await sb.from("uc_infra").insert({nome_uc: INF.nome, nao_possui: [...s]}) : await sb.from("uc_infra").update({nao_possui: [...s]}).eq("nome_uc", INF.nome);
+    if (error) return msg(error.message, "erro");
+    msg("Informação salva."); abrirInfra(INF.nome);
+  });
+}
+function editarPt(p){
+  if (sujo && editando && !confirm("Descartar as alterações deste ponto?")) return;
+  sujo = false; editando = p; const T = TIPOS_PONTO[p.tipo], ed = INF.ed, dis = ed ? "" : "disabled", a = p.atributos || {};
+  $("#editorPt").innerHTML = `<div class="editor-pt">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${p._novo ? "Novo — " : ""}${esc(T.curto)}</b><button class="btn peq" type="button" id="ptFechar">Fechar</button></div>
+    <div class="grade" style="margin-top:8px">
+      <div class="largo"><label>Identificação do local *</label><input data-p="nome" value="${esc(p.nome||"")}" ${dis}></div>
+      ${T.campos.map(([k, rot, tipo]) => Array.isArray(tipo)
+        ? `<div><label>${esc(rot)}</label><select data-a="${k}" ${dis}><option value=""></option>${tipo.map(o => `<option ${a[k]===o?"selected":""}>${esc(o)}</option>`).join("")}</select></div>`
+        : `<div class="${tipo ? "" : "duplo"}"><label>${esc(rot)}</label><input data-a="${k}" ${tipo==="num" ? 'type="number" min="0"' : ""} value="${esc(a[k]??"")}" ${dis}></div>`).join("")}
+      ${T.sit ? `<div><label>Situação</label><select data-p="situacao" ${dis}><option value=""></option>${Object.entries(SITUACOES).filter(([k]) => p.tipo === "estacao" || p.tipo === "agua" || k !== "parcial").map(([k,t]) => `<option value="${k}" ${p.situacao===k?"selected":""}>${t}</option>`).join("")}</select></div>` : ""}
+      <div><label>Altitude (m)</label><input data-p="altitude_m" type="number" value="${p.altitude_m??""}" ${dis}></div>
+      <div class="largo"><label>Ponto de referência</label><input data-p="ponto_ref" value="${esc(p.ponto_ref||"")}" ${dis}></div>
+    </div>
+    <div style="margin-top:8px">${htmlCoord("pt", p.lat, p.lon, ed)}</div>
+    <div style="margin-top:8px"><label>Observação</label><input data-p="obs" value="${esc(p.obs||"")}" ${dis}></div>
+    ${ed ? `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn primario peq" type="button" id="ptSalvar">Salvar</button>${p._novo ? "" : `<button class="btn peq perigo" type="button" id="ptExcluir">Excluir</button>`}</div>` : ""}
+  </div>`;
+  $$("#editorPt input, #editorPt select").forEach(el => el.addEventListener("input", marcarSujo));
+  $("#ptFechar").onclick = () => { if (sujo && !confirm("Descartar as alterações?")) return; sujo = false; editando = null; $("#editorPt").innerHTML = ""; desenharPontos(); pintarInfra(); };
+  const atualizarRes = () => {
+    const la = lerCoord($('[data-k="pt_lat"]').value), lo = lerCoord($('[data-k="pt_lon"]').value), res = $('[data-res="pt"]'); res.classList.remove("bad");
+    if (la === null || lo === null){ res.textContent = ""; pintarInfra(); return; }
+    if (Number.isNaN(la) || Number.isNaN(lo) || !dentroMG(la, lo)){ res.textContent = "Coordenada não reconhecida ou fora de MG."; res.classList.add("bad"); return; }
+    const f = GEO?.features.find(x => x.properties.nome_uc === INF.nome), dentro = f ? pontoNoPoligono(la, lo, f.geometry) : null;
+    res.textContent = `${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
+    pintarInfra({lat: la, lon: lo});
+  };
+  $$('[data-k^="pt_"]').forEach(i => i.addEventListener("change", atualizarRes)); atualizarRes();
+  $('[data-marcar="pt"]')?.addEventListener("click", () => { alvoInf = true; $("#mapaInfra").style.cursor = "crosshair"; msg("Clique no mapa para marcar o ponto."); });
+  $('[data-utm-conv]', $("#editorPt"))?.addEventListener("click", () => {
+    const box = $('[data-coord="pt"]'), z = +$("[data-utm=z]", box).value;
+    const E = numDec($("[data-utm=e]", box).value.replace(/[^\d.,]/g,"")), N = numDec($("[data-utm=n]", box).value.replace(/[^\d.,]/g,""));
+    if (!E || !N || E < 100000 || E > 900000 || N < 7000000 || N > 10000000) return msg("Confira E (6 dígitos) e N (7 dígitos).", "erro");
+    const [la, lo] = utmParaGeo(z, E, N); $('[data-k="pt_lat"]').value = la.toFixed(6); $('[data-k="pt_lon"]').value = lo.toFixed(6); atualizarRes(); marcarSujo();
+  });
+  $("#ptSalvar")?.addEventListener("click", async () => {
+    const g = k => $(`#editorPt [data-p="${k}"]`)?.value;
+    const o = {nome: txt(g("nome")), ponto_ref: txt(g("ponto_ref")), obs: txt(g("obs")), situacao: T.sit ? (g("situacao") || null) : null,
+               altitude_m: txt(g("altitude_m")) === null ? null : Math.round(+g("altitude_m")), atributos: {}};
+    if (!o.nome) return msg("Informe a identificação do local.", "erro");
+    T.campos.forEach(([k, , tipo]) => { const v = $(`#editorPt [data-a="${k}"]`).value.trim(); if (v !== "") o.atributos[k] = tipo === "num" ? +v : v; });
+    const la = lerCoord($('[data-k="pt_lat"]').value), lo = lerCoord($('[data-k="pt_lon"]').value);
+    if (Number.isNaN(la) || Number.isNaN(lo) || ((la === null) !== (lo === null))) return msg("Coordenada incompleta ou não reconhecida.", "erro");
+    if (la !== null && !dentroMG(la, lo)) return msg("Coordenada fora de Minas Gerais.", "erro");
+    o.lat = la === null ? null : +la.toFixed(6); o.lon = lo === null ? null : +lo.toFixed(6);
+    const {error} = p._novo ? await sb.from("uc_ponto").insert({nome_uc: INF.nome, tipo: p.tipo, ...o}) : await sb.from("uc_ponto").update(o).eq("id", p.id);
+    if (error) return msg("Não foi possível salvar: " + error.message, "erro");
+    if (p._novo && (INF.inf.nao_possui||[]).includes(p.tipo) && !INF.novo)
+      await sb.from("uc_infra").update({nao_possui: INF.inf.nao_possui.filter(t => t !== p.tipo)}).eq("nome_uc", INF.nome);
+    sujo = false; editando = null; msg("Ponto salvo."); abrirInfra(INF.nome);
+  });
+  $("#ptExcluir")?.addEventListener("click", async () => {
+    if (!confirm(`Excluir “${p.nome}”? A exclusão fica registrada no histórico.`)) return;
+    const {error} = await sb.from("uc_ponto").delete().eq("id", p.id);
+    if (error) return msg(error.message, "erro");
+    sujo = false; editando = null; msg("Ponto excluído."); abrirInfra(INF.nome);
+  });
+  desenharPontos();
+  if (p.lat != null && mapaInf && !mapaInf.getBounds().contains([p.lat, p.lon])){     // ponto fora da vista (ex.: pista distante)
+    const bb = INF.lim ? L.latLngBounds(INF.lim.getBounds().getSouthWest(), INF.lim.getBounds().getNorthEast()) : L.latLngBounds([p.lat, p.lon], [p.lat, p.lon]);
+    bb.extend([p.lat, p.lon]); mapaInf.fitBounds(bb, {padding:[30,30], maxZoom:15});
+  }
+  $("#editorPt").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+function montarMapaInfra(){
+  if (mapaInf){ mapaInf.remove(); mapaInf = null; }
+  mapaInf = L.map("mapaInfra", {zoomSnap:.25});
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar"}).addTo(mapaInf);
+  L.control.scale({imperial:false}).addTo(mapaInf);
+  const f = GEO?.features.find(x => x.properties.nome_uc === INF.nome);
+  INF.lim = f ? L.geoJSON(f, {style:{color:"#8be06b", weight:2, fillColor:"#6fd34a", fillOpacity:.12}, interactive:false}).addTo(mapaInf) : null;
+  mapaInf.on("click", e => { if (!alvoInf || !editando) return;
+    $('[data-k="pt_lat"]').value = e.latlng.lat.toFixed(6); $('[data-k="pt_lon"]').value = e.latlng.lng.toFixed(6);
+    $('[data-k="pt_lat"]').dispatchEvent(new Event("change")); marcarSujo(); alvoInf = false; $("#mapaInfra").style.cursor = ""; });
+  $("#legInfra").innerHTML = Object.values(TIPOS_PONTO).map(T => `<span style="white-space:nowrap;margin-right:10px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${T.cor};border:1px solid #666;vertical-align:-1px"></span> ${esc(T.curto)}</span>`).join("") + ` <span style="white-space:nowrap">· verde: limite da UC</span>`;
+  pintarInfra(null, true);
+}
+function pintarInfra(provisorio=null, enquadrar=false){
+  if (!mapaInf) return;
+  if (camadaInf) mapaInf.removeLayer(camadaInf);
+  const itens = INF.pts.filter(p => p.lat != null).map(p => {
+    const sel = editando && editando.id === p.id;
+    return L.circleMarker([p.lat, p.lon], {radius: sel ? 10 : 7, color: sel ? "#000" : "#fff", weight: sel ? 3 : 2, fillColor: TIPOS_PONTO[p.tipo].cor, fillOpacity: 1})
+      .bindTooltip(`${esc(TIPOS_PONTO[p.tipo].curto)}: ${esc(p.nome)}`).on("click", () => editarPt(p));
+  });
+  if (provisorio) itens.push(L.circleMarker([provisorio.lat, provisorio.lon], {radius:10, color:"#000", weight:3, fillColor: TIPOS_PONTO[editando.tipo].cor, fillOpacity:1}));
+  camadaInf = L.featureGroup(itens).addTo(mapaInf);
+  if (enquadrar){
+    const b = INF.lim ? INF.lim.getBounds() : null, bp = itens.length ? camadaInf.getBounds() : null;
+    const tudo = b && bp ? b.extend(bp) : (b || bp);
+    // pistas distantes podem afastar demais o enquadramento: prioriza a UC e os pontos a até 15 km
+    const perto = INF.pts.filter(p => p.lat != null && (p.dist_uc_km ?? 0) <= 15);
+    const bb = INF.lim ? L.latLngBounds(INF.lim.getBounds().getSouthWest(), INF.lim.getBounds().getNorthEast()) : null;
+    if (bb){ perto.forEach(p => bb.extend([p.lat, p.lon])); mapaInf.fitBounds(bb, {padding:[20,20]}); }
+    else if (tudo) mapaInf.fitBounds(tudo, {padding:[20,20], maxZoom:14}); else mapaInf.fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);
+  }
 }
 
 /* ============================ REGIONAIS ============================ */
