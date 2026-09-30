@@ -70,7 +70,7 @@
   .cabec{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
   .selo{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--realce);color:var(--verde)}
   .selo.ro{background:#f1efe9;color:var(--suave)}
-  fieldset{border:1px solid var(--linha);border-radius:10px;margin:14px 0 0;padding:10px 12px 12px}
+  fieldset{border:1px solid var(--linha);border-radius:10px;margin:14px 0 0;padding:10px 12px 12px;min-width:0}
   legend{font-size:12.5px;font-weight:700;color:var(--verde);padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
   .fixos{display:grid;gap:4px 16px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));font-size:13.5px}
   .fixos div span{display:block;font-size:11.5px;color:var(--mudo)}
@@ -122,6 +122,16 @@
   .breve-mod ul{margin:8px 0 0;padding-left:18px}
   .infra-grade{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:14px;align-items:start}
   #mapaInfra{height:460px;border-radius:8px;background:#1b1f17}
+  #mapaMU{height:440px;border-radius:8px;background:#1b1f17}
+  .mu-grade{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}
+  @media (max-width:980px){ .infra-grade,.mu-grade{grid-template-columns:minmax(0,1fr)} #mapaMU{height:340px} }
+  .mu-mapa{position:sticky;top:10px;margin-top:14px}
+  .mu-g{margin:12px 0 6px;font-size:13.5px}
+  .mu-tab .lin.cab span{font-size:11.5px;font-weight:650;color:var(--suave);text-transform:uppercase;letter-spacing:.03em}
+  .mu-tab .lin{margin-bottom:4px}
+  .mu-det{font-size:12px;font-weight:700;color:var(--verde);margin:10px 0 4px;padding-top:6px;border-top:1px dashed var(--linha)}
+  .mu-acoes{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  @media (max-width:880px){ .mu-mapa{position:static} .mu-tab .lin{grid-template-columns:1fr 1fr!important} .mu-tab .lin.cab{display:none} }
   .tipo-bloco{border:1px solid var(--linha);border-radius:10px;margin-bottom:10px;overflow:hidden}
   .tipo-bloco .th{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f6f8ef;font-weight:650;font-size:13.5px}
   .tipo-bloco .th .cor{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #999;flex:none}
@@ -525,18 +535,18 @@ function fmtValor(k, v){
   if (k === "meses_criticos") return v.map(m => MESES[m-1]).join(", ");
   if (k === "gerente_contatos" || k === "coord_contatos") return v.map(x => x.valor + (x.obs ? ` (${x.obs})` : "")).join("; ");
   if (k === "responsaveis") return v.map(x => [x.nome, x.telefone, x.email].filter(Boolean).join(" · ")).join("; ");
-  if (k === "nao_possui") return v.map(t => TIPOS_PONTO[t]?.rot || t).join(", ");
+  if (k === "nao_possui") return v.map(t => TIPOS_PONTO[t]?.rot || window.MU_NP?.[t] || t).join(", ");
   if (k === "situacao") return SITUACOES[v] || v;
   if (k === "atributos" && typeof v === "object") return Object.entries(v).filter(([,x]) => x !== "" && x != null).map(([a,x]) => `${ROT_ATRIB[a]||a}: ${x}`).join("; ") || "vazio";
   if (typeof v === "boolean") return v ? "sim" : "não";
-  if (Array.isArray(v)) return v.join(", ");
+  if (Array.isArray(v)) return v.map(x => x && typeof x === "object" ? Object.values(x).filter(y => y !== "" && y != null).join(" · ") : x).join("; ");
   if (typeof v === "number") return fmtNum(v, 6);
   const s = String(v); return s.length > 140 ? s.slice(0,140) + "…" : s;
 }
 function htmlHistorico(H){
   if (!H.length) return `<p class="dica">Sem alterações registradas.</p>`;
   return `<ul class="hist" style="padding-left:18px;margin-top:8px">${H.map(h => `<li><span class="q">${fmtDH(h.quando)} · ${esc(nomePor(h.quem))}</span>${h.ref ? ` · <b>${esc(refLegivel(h.ref))}</b>` : ""}
-    ${h.tabela === "uc_ponto" && h.operacao !== "alterar" ? ` — ${h.operacao === "incluir" ? "incluído" : "excluído"}` : h.operacao === "alterar" ? `<ul class="mud">${(h.campos||[]).map(k => `<li><b>${esc(ROTULOS[k]||k)}:</b> <del>${esc(fmtValor(k, h.antes?.[k]))}</del> → <ins>${esc(fmtValor(k, h.depois?.[k]))}</ins></li>`).join("")}</ul>`
+    ${!["uc_cadastro","regional"].includes(h.tabela) && h.operacao !== "alterar" ? ` — ${h.operacao === "incluir" ? "incluído" : "excluído"}` : h.operacao === "alterar" ? `<ul class="mud">${(h.campos||[]).map(k => `<li><b>${esc(ROTULOS[k]||k)}:</b> <del>${esc(fmtValor(k, h.antes?.[k]))}</del> → <ins>${esc(fmtValor(k, h.depois?.[k]))}</ins></li>`).join("")}</ul>`
       : ` — ${h.operacao === "incluir" ? "cadastro criado" : "cadastro excluído"}`}</li>`).join("")}</ul>`;
 }
 
@@ -591,6 +601,7 @@ function ligarAbasModulos(nome){
     $("#mod-cadastro").hidden = id !== "cadastro";
     if (id === "cadastro"){ $("#mod-conteudo").innerHTML = ""; if (mapa) setTimeout(() => mapa.invalidateSize(), 30); return; }
     if (id === "infraestrutura") return abrirInfra(nome);
+    if (window.MODULOS_UC?.[id]) return abrirModuloUC(id, nome);
     const m = (window.PIPCIF_MODULOS||[]).find(x => x.id === id);
     $("#mod-conteudo").innerHTML = `<div class="breve-mod"><b>Módulo ${m.n} · ${esc(m.nome)}</b> — em construção. Vai reunir:<ul>${m.blocos.map(bl => `<li><b>${esc(bl.s)}</b> ${esc(bl.t)}${bl.d ? ` — ${esc(bl.d)}` : ""}</li>`).join("")}</ul></div>`;
   });
@@ -611,7 +622,7 @@ const TIPOS_PONTO = {
     campos:[["tipo_agua","Tipo",["Hidrante","Represa / açude","Rio / córrego","Poço","Caixa d’água","Outro"]],["responsavel","Responsável"],["localizacao","Localização"]]}
 };
 const ROT_ATRIB = Object.fromEntries(Object.values(TIPOS_PONTO).flatMap(t => t.campos.map(c => [c[0], c[1]])));
-const refLegivel = r => { const [t, ...n] = String(r).split(": "); return TIPOS_PONTO[t] ? `${TIPOS_PONTO[t].curto}: ${n.join(": ")}` : r; };
+const refLegivel = r => { const [t, ...n] = String(r).split(": "); return TIPOS_PONTO[t] ? `${TIPOS_PONTO[t].curto}: ${n.join(": ")}` : window.MU_REF?.[t] ? `${window.MU_REF[t]}: ${n.join(": ")}` : r; };
 
 let INF = null, mapaInf = null, camadaInf = null, editando = null, alvoInf = false;
 async function abrirInfra(nome){
@@ -910,5 +921,6 @@ $$(".abas button").forEach(b => b.onclick = async () => {
 });
 entrar();
 </script>
+<script src="modulos_uc.js"></script>
 </body>
 </html>

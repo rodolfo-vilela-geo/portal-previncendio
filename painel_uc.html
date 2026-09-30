@@ -175,9 +175,10 @@ async function carregar(){
   const nome = $("#selUC").value; if (!nome) return;
   $("#btnCadastro").href = "ucs.html?uc=" + encodeURIComponent(nome);
   $("#conteudo").innerHTML = `<div class="carregando">Carregando o painel de ${esc(nome)}…</div>`;
-  const [{data, error}, {data: infra}] = await Promise.all([sb.rpc("painel_uc", {p_nome_uc: nome}),
-    sb.from("vw_uc_ponto").select("tipo,nome,lat,lon,situacao,dist_uc_km,atributos").eq("nome_uc", nome)]);
-  if (data) data.infra = infra || [];
+  const [{data, error}, {data: infra}, {data: rec}, {data: rede}] = await Promise.all([sb.rpc("painel_uc", {p_nome_uc: nome}),
+    sb.from("vw_uc_ponto").select("tipo,nome,lat,lon,situacao,dist_uc_km,atributos").eq("nome_uc", nome),
+    sb.rpc("uc_recursos_resumo", {p_nome_uc: nome}), sb.from("vw_uc_rede_geo").select("tabela,tipo,nome,lat,lon,situacao").eq("nome_uc", nome)]);
+  if (data){ data.infra = infra || []; data.rec = rec || null; data.rede = rede || []; }
   if (error){ $("#conteudo").innerHTML = `<div class="carregando" style="color:var(--erro)">${esc(error.message)}</div>`; return; }
   D = data; desenhar();
 }
@@ -213,6 +214,8 @@ function desenhar(){
         </dl>
         <h4>Infraestrutura cadastrada</h4>
         ${(D.infra||[]).length ? `<div style="font-size:13px">${Object.entries(INFRA).map(([t,[r]]) => { const n = D.infra.filter(x => x.tipo === t).length; return n ? `${n} ${r.toLowerCase()}${n>1 && !r.endsWith("s") ? "s" : ""}` : null; }).filter(Boolean).join(" · ")}</div>` : `<div class="vazio">Nada cadastrado no módulo Infraestrutura.</div>`}
+        <h4>Recursos e rede de apoio</h4>
+        ${htmlRecursos(D.rec)}
         <h4>Meses críticos declarados</h4>
         <div class="meses">${MESES.map((m,i) => `<span class="${(u.meses_criticos||[]).includes(i+1) ? "on" : ""}">${m}</span>`).join("")}</div>
         ${!(u.meses_criticos||[]).length ? `<div class="vazio">Ainda não informados no cadastro.</div>` : ""}
@@ -285,6 +288,18 @@ function colunas(sel, dados, unidade){
 }
 
 /* ---------------- mapa ---------------- */
+function htmlRecursos(r){
+  if (!r || !(r.veiculos + r.ht + r.radios_fixos + r.repetidoras + r.itens_material + r.parceiros + r.prestadores + r.colaboradores + r.brigadistas))
+    return `<div class="vazio">Nada cadastrado nos módulos Recursos e Rede de apoio.</div>`;
+  const it = (n, t, extra) => n ? `<b>${fmtN(n)}</b> ${t}${extra ? ` <span style="color:var(--suave)">(${extra})</span>` : ""}` : null;
+  const linhas = [
+    it(r.veiculos, r.veiculos === 1 ? "veículo" : "veículos", r.veiculos_disp < r.veiculos ? `${r.veiculos_disp} disponíve${r.veiculos_disp === 1 ? "l" : "is"}` : null),
+    it(r.ht, "rádios HT", r.ht_uso < r.ht ? `${r.ht_uso} em uso` : null), it(r.radios_fixos, "rádios fixos/móveis"), it(r.repetidoras, r.repetidoras === 1 ? "repetidora" : "repetidoras"),
+    it(r.abafadores, "abafadores"), it(r.bombas_costais, "bombas costais"),
+    it(r.parceiros, "parceiros"), it(r.prestadores, "prestadores de serviço", r.saude ? `${r.saude} de saúde` : null),
+    it(r.colaboradores, "colaboradores/moradores"), it(r.brigadistas, "brigadistas voluntários")].filter(Boolean);
+  return `<div style="font-size:13px;line-height:1.7">${linhas.join(" · ")}</div>`;
+}
 function montarMapa(){
   if (mapa){ mapa.remove(); mapa = null; }
   const u = D.uc, g = D.geo;
@@ -321,6 +336,13 @@ function montarMapa(){
     cam["Infraestrutura"] = L.featureGroup(inf.map(x => L.marker([x.lat, x.lon], {icon: iconeMapa(tipoIcone(x.tipo, x.atributos), {tam:24, situacao:x.situacao}), zIndexOffset:500})
       .bindTooltip(`${INFRA[x.tipo][0]}: ${esc(x.nome)}${x.situacao && x.situacao !== "operante" ? " · " + x.situacao : ""}`))).addTo(mapa);
     [...new Set(inf.map(x => tipoIcone(x.tipo, x.atributos)))].forEach(t => leg.push(`${iconeLegenda(t, 16)}${ICONES_ROTULO[t]}`));
+  }
+  const rede = (D.rede||[]).filter(x => x.lat != null);
+  if (rede.length){
+    const ic = x => x.tipo === "repetidora" ? "antena" : ["fixo","movel","portatil"].includes(x.tipo) || x.tipo.startsWith("parceiro_") ? "radio" : x.tipo;
+    cam["Rede de apoio e rádios"] = L.featureGroup(rede.map(x => L.marker([x.lat, x.lon], {icon: iconeMapa(ic(x), {tam:22, situacao: x.situacao === "inoperante" ? "inoperante" : x.situacao === "ruim" ? "parcial" : null}), zIndexOffset:400})
+      .bindTooltip(`${ICONES_ROTULO[ic(x)] || ""}: ${esc(x.nome)}`))).addTo(mapa);
+    [...new Set(rede.map(ic))].forEach(t => leg.push(`${iconeLegenda(t, 16)}${t === "radio" ? "Rádio" : ICONES_ROTULO[t]}`));
   }
   const pts = [];
   if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: iconeMapa("sede", {tam:26}), zIndexOffset:600}).bindTooltip("Sede da UC")); leg.push(`${iconeLegenda("sede", 16)}Sede`); }

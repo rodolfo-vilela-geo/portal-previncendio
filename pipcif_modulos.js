@@ -12,14 +12,14 @@ window.PIPCIF_MODULOS = [
     {s:"4.8", t:"Heliportos e helipontos", d:"áreas para operação de helicóptero", mapa:true},
     {s:"4.9", t:"Estações meteorológicas", d:"responsável, localização e situação", mapa:true},
     {s:"4.10", t:"Hidrantes e pontos de água", d:"hidrantes, represas, poços e outros pontos de abastecimento", mapa:true}]},
-  {n:3, ic:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4M10 14.5h4"/>', id:"recursos", nome:"Recursos e comunicação", blocos:[
+  {n:3, ic:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4M10 14.5h4"/>', id:"recursos", nome:"Recursos e comunicação", pronto:true, blocos:[
     {s:"4.4", t:"Veículos", d:"tipo, marca/modelo, estado de conservação, disponibilidade"},
     {s:"4.5", t:"Radiocomunicação da UC", d:"repetidoras, rádios fixos, móveis e portáteis (HT)", mapa:true},
-    {s:"4.6", t:"Rádios com parceiros", d:"fixos, móveis e portáteis disponibilizados por parceiros"},
+    {s:"4.6", t:"Rádios com parceiros", d:"fixos, móveis e portáteis disponibilizados por parceiros", mapa:true},
     {s:"5",   t:"Materiais e equipamentos", d:"ferramentas manuais, equipamentos especiais e EPIs — quantidade e situação"}]},
-  {n:4, ic:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/>', id:"apoio", nome:"Rede de apoio", blocos:[
-    {s:"6", t:"Parceiros e apoios disponíveis", d:"instituições do catálogo, responsável, contatos e apoio oferecido", mapa:true},
-    {s:"7", t:"Prestadores de serviço", d:"alimentação, unidades de saúde e outros"},
+  {n:4, ic:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/>', id:"apoio", nome:"Rede de apoio", pronto:true, blocos:[
+    {s:"6", t:"Parceiros e apoios disponíveis", d:"responsável, contatos, localização e apoio oferecido; outros contatos importantes", mapa:true},
+    {s:"7", t:"Prestadores de serviço", d:"alimentação, unidades de saúde, abastecimento e outros", mapa:true},
     {s:"8", t:"Colaboradores e moradores", d:"propriedades, atividade e tipo de apoio", mapa:true},
     {s:"9", t:"Brigadistas voluntários", d:"nome, município e contato"}]},
   {n:5, ic:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>', id:"prevencao", nome:"Prevenção e plano anual", blocos:[
