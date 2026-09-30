@@ -121,6 +121,7 @@
     <button role="tab" data-aba="boletim" aria-selected="false">Boletim</button>
     <button role="tab" data-aba="apoios" aria-selected="false">Apoios e atuações</button>
     <button role="tab" data-aba="prazos" aria-selected="false">Prazos dos ROIs</button>
+    <button role="tab" data-aba="listas" aria-selected="false" hidden id="abaListas">Listas (admin)</button>
   </nav>
 
   <!-- REGISTROS -->
@@ -170,6 +171,26 @@
     <p class="dica">Nomes padronizados usados no registro das atuações, no boletim e no ROI. A categoria define em que coluna do ROI/BDG o efetivo entra
       (“Outros” entra como Parceiros). Instituições já usadas não são apagadas: desmarque “ativa” para tirá-las da lista.</p>
     <div class="tab-wrap" style="max-height:none"><table class="tab" id="tabInst"></table></div>
+  </section>
+
+  <!-- LISTAS (admin) -->
+  <section class="painel" id="aba-listas">
+    <div class="barra">
+      <div style="min-width:250px"><label for="lCampo">Lista</label><select id="lCampo"></select></div>
+      <div><label for="lMostrar">Mostrar</label><select id="lMostrar"><option value="">Ativos e inativos</option><option value="1">Só ativos</option><option value="0">Só inativos</option></select></div>
+      <div style="min-width:200px"><label for="lBusca">Buscar</label><input id="lBusca" placeholder="parte do valor"></div>
+    </div>
+    <p class="dica" id="lInfo"></p>
+    <div class="at-form nao-imprime" id="lNovo" style="margin:0 0 12px">
+      <div class="grade" style="grid-template-columns:minmax(0,3fr) minmax(90px,1fr) auto;align-items:end">
+        <div><label for="lValor">Novo valor</label><input id="lValor" placeholder="Como deve aparecer no formulário"></div>
+        <div><label for="lOrdem">Ordem</label><input id="lOrdem" type="number" placeholder="fim da lista"></div>
+        <div><button class="btn primario" id="lIncluir">Adicionar</button></div>
+      </div>
+    </div>
+    <div class="tab-wrap" style="max-height:520px"><table class="tab" id="tabListas"></table></div>
+    <h3 class="sec">Histórico de alterações desta lista</h3>
+    <div class="tab-wrap" style="max-height:300px"><table class="tab" id="tabLog"></table></div>
   </section>
 
   <!-- PRAZOS -->
@@ -224,6 +245,7 @@ async function entrar(){
   perfil = data;
   $("#quem").textContent = `${perfil.nome} · ${perfil.papel}`; $("#usuario").hidden=false;
   $("#telaLogin").style.display="none"; $("#app").style.display="block";
+  $("#abaListas").hidden = perfil.papel !== "admin";
   await Promise.all([carregarUCs(), carregarInst()]); montarFiltros(); await carregarLista();
   const q = new URLSearchParams(location.search);
   if (q.get("ri")) abrirRI(+q.get("ano")||new Date().getFullYear(), q.get("ri").padStart(4,"0"));
@@ -649,6 +671,91 @@ async function carregarPrazos(){
 }
 $("#pFiltro").onchange = carregarPrazos; $("#pDesde").onchange = carregarPrazos;
 
+/* ======================= LISTAS SUSPENSAS (admin) ======================= */
+let CAMPOS = [], valores = [];
+async function iniciarListas(){
+  if (!CAMPOS.length){
+    const {data, error} = await sb.from("dominio_campo").select("*").order("ordem");
+    if (error) return msg(error.message, "erro");
+    CAMPOS = data || [];
+    $("#lCampo").innerHTML = `<optgroup label="Editáveis">${CAMPOS.filter(c=>c.editavel).map(c=>`<option value="${c.campo}">${esc(c.rotulo)}</option>`).join("")}</optgroup>
+      <optgroup label="Travadas (somente consulta)">${CAMPOS.filter(c=>!c.editavel).map(c=>`<option value="${c.campo}">${esc(c.rotulo)}</option>`).join("")}</optgroup>`;
+  }
+  carregarValores();
+}
+const campoAtual = () => CAMPOS.find(c => c.campo === $("#lCampo").value) || {};
+async function carregarValores(){
+  const c = campoAtual();
+  const [{data, error}, {data: log}] = await Promise.all([
+    sb.rpc("dominio_uso", {p_campo: c.campo}),
+    sb.from("dominio_log").select("*").eq("campo", c.campo).order("quando", {ascending:false}).limit(100)
+  ]);
+  if (error) return msg(error.message, "erro");
+  valores = data || [];
+  const at = valores.filter(v=>v.ativo).length;
+  $("#lInfo").innerHTML = `${valores.length} valores · ${at} ativos (aparecem no formulário) · ${valores.length-at} inativos (só no histórico).` +
+    (c.editavel ? "" : ` <b>Lista travada:</b> `) + (c.motivo ? ` ${esc(c.motivo)}` : "") +
+    (c.editavel ? ` Nada é apagado: desmarque “ativo” para tirar do formulário.` : "");
+  $("#lNovo").hidden = !c.editavel;
+  desenharValores();
+  $("#tabLog").innerHTML = `<thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>De</th><th>Para</th><th>Detalhe</th></tr></thead><tbody>` +
+    ((log||[]).map(l => `<tr><td>${fmtD(l.quando)} ${new Date(l.quando).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</td><td>${esc(l.quem)}</td>
+      <td>${esc(l.acao)}</td><td>${esc(l.valor_antigo||"")}</td><td>${esc(l.valor_novo||"")}</td><td>${esc(l.detalhe||"")}</td></tr>`).join("")
+      || `<tr><td colspan="6" class="dica">Nenhuma alteração registrada.</td></tr>`) + "</tbody>";
+}
+function desenharValores(){
+  const c = campoAtual(), m = $("#lMostrar").value, b = $("#lBusca").value.trim().toLowerCase();
+  const L = valores.filter(v => (m==="" || String(+v.ativo)===m) && (!b || v.valor.toLowerCase().includes(b)));
+  $("#tabListas").innerHTML = `<thead><tr><th>Valor</th><th>Ordem</th><th>ROIs</th><th>RIs</th><th>Ativo</th>${c.editavel?"<th></th>":""}</tr></thead><tbody>` +
+    (L.map(v => `<tr data-v="${esc(v.valor)}">
+      <td>${esc(v.valor)}</td>
+      <td>${c.editavel ? `<input type="number" data-k="ordem" value="${v.ordem}" style="max-width:80px">` : v.ordem}</td>
+      <td class="n">${v.n_roi || ""}</td><td class="n">${v.n_ri || ""}</td>
+      <td style="text-align:center">${c.editavel ? `<input type="checkbox" data-k="ativo" ${v.ativo?"checked":""} style="width:auto">` : (v.ativo?"✓":"")}</td>
+      ${c.editavel ? `<td style="white-space:nowrap"><button class="btn peq" data-salvar>Salvar</button> <button class="btn peq" data-renomear>Renomear</button></td>` : ""}
+    </tr>`).join("") || `<tr><td colspan="6" class="dica">Nenhum valor.</td></tr>`) + "</tbody>";
+  const achar = el => valores.find(v => v.valor === el.closest("tr").dataset.v);
+  $$("#tabListas [data-salvar]").forEach(bt => bt.onclick = async () => {
+    const tr = bt.closest("tr"), v = achar(bt);
+    const {error} = await sb.rpc("dominio_alterar", {p_campo: c.campo, p_valor: v.valor, p_ordem: num(tr.querySelector('[data-k=ordem]').value) ?? v.ordem, p_ativo: tr.querySelector('[data-k=ativo]').checked});
+    if (error) return msg(error.message, "erro");
+    msg(`“${v.valor}” atualizado.`, "ok"); carregarValores();
+  });
+  $$("#tabListas [data-renomear]").forEach(bt => bt.onclick = () => {
+    const tr = bt.closest("tr"), v = achar(bt), usos = (v.n_roi||0) + (v.n_ri||0);
+    $$("#tabListas tr.renomear").forEach(x => x.remove());
+    tr.insertAdjacentHTML("afterend", `<tr class="renomear"><td colspan="6" style="background:#fbf6ef">
+      <label>Novo nome para “${esc(v.valor)}”</label><input data-k="novo" value="${esc(v.valor)}" style="max-width:520px">
+      <div class="dica" style="margin:6px 0">${usos ? `Este valor está em <b>${v.n_roi||0} ROIs</b>${v.n_ri ? ` e <b>${v.n_ri} RIs</b>` : ""}. Escolha:` : "Este valor ainda não foi usado em nenhum registro."}</div>
+      ${usos ? `<button class="btn primario peq" data-modo="corrigir">Corrigir a grafia (atualiza os ${usos} registros)</button>
+               <button class="btn peq" data-modo="substituir">Substituir (valor novo daqui em diante; histórico mantém o antigo)</button>`
+             : `<button class="btn primario peq" data-modo="corrigir">Renomear</button>`}
+      <button class="btn peq" data-modo="cancelar">Cancelar</button>
+      <div class="dica" style="margin-top:6px">Use <b>corrigir</b> para erro de digitação ou padronização (o mesmo conceito). Use <b>substituir</b> quando a categoria mudou de fato e o histórico deve continuar como foi registrado.</div>
+    </td></tr>`);
+    const box = tr.nextElementSibling; box.querySelector("[data-k=novo]").select();
+    box.querySelectorAll("[data-modo]").forEach(b2 => b2.onclick = async () => {
+      if (b2.dataset.modo === "cancelar") return box.remove();
+      const novo = txt(box.querySelector("[data-k=novo]").value);
+      if (!novo || novo === v.valor) return msg("Digite o novo nome.", "erro");
+      const corrigir = b2.dataset.modo === "corrigir";
+      if (corrigir && usos && !confirm(`Trocar “${v.valor}” por “${novo}” em ${usos} registros do histórico?`)) return;
+      const {data, error} = await sb.rpc("dominio_renomear", {p_campo: c.campo, p_antigo: v.valor, p_novo: novo, p_corrigir_historico: corrigir});
+      if (error) return msg(error.message, "erro");
+      msg(corrigir ? `Corrigido: ${data.n_roi} ROIs${data.n_ri ? `, ${data.n_ri} RIs` : ""}${data.n_uc ? `, ${data.n_uc} UCs` : ""} atualizados${data.unidos ? " (unido ao valor já existente)" : ""}.`
+                   : `“${novo}” passa a ser usado; “${v.valor}” foi desativado.`, "ok");
+      carregarValores();
+    });
+  });
+}
+$("#lCampo").onchange = carregarValores; $("#lMostrar").onchange = desenharValores; $("#lBusca").oninput = desenharValores;
+$("#lIncluir").onclick = async () => {
+  const v = txt($("#lValor").value); if (!v) return msg("Digite o valor.", "erro");
+  const {error} = await sb.rpc("dominio_incluir", {p_campo: campoAtual().campo, p_valor: v, p_ordem: num($("#lOrdem").value)});
+  if (error) return msg(error.message, "erro");
+  $("#lValor").value = ""; $("#lOrdem").value = ""; msg(`“${v}” incluído.`, "ok"); carregarValores();
+};
+
 /* ======================= ABAS ======================= */
 $$(".abas button").forEach(b => b.onclick = () => {
   $$(".abas button").forEach(x => x.setAttribute("aria-selected", x===b));
@@ -656,6 +763,7 @@ $$(".abas button").forEach(b => b.onclick = () => {
   if (b.dataset.aba==="boletim") carregarBoletim();
   if (b.dataset.aba==="prazos") carregarPrazos();
   if (b.dataset.aba==="apoios") carregarApoios();
+  if (b.dataset.aba==="listas") iniciarListas();
 });
 setInterval(() => { if (perfil && document.visibilityState==="visible") carregarLista(); }, 60000);   // atualiza a lista a cada minuto
 entrar();
