@@ -36,12 +36,12 @@
   header.inst .dentro{max-width:1040px;margin:0 auto;padding:14px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
   .logos{display:flex;align-items:center;gap:16px}
   .logos a{text-decoration:none}
-  .logos .ief{height:58px;width:auto;display:block}
+  .logos .ief{height:52px;width:auto;display:block}
   .logos .ief-txt{font:800 30px/1 system-ui,sans-serif;color:var(--marca);letter-spacing:.02em}
   .logos .sep{width:1px;height:54px;background:var(--linha)}
   .logos .prev{height:64px;width:auto;display:block}
   .titulo .org{font-size:12.5px;color:var(--suave);letter-spacing:.02em}
-  .titulo h1{margin:2px 0 0;font-size:26px;line-height:1.15;font-weight:750;color:var(--marca)}
+  .titulo h1{margin:2px 0 0;font-size:26px;line-height:1.15;font-weight:750;color:var(--marca-2)}
   .titulo p{margin:2px 0 0;color:var(--suave);font-size:14px;max-width:620px}
   /* menu institucional */
   nav.menu{background:var(--marca)}
@@ -110,7 +110,7 @@
     .fluxo{grid-template-columns:1fr} .seta{height:30px} .seta svg{transform:rotate(90deg)}
     .modulos{grid-template-columns:1fr}
   }
-  @media (max-width:600px){ .logos .ief{height:44px} .logos .prev{height:50px} .logos .sep{height:42px} .titulo h1{font-size:22px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
+  @media (max-width:600px){ .logos .ief{height:38px} .logos .prev{height:50px} .logos .sep{height:42px} .titulo h1{font-size:22px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
 
   main.manual{max-width:1040px;margin:0 auto;padding:22px 16px 10px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start}
   .sumario{position:sticky;top:12px;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:14px 14px 10px}
@@ -119,7 +119,7 @@
   .sumario a{display:block;padding:5px 8px;border-radius:7px;color:inherit;text-decoration:none;font-size:14px}
   .sumario a:hover,.sumario a.ativo{background:var(--realce);color:var(--marca-2);font-weight:600}
   .conteudo{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:22px 26px 26px;min-width:0}
-  .conteudo h1{margin:0;font-size:26px;color:var(--marca)}
+  .conteudo h1{margin:0;font-size:26px;color:var(--marca-2)}
   .conteudo .lead{color:var(--suave);margin:6px 0 0}
   .conteudo section{margin-top:26px;padding-top:18px;border-top:1px solid var(--linha);scroll-margin-top:14px}
   .conteudo h2{font-size:20px;margin:0 0 6px;color:var(--tinta);text-transform:none;letter-spacing:0}
@@ -158,13 +158,12 @@
 <header class="inst"><div class="dentro">
   <div class="logos">
     <a href="https://www.ief.mg.gov.br/" target="_blank" rel="noopener" title="Instituto Estadual de Florestas">
-      <img class="ief" src="https://www.ief.mg.gov.br/documents/20121/118197/ief.svg" alt="IEF — Instituto Estadual de Florestas"
-           onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ief-txt',textContent:'IEF'}))"></a>
+      <picture><source srcset="img/logo_ief_branco.png" media="(prefers-color-scheme: dark)"><img class="ief" src="img/logo_ief.png" alt="IEF — Instituto Estadual de Florestas"></picture></a>
     <span class="sep" aria-hidden="true"></span>
     <a href="index.html" title="Portal Previncêndio"><img class="prev" src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
   </div>
   <div class="titulo">
-    <div class="org">Instituto Estadual de Florestas · Diretoria de Unidades de Conservação</div>
+    <div class="org">Diretoria de Unidades de Conservação · Gerência de Prevenção e Combate a Incêndios Florestais</div>
     <h1>Portal Previncêndio</h1>
     <p>Serviços da Gerência de Prevenção e Combate a Incêndios Florestais para as Unidades de Conservação estaduais.</p>
   </div>
