@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Manual do sistema — Portal Previncêndio</title>
+<style>
+  :root{
+    color-scheme: light;
+    --fundo:#eef0e6; --papel:#ffffff; --linha:#e3e0da; --tinta:#1d1d1f; --suave:#5f6368;
+    --marca:#2e5603; --marca-2:#3f6b12; --realce:#e6eed8; --laranja:#c46f1a; --amarelo:#e3b500; --gov:#262b22;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --tinta:#f3f2ee; --suave:#b5b4ab;
+      --marca:#1e3a02; --marca-2:#9cc46a; --realce:#1d2614; --laranja:#e08a38; --amarelo:#e3b500; --gov:#0c0d0b;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --tinta:#f3f2ee; --suave:#b5b4ab;
+    --marca:#1e3a02; --marca-2:#9cc46a; --realce:#1d2614; --laranja:#e08a38; --amarelo:#e3b500; --gov:#0c0d0b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fundo);color:var(--tinta);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  /* barra do Governo de Minas */
+  .gov{background:var(--gov);color:#e9e9e6;font-size:12.5px}
+  .gov .dentro{max-width:1040px;margin:0 auto;padding:6px 16px;display:flex;gap:6px 18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .gov b{font-weight:700;letter-spacing:.02em}
+  .gov nav{display:flex;gap:4px 16px;flex-wrap:wrap}
+  .gov a{color:#e9e9e6;text-decoration:none} .gov a:hover{text-decoration:underline}
+  /* cabeçalho: IEF + Previncêndio */
+  header.inst{background:var(--papel);border-bottom:1px solid var(--linha)}
+  header.inst .dentro{max-width:1040px;margin:0 auto;padding:14px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .logos{display:flex;align-items:center;gap:16px}
+  .logos a{text-decoration:none}
+  .logos .ief{height:58px;width:auto;display:block}
+  .logos .ief-txt{font:800 30px/1 system-ui,sans-serif;color:var(--marca);letter-spacing:.02em}
+  .logos .sep{width:1px;height:54px;background:var(--linha)}
+  .logos .prev{height:64px;width:auto;display:block}
+  .titulo .org{font-size:12.5px;color:var(--suave);letter-spacing:.02em}
+  .titulo h1{margin:2px 0 0;font-size:26px;line-height:1.15;font-weight:750;color:var(--marca)}
+  .titulo p{margin:2px 0 0;color:var(--suave);font-size:14px;max-width:620px}
+  /* menu institucional */
+  nav.menu{background:var(--marca)}
+  nav.menu ul{max-width:1040px;margin:0 auto;padding:0 8px;list-style:none;display:flex;flex-wrap:wrap}
+  nav.menu a{display:block;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 12px;border-bottom:3px solid transparent}
+  nav.menu a:hover,nav.menu a[aria-current=page]{background:rgba(255,255,255,.1);border-bottom-color:var(--laranja)}
+  nav.menu a .ext{opacity:.7;font-size:11px;margin-left:3px}
+  nav.menu .pend{opacity:.72}
+  .faixa{background:linear-gradient(90deg,var(--marca) 0 60%,var(--laranja) 60% 80%,var(--amarelo) 80%);height:4px}
+  main,footer{max-width:1040px;margin:0 auto}
+  main{padding:8px 16px 10px}
+  section{margin-top:26px}
+  .tit{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
+  .tit h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--suave);margin:0}
+  .sub{margin:0 0 12px;color:var(--suave);font-size:14px}
+  .cadeado{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--suave);border:1px solid var(--linha);border-radius:99px;padding:1px 8px;background:var(--papel)}
+  .cadeado svg{width:12px;height:12px}
+
+  /* linha do tempo da ocorrência */
+  .fluxo{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;align-items:stretch}
+  .seta{display:grid;place-items:center;color:var(--marca-2)}
+  .seta svg{width:24px;height:24px}
+  a.passo{position:relative;display:flex;flex-direction:column;gap:6px;background:var(--papel);border:1px solid var(--linha);border-radius:12px;
+          padding:18px 18px 16px;color:inherit;text-decoration:none;transition:border-color .15s, transform .15s, box-shadow .15s}
+  a.passo:hover,a.passo:focus-visible{border-color:var(--marca-2);transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);outline:none}
+  .passo .topo{display:flex;align-items:center;gap:10px}
+  .passo .n{width:34px;height:34px;border-radius:50%;background:var(--marca);color:#fff;display:grid;place-items:center;font-weight:800;font-size:16px;flex:none}
+  .passo .quem{font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--marca-2)}
+  .passo h3{margin:2px 0 0;font-size:17px;line-height:1.25}
+  .passo p{margin:0;color:var(--suave);font-size:14px}
+  .passo .ir{margin-top:auto;padding-top:6px;font-weight:600;color:var(--marca-2);font-size:14px}
+  .passo .alt{font-size:13px;color:var(--suave);border-top:1px dashed var(--linha);padding-top:8px;margin-top:4px}
+  .extra{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .aviso{flex:1 1 420px;background:var(--papel);border:1px solid var(--linha);border-left:4px solid var(--laranja);border-radius:10px;padding:12px 14px;font-size:14px}
+  .aviso b{color:var(--laranja)}
+  a.atalho{flex:0 1 auto;display:flex;align-items:center;gap:10px;background:var(--papel);border:1px solid var(--linha);border-radius:10px;padding:12px 14px;color:inherit;text-decoration:none;font-size:14px}
+  a.atalho:hover{border-color:var(--marca-2)}
+  a.atalho b{color:var(--marca-2)}
+
+  .cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  a.card{display:flex;flex-direction:column;gap:6px;background:var(--papel);border:1px solid var(--linha);border-radius:12px;
+         padding:18px;color:inherit;text-decoration:none;transition:border-color .15s, transform .15s, box-shadow .15s;min-height:140px}
+  a.card:hover,a.card:focus-visible{border-color:var(--marca-2);transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08);outline:none}
+  .ic{width:40px;height:40px;border-radius:10px;background:var(--realce);color:var(--marca-2);display:grid;place-items:center;flex:none}
+  .ic svg{width:22px;height:22px}
+  .card h3{margin:4px 0 0;font-size:17px}
+  .card p{margin:0;color:var(--suave);font-size:14px}
+  .card .ir{margin-top:auto;font-weight:600;color:var(--marca-2);font-size:14px}
+
+  .modulos{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1.4fr);gap:14px;align-items:stretch}
+  .breve{background:var(--papel);border:1px dashed var(--linha);border-radius:12px;padding:16px 18px}
+  .breve h3{margin:0 0 8px;font-size:14px;color:var(--suave);font-weight:600}
+  .breve ol{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+  .breve li{display:flex;gap:8px;align-items:baseline;font-size:14px;color:var(--suave)}
+  .breve li b{color:var(--tinta);font-weight:600}
+  .breve li span.s{font-size:11px;font-weight:700;color:var(--suave);border:1px solid var(--linha);border-radius:99px;padding:0 7px;white-space:nowrap}
+
+  .gestao{display:flex;flex-wrap:wrap;gap:8px}
+  .gestao a{display:inline-flex;align-items:center;gap:8px;background:var(--papel);border:1px solid var(--linha);border-radius:10px;padding:9px 13px;color:inherit;text-decoration:none;font-size:14px}
+  .gestao a:hover{border-color:var(--marca-2)}
+  .gestao a small{color:var(--suave);font-size:12px}
+  .gestao svg{width:16px;height:16px;color:var(--marca-2)}
+  footer{padding:28px 16px 32px;color:var(--suave);font-size:12.5px}
+
+  @media (max-width:860px){
+    .fluxo{grid-template-columns:1fr} .seta{height:30px} .seta svg{transform:rotate(90deg)}
+    .modulos{grid-template-columns:1fr}
+  }
+  @media (max-width:600px){ .logos .ief{height:44px} .logos .prev{height:50px} .logos .sep{height:42px} .titulo h1{font-size:22px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
+
+  main.manual{max-width:1040px;margin:0 auto;padding:22px 16px 10px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start}
+  .sumario{position:sticky;top:12px;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:14px 14px 10px}
+  .sum-tit{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--suave);margin-bottom:6px}
+  .sumario ol{list-style:none;margin:0;padding:0}
+  .sumario a{display:block;padding:5px 8px;border-radius:7px;color:inherit;text-decoration:none;font-size:14px}
+  .sumario a:hover,.sumario a.ativo{background:var(--realce);color:var(--marca-2);font-weight:600}
+  .conteudo{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:22px 26px 26px;min-width:0}
+  .conteudo h1{margin:0;font-size:26px;color:var(--marca)}
+  .conteudo .lead{color:var(--suave);margin:6px 0 0}
+  .conteudo section{margin-top:26px;padding-top:18px;border-top:1px solid var(--linha);scroll-margin-top:14px}
+  .conteudo h2{font-size:20px;margin:0 0 6px;color:var(--tinta);text-transform:none;letter-spacing:0}
+  .conteudo h3{font-size:15.5px;margin:16px 0 6px}
+  .conteudo p,.conteudo li{font-size:15px;line-height:1.6}
+  .conteudo code{background:var(--realce);padding:1px 5px;border-radius:4px;font-size:13.5px}
+  .quem{font-size:13.5px;color:var(--suave);margin:0 0 10px}
+  .quem a{color:var(--marca-2);font-weight:600}
+  ol.passos{counter-reset:p;list-style:none;padding:0;margin:8px 0}
+  ol.passos>li{counter-increment:p;position:relative;padding:0 0 10px 38px}
+  ol.passos>li::before{content:counter(p);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--marca);color:#fff;font-weight:700;font-size:13px;display:grid;place-items:center}
+  .nota{background:var(--realce);border-left:4px solid var(--marca-2);border-radius:8px;padding:10px 14px;font-size:14px!important}
+  .fluxo-m{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}
+  .fluxo-m div{border:1px solid var(--linha);border-radius:10px;padding:10px 12px;display:grid;gap:2px}
+  .fluxo-m .n{width:26px;height:26px;border-radius:50%;background:var(--marca);color:#fff;font-weight:800;display:grid;place-items:center;margin-bottom:4px}
+  .fluxo-m small{color:var(--suave)}
+  table.t{border-collapse:collapse;width:100%;font-size:14px;margin-top:8px}
+  table.t th{text-align:left;background:var(--realce);padding:7px 8px}
+  table.t td{padding:7px 8px;border-bottom:1px solid var(--linha);vertical-align:top}
+  details{border:1px solid var(--linha);border-radius:9px;padding:9px 12px;margin:8px 0}
+  details summary{cursor:pointer;font-weight:600}
+  details p{margin:8px 0 2px}
+  @media (max-width:860px){ main.manual{grid-template-columns:1fr} .sumario{position:static} .fluxo-m{grid-template-columns:1fr} .conteudo{padding:18px 16px} }
+  @media print{ .gov,nav.menu,.faixa,.sumario,footer{display:none} main.manual{display:block} .conteudo{border:0} details{border:0} details>*{display:block} }
+</style>
+</head>
+<body>
+<div class="gov"><div class="dentro">
+  <b>GOVERNO DE MINAS GERAIS</b>
+  <nav aria-label="Governo de Minas">
+    <a href="https://www.ouvidoriageral.mg.gov.br/simplifique-oge" target="_blank" rel="noopener">Simplifique</a>
+    <a href="https://www.mg.gov.br/estrutura-governamental" target="_blank" rel="noopener">Órgãos do Governo</a>
+    <a href="https://www.transparencia.mg.gov.br/" target="_blank" rel="noopener">Portal da Transparência</a>
+  </nav>
+</div></div>
+<header class="inst"><div class="dentro">
+  <div class="logos">
+    <a href="https://www.ief.mg.gov.br/" target="_blank" rel="noopener" title="Instituto Estadual de Florestas">
+      <img class="ief" src="https://www.ief.mg.gov.br/documents/20121/118197/ief.svg" alt="IEF — Instituto Estadual de Florestas"
+           onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ief-txt',textContent:'IEF'}))"></a>
+    <span class="sep" aria-hidden="true"></span>
+    <a href="index.html" title="Portal Previncêndio"><img class="prev" src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
+  </div>
+  <div class="titulo">
+    <div class="org">Instituto Estadual de Florestas · Diretoria de Unidades de Conservação</div>
+    <h1>Portal Previncêndio</h1>
+    <p>Serviços da Gerência de Prevenção e Combate a Incêndios Florestais para as Unidades de Conservação estaduais.</p>
+  </div>
+</div></header>
+<nav class="menu" aria-label="Menu institucional"><ul>
+  <li><a href="index.html">Início</a></li>
+  <li><a href="#" class="pend" title="Página em construção">O Previncêndio</a></li>
+  <li><a href="https://www.ief.mg.gov.br/unidades-de-conservação" target="_blank" rel="noopener">UCs estaduais<span class="ext">↗</span></a></li>
+  <li><a href="#" class="pend" title="Página em construção">Legislação</a></li>
+  <li><a href="#" class="pend" title="Página em construção">Documentos técnicos</a></li>
+  <li><a href="manual.html" aria-current="page">Manual</a></li>
+  <li><a href="https://www.ief.mg.gov.br/fale-conosco" target="_blank" rel="noopener">Fale conosco<span class="ext">↗</span></a></li>
+</ul></nav>
+<div class="faixa" aria-hidden="true"></div>
+<main class="manual">
+  <aside class="sumario" aria-label="Sumário">
+    <div class="sum-tit">Neste manual</div>
+    <ol>
+      <li><a href="#visao">Visão geral</a></li>
+      <li><a href="#acesso">Acesso e senha</a></li>
+      <li><a href="#ri">1. Registro de Incêndio (RI)</a></li>
+      <li><a href="#apoios">Apoios e atuações</a></li>
+      <li><a href="#smc">2. SMC — área queimada</a></li>
+      <li><a href="#roi">3. ROI — relatório</a></li>
+      <li><a href="#prazos">Prazos dos ROIs</a></li>
+      <li><a href="#boletim">Boletim e painel</a></li>
+      <li><a href="#pipcif">Cadastro das UCs (PIPCIF)</a></li>
+      <li><a href="#admin">Administração</a></li>
+      <li><a href="#faq">Perguntas frequentes</a></li>
+    </ol>
+  </aside>
+
+  <article class="conteudo">
+    <h1>Manual do sistema</h1>
+    <p class="lead">Como usar o Portal Previncêndio, página por página. Cada seção diz <b>quem usa</b>, <b>o que precisa</b> e <b>o passo a passo</b>.</p>
+
+    <section id="visao">
+      <h2>Visão geral</h2>
+      <p>Todo incêndio em Unidade de Conservação estadual passa por três etapas, cada uma com uma página:</p>
+      <div class="fluxo-m">
+        <div><span class="n">1</span><b>Registro de Incêndio (RI)</b><small>Sala de Situação · no primeiro chamado</small></div>
+        <div><span class="n">2</span><b>Mapeamento da área queimada (SMC)</b><small>UC · depois do incêndio</small></div>
+        <div><span class="n">3</span><b>Relatório de Ocorrência (ROI)</b><small>UC · até 10 dias após o fim</small></div>
+      </div>
+      <p>Os dados passam de uma etapa para a outra: o ROI puxa do RI a UC, as datas e as coordenadas; o polígono do SMC (ou de campo) preenche áreas e municípios. Tudo alimenta o <b>boletim público</b>, o <b>painel histórico</b> e o <b>Banco de Dados Georreferenciado (BDG)</b>.</p>
+      <table class="t">
+        <tr><th>Página</th><th>Quem usa</th><th>Acesso</th></tr>
+        <tr><td>Sala de Situação (RI, apoios, prazos)</td><td>Atendentes da sala, GPCIF</td><td>Login</td></tr>
+        <tr><td>SMC</td><td>UCs, GPCIF</td><td>Aberto</td></tr>
+        <tr><td>ROI</td><td>UCs (gerente ou responsável)</td><td>Aberto — só envia, não lê dados de ninguém</td></tr>
+        <tr><td>Boletim e painel</td><td>Todos</td><td>Público</td></tr>
+        <tr><td>Cadastro das UCs (PIPCIF)</td><td>Gerentes, GPCIF</td><td>Login</td></tr>
+      </table>
+    </section>
+
+    <section id="acesso">
+      <h2>Acesso e senha</h2>
+      <p>O login é pessoal (e-mail institucional) e vale para todas as páginas restritas: entrou na Sala ou no Cadastro das UCs, já está logado nas outras.</p>
+      <ol class="passos">
+        <li>A GPCIF cria o seu acesso e envia uma <b>senha provisória</b>.</li>
+        <li>No primeiro acesso, o sistema pede que você defina uma <b>senha pessoal</b> (mínimo de 8 caracteres).</li>
+        <li>Para trocar depois: botão <b>Trocar senha</b>, no alto da página do Cadastro das UCs.</li>
+        <li>Esqueceu a senha? Peça à GPCIF uma nova senha provisória.</li>
+      </ol>
+      <p class="nota">Cada papel vê coisas diferentes: <b>Sala de Situação</b> registra RIs; <b>gerentes</b> editam o cadastro das próprias UCs; <b>GPCIF</b> edita tudo; <b>administradores</b> também criam usuários e configuram listas. Todos os logados veem o cadastro de todas as UCs.</p>
+    </section>
+
+    <section id="ri">
+      <h2>1. Registro de Incêndio (RI)</h2>
+      <p class="quem">Quem usa: Sala de Situação · <a href="sala.html">abrir a Sala de Situação</a></p>
+      <h3>Abrir um RI</h3>
+      <ol class="passos">
+        <li>Na aba <b>Registros (RI)</b>, clique em <b>+ Novo RI</b>.</li>
+        <li>Escolha a UC — a base operacional e o município são sugeridos pelo cadastro.</li>
+        <li>Informe data e hora da detecção, localização (interno/entorno) e, se houver, coordenadas (aceita <code>-17.98</code> ou <code>17°58'32"S</code>).</li>
+        <li>Descreva a primeira ligação (quem informou e o que foi dito) e clique em <b>Registrar RI</b>. O número é gerado automaticamente e deve ser passado à UC.</li>
+      </ol>
+      <h3>Acompanhar</h3>
+      <ul>
+        <li>Cada ligação ou atualização vira um <b>evento</b> na linha do tempo do RI.</li>
+        <li>Para encerrar, registre um evento do tipo <b>Debelado</b> com data e hora do fim: o RI muda de situação e o prazo do ROI começa a contar.</li>
+        <li>O link <b>abrir o formulário do ROI com este RI</b> leva a UC direto ao ROI já preenchido com os dados da sala.</li>
+      </ul>
+    </section>
+
+    <section id="apoios">
+      <h2>Apoios e atuações</h2>
+      <p class="quem">Quem usa: Sala de Situação · no detalhe de cada RI, bloco <b>Apoios empenhados</b></p>
+      <ol class="passos">
+        <li>Para cada instituição no combate, registre <b>data, turno, horário, instituição, pessoas</b> e veículos/aeronaves. Só quantidades — sem nomes.</li>
+        <li>A instituição vem de um <b>catálogo padronizado</b> (ex.: “Corpo de Bombeiros Militar (CBMMG)”), que define a coluna do ROI/BDG em que o efetivo entra.</li>
+        <li>No dia seguinte, <b>Repetir apoios</b> copia o último dia para a nova data; ajuste só o que mudou.</li>
+      </ol>
+      <p class="nota">A mesma instituição em dois turnos do mesmo dia conta pelo maior efetivo; instituições diferentes somam. As atuações alimentam o boletim (recursos atuais) e pré-preenchem a evolução do combate e os veículos no ROI. A aba <b>Apoios e atuações</b> mostra o total por instituição (RIs, dias, pessoas-dia, horas-homem).</p>
+    </section>
+
+    <section id="smc">
+      <h2>2. SMC — mapear a área queimada</h2>
+      <p class="quem">Quem usa: UC, GPCIF · <a href="smc.html">abrir o SMC</a></p>
+      <ol class="passos">
+        <li>No SMC, localize a ocorrência a partir do ponto levantado em campo.</li>
+        <li>Siga as etapas do próprio SMC para delimitar a cicatriz nas imagens Sentinel-2 e confira o resultado.</li>
+        <li>Exporte o <b>KML</b> — ele leva os atributos (UC, municípios, áreas dentro e fora da UC) que preenchem o ROI.</li>
+      </ol>
+      <p class="nota">Se preferir, use <b>Tela cheia ↗</b> no alto da página do SMC.</p>
+    </section>
+
+    <section id="roi">
+      <h2>3. ROI — Relatório de Ocorrência de Incêndio</h2>
+      <p class="quem">Quem usa: UC · <a href="roi.html">abrir o formulário</a> · prazo: <b>10 dias após o fim do incêndio</b></p>
+      <h3>Passo a passo</h3>
+      <ol class="passos">
+        <li><b>Comece pelo polígono</b> (primeiro bloco do formulário):
+          <ul>
+            <li><b>KML do SMC</b>: preenche UC, municípios, áreas, localização e o ponto de campo.</li>
+            <li><b>Polígono de campo</b> (KML, KMZ, GeoJSON ou GPX do GPS): o sistema cruza com o limite oficial da UC e os municípios (IBGE) e calcula áreas dentro/fora, localização e municípios.</li>
+          </ul></li>
+        <li>Informe o <b>ano e o nº do RI</b> passado pela sala: UC, datas, coordenadas, evolução do combate e veículos vêm do registro da sala.</li>
+        <li>Complete as demais seções: causas, vegetação atingida, descrição da ocorrência e fotos.</li>
+        <li><b>Gerar PDF para o SEI</b> monta o relatório com o mapa (limite da UC, ponto de início, escala e norte).</li>
+        <li><b>Enviar ROI</b> grava no banco. Depois do envio, <b>Baixar shapefile (BDG)</b> fornece o polígono com os atributos do BDG.</li>
+      </ol>
+      <h3>Sobre o arquivo do polígono</h3>
+      <ul>
+        <li>Só vale <b>polígono</b>. Arquivo com apenas pontos ou com linha aberta é recusado com explicação.</li>
+        <li>Trilha de GPS que <b>fecha</b> (termina a até 50 m do início) pode ser usada como polígono — o sistema pergunta antes.</li>
+        <li>Se o arquivo tiver polígono e pontos/linhas, só o polígono é usado.</li>
+        <li>Trocou a UC depois de anexar um polígono de campo? As áreas dentro/fora são recalculadas.</li>
+      </ul>
+      <p class="nota">O rascunho fica salvo no navegador enquanto você preenche. Os campos fixos da UC (categoria, grupo, bioma, regional, base) vêm travados do cadastro; se estiverem errados, avise a GPCIF.</p>
+    </section>
+
+    <section id="prazos">
+      <h2>Prazos dos ROIs</h2>
+      <p class="quem">Quem usa: Sala de Situação, GPCIF · <a href="sala.html?aba=prazos">abrir os prazos</a></p>
+      <p>Lista cada RI encerrado com a data limite do ROI e a situação: <b>no prazo</b>, <b>vence em até 2 dias</b>, <b>atrasado</b> ou <b>entregue</b>. O ROI conta como entregue quando é enviado com o mesmo ano e nº de RI.</p>
+    </section>
+
+    <section id="boletim">
+      <h2>Boletim e painel</h2>
+      <p class="quem">Aberto ao público · <a href="boletim.html">boletim</a> · <a href="painel.html">painel histórico</a></p>
+      <ul>
+        <li><b>Boletim da Força Tarefa</b>: mapa das UCs (vermelho = incêndio em andamento), lista do que está em andamento com recursos, comparação mensal com a média 2013–2025 e ocorrências debeladas. Atualiza sozinho a cada 5 minutos; as informações são consolidadas às 19h. Não mostra coordenadas, descrições nem informantes.</li>
+        <li><b>Painel histórico</b>: estatísticas dos ROIs desde 2013 com filtros por ano, regional, categoria e UC; exporta CSV.</li>
+      </ul>
+    </section>
+
+    <section id="pipcif">
+      <h2>Cadastro das UCs (PIPCIF)</h2>
+      <p class="quem">Quem usa: gerentes e GPCIF · <a href="ucs.html">abrir o cadastro</a></p>
+      <ol class="passos">
+        <li>Entre com seu login. A lista abre em <b>Minhas UCs</b>; use <b>Todas</b> para consultar as demais (somente leitura).</li>
+        <li>Preencha as seções: gestão (gerente, contatos, funcionários, responsáveis na ausência), criação e ambiente, meses críticos, localização e sede, situação fundiária.</li>
+        <li><b>Coordenadas</b>: digite em graus decimais ou graus-minutos-segundos, use <b>Tenho a coordenada em UTM</b> para converter, ou <b>Marcar no mapa</b>. O sistema avisa se o ponto cai fora do limite da UC.</li>
+        <li>Clique em <b>Salvar cadastro</b>. A barra na lista mostra quanto da seção 3 está preenchido.</li>
+      </ol>
+      <p class="nota">Toda alteração fica no <b>Histórico de alterações</b> da UC: quem mudou, quando e o valor anterior. Os dados da regional (coordenador, telefones) são compartilhados por todas as UCs da regional e editados pela GPCIF na aba <b>Regionais</b>. Os demais módulos do PIPCIF (infraestrutura, recursos, rede de apoio, plano anual e mapa de risco) serão acrescentados aqui.</p>
+    </section>
+
+    <section id="admin">
+      <h2>Administração</h2>
+      <p class="quem">Quem usa: administradores da GPCIF · acesso pelo rodapé (<b>Acesso da equipe</b>)</p>
+      <ul>
+        <li><b>Usuários e gerentes</b> (Cadastro das UCs → aba Usuários): criar login, gerar senha provisória, definir o papel e as UCs que cada gerente edita, desativar acesso.</li>
+        <li><b>Listas suspensas</b> (Sala → aba Listas): incluir, ordenar e desativar valores. Renomear oferece <b>corrigir a grafia</b> (atualiza o histórico) ou <b>substituir</b> (mantém o histórico). Listas estruturais do BDG ficam travadas. Nada é apagado.</li>
+        <li><b>Catálogo de instituições</b> (Sala → aba Apoios e atuações): nomes padronizados e categoria de cada instituição.</li>
+      </ul>
+    </section>
+
+    <section id="faq">
+      <h2>Perguntas frequentes</h2>
+      <details><summary>A página não mudou depois de uma atualização.</summary><p>O navegador guardou a versão antiga. Recarregue com <b>Ctrl+F5</b> (no celular, feche e abra a aba). No rodapé do formulário do ROI aparece a versão em uso.</p></details>
+      <details><summary>O ROI diz que o RI não foi encontrado.</summary><p>Confira o ano e o número com a Sala de Situação. RIs cancelados não aparecem.</p></details>
+      <details><summary>Meu arquivo foi recusado: “só vale polígono”.</summary><p>O arquivo tem pontos ou uma linha que não fecha. Desenhe o polígono no SMC, no Google Earth ou no QGIS, ou percorra o perímetro com o GPS terminando perto de onde começou.</p></details>
+      <details><summary>As áreas calculadas não batem com as do SMC.</summary><p>O SMC e o portal usam o mesmo limite oficial da UC, mas polígonos de campo e do SMC podem diferir. Prevalece o que for enviado no ROI; se o limite da UC parecer errado, avise a GPCIF.</p></details>
+      <details><summary>Não consigo editar a minha UC.</summary><p>O seu login precisa estar ligado a ela. Peça à GPCIF para incluir a UC no seu acesso.</p></details>
+      <details><summary>Esqueci a senha.</summary><p>Peça à GPCIF uma nova senha provisória; no primeiro acesso você define a sua.</p></details>
+    </section>
+  </article>
+</main>
+
+<footer>
+  <div style="display:flex;gap:10px 24px;flex-wrap:wrap;justify-content:space-between">
+    <div>IEF-MG · Gerência de Prevenção e Combate a Incêndios Florestais — Previncêndio<br>
+    Rodovia João Paulo II, 4143 — Serra Verde — Belo Horizonte/MG · Sala de Situação: 0800 283 23 23</div>
+    <div><a href="sala.html" style="color:inherit">Acesso da equipe</a> · <a href="manual.html" style="color:inherit">Manual</a> · <a href="https://www.ief.mg.gov.br/acessibilidade" target="_blank" rel="noopener" style="color:inherit">Acessibilidade</a></div>
+  </div>
+</footer>
+<script>
+// destaca no sumário a seção visível
+const links = [...document.querySelectorAll('.sumario a')];
+const obs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting){ links.forEach(a => a.classList.toggle('ativo', a.getAttribute('href') === '#'+e.target.id)); } }), {rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('.conteudo section').forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

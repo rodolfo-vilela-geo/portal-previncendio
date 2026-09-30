@@ -9,29 +9,49 @@
   :root{
     color-scheme: light;
     --fundo:#eef0e6; --papel:#ffffff; --linha:#e3e0da; --tinta:#1d1d1f; --suave:#5f6368;
-    --marca:#2e5603; --marca-2:#3f6b12; --realce:#e6eed8; --laranja:#c46f1a;
+    --marca:#2e5603; --marca-2:#3f6b12; --realce:#e6eed8; --laranja:#c46f1a; --amarelo:#e3b500; --gov:#262b22;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       color-scheme: dark;
       --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --tinta:#f3f2ee; --suave:#b5b4ab;
-      --marca:#1e3a02; --marca-2:#9cc46a; --realce:#1d2614; --laranja:#e08a38;
+      --marca:#1e3a02; --marca-2:#9cc46a; --realce:#1d2614; --laranja:#e08a38; --amarelo:#e3b500; --gov:#0c0d0b;
     }
   }
   :root[data-theme="dark"]{
     color-scheme: dark;
     --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --tinta:#f3f2ee; --suave:#b5b4ab;
-    --marca:#1e3a02; --marca-2:#9cc46a; --realce:#1d2614; --laranja:#e08a38;
+    --marca:#1e3a02; --marca-2:#9cc46a; --realce:#1d2614; --laranja:#e08a38; --amarelo:#e3b500; --gov:#0c0d0b;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--fundo);color:var(--tinta);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  header{background:var(--marca);color:#fff;padding:26px 16px 28px}
-  header .dentro,main,footer{max-width:1040px;margin:0 auto}
-  header .inst{font-size:12.5px;opacity:.85;letter-spacing:.02em}
-  header h1{margin:6px 0 4px;font-size:28px;line-height:1.15;font-weight:700}
-  header p{margin:0;opacity:.9;max-width:640px}
-  .marca{display:flex;align-items:center;gap:14px;min-width:0}
-  .logo img{height:96px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  /* barra do Governo de Minas */
+  .gov{background:var(--gov);color:#e9e9e6;font-size:12.5px}
+  .gov .dentro{max-width:1040px;margin:0 auto;padding:6px 16px;display:flex;gap:6px 18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .gov b{font-weight:700;letter-spacing:.02em}
+  .gov nav{display:flex;gap:4px 16px;flex-wrap:wrap}
+  .gov a{color:#e9e9e6;text-decoration:none} .gov a:hover{text-decoration:underline}
+  /* cabeçalho: IEF + Previncêndio */
+  header.inst{background:var(--papel);border-bottom:1px solid var(--linha)}
+  header.inst .dentro{max-width:1040px;margin:0 auto;padding:14px 16px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .logos{display:flex;align-items:center;gap:16px}
+  .logos a{text-decoration:none}
+  .logos .ief{height:58px;width:auto;display:block}
+  .logos .ief-txt{font:800 30px/1 system-ui,sans-serif;color:var(--marca);letter-spacing:.02em}
+  .logos .sep{width:1px;height:54px;background:var(--linha)}
+  .logos .prev{height:64px;width:auto;display:block}
+  .titulo .org{font-size:12.5px;color:var(--suave);letter-spacing:.02em}
+  .titulo h1{margin:2px 0 0;font-size:26px;line-height:1.15;font-weight:750;color:var(--marca)}
+  .titulo p{margin:2px 0 0;color:var(--suave);font-size:14px;max-width:620px}
+  /* menu institucional */
+  nav.menu{background:var(--marca)}
+  nav.menu ul{max-width:1040px;margin:0 auto;padding:0 8px;list-style:none;display:flex;flex-wrap:wrap}
+  nav.menu a{display:block;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 12px;border-bottom:3px solid transparent}
+  nav.menu a:hover,nav.menu a[aria-current=page]{background:rgba(255,255,255,.1);border-bottom-color:var(--laranja)}
+  nav.menu a .ext{opacity:.7;font-size:11px;margin-left:3px}
+  nav.menu .pend{opacity:.72}
+  .faixa{background:linear-gradient(90deg,var(--marca) 0 60%,var(--laranja) 60% 80%,var(--amarelo) 80%);height:4px}
+  main,footer{max-width:1040px;margin:0 auto}
   main{padding:8px 16px 10px}
   section{margin-top:26px}
   .tit{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
@@ -90,20 +110,42 @@
     .fluxo{grid-template-columns:1fr} .seta{height:30px} .seta svg{transform:rotate(90deg)}
     .modulos{grid-template-columns:1fr}
   }
-  @media (max-width:600px){ .logo img{height:64px} header h1{font-size:24px} }
+  @media (max-width:600px){ .logos .ief{height:44px} .logos .prev{height:50px} .logos .sep{height:42px} .titulo h1{font-size:22px} nav.menu a{padding:9px 9px;font-size:13px;white-space:nowrap} nav.menu ul{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .gov nav{display:none} }
 </style>
 </head>
 <body>
-<header>
-  <div class="dentro marca">
-    <a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
-    <div>
-      <div class="inst">Governo de Minas Gerais · Instituto Estadual de Florestas · DIUC</div>
-      <h1>Portal Previncêndio</h1>
-      <p>Serviços da Gerência de Prevenção e Combate a Incêndios Florestais para as Unidades de Conservação estaduais.</p>
-    </div>
+<div class="gov"><div class="dentro">
+  <b>GOVERNO DE MINAS GERAIS</b>
+  <nav aria-label="Governo de Minas">
+    <a href="https://www.ouvidoriageral.mg.gov.br/simplifique-oge" target="_blank" rel="noopener">Simplifique</a>
+    <a href="https://www.mg.gov.br/estrutura-governamental" target="_blank" rel="noopener">Órgãos do Governo</a>
+    <a href="https://www.transparencia.mg.gov.br/" target="_blank" rel="noopener">Portal da Transparência</a>
+  </nav>
+</div></div>
+<header class="inst"><div class="dentro">
+  <div class="logos">
+    <a href="https://www.ief.mg.gov.br/" target="_blank" rel="noopener" title="Instituto Estadual de Florestas">
+      <img class="ief" src="https://www.ief.mg.gov.br/documents/20121/118197/ief.svg" alt="IEF — Instituto Estadual de Florestas"
+           onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ief-txt',textContent:'IEF'}))"></a>
+    <span class="sep" aria-hidden="true"></span>
+    <a href="index.html" title="Portal Previncêndio"><img class="prev" src="img/logo_previncendio.png" alt="Previncêndio — Programa de Prevenção e Combate a Incêndios Florestais"></a>
   </div>
-</header>
+  <div class="titulo">
+    <div class="org">Instituto Estadual de Florestas · Diretoria de Unidades de Conservação</div>
+    <h1>Portal Previncêndio</h1>
+    <p>Serviços da Gerência de Prevenção e Combate a Incêndios Florestais para as Unidades de Conservação estaduais.</p>
+  </div>
+</div></header>
+<nav class="menu" aria-label="Menu institucional"><ul>
+  <li><a href="index.html" aria-current="page">Início</a></li>
+  <li><a href="#" class="pend" title="Página em construção">O Previncêndio</a></li>
+  <li><a href="https://www.ief.mg.gov.br/unidades-de-conservação" target="_blank" rel="noopener">UCs estaduais<span class="ext">↗</span></a></li>
+  <li><a href="#" class="pend" title="Página em construção">Legislação</a></li>
+  <li><a href="#" class="pend" title="Página em construção">Documentos técnicos</a></li>
+  <li><a href="manual.html">Manual</a></li>
+  <li><a href="https://www.ief.mg.gov.br/fale-conosco" target="_blank" rel="noopener">Fale conosco<span class="ext">↗</span></a></li>
+</ul></nav>
+<div class="faixa" aria-hidden="true"></div>
 
 <main>
   <!-- 1. OCORRÊNCIA -->
@@ -185,19 +227,24 @@
     </div>
   </section>
 
-  <!-- 4. GESTÃO -->
+  <!-- AJUDA -->
   <section>
-    <div class="tit"><h2>Gestão do sistema</h2>
-      <span class="cadeado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>login · equipe GPCIF</span></div>
-    <div class="gestao">
-      <a href="sala.html?aba=apoios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/></svg>Apoios e atuações <small>instituições e efetivo por dia</small></a>
-      <a href="sala.html?aba=listas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Listas suspensas <small>admin</small></a>
-      <a href="ucs.html?aba=usuarios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Usuários e gerentes <small>admin</small></a>
-      <a href="ucs.html?aba=regionais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/></svg>Regionais (URFBio)</a>
-    </div>
+    <div class="tit"><h2>Ajuda</h2></div>
+    <a class="card" href="manual.html" style="min-height:0;flex-direction:row;align-items:center;gap:14px">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></div>
+      <div style="flex:1"><h3 style="margin:0">Manual do sistema</h3><p>Passo a passo de cada página: Sala de Situação, SMC, ROI, boletim, cadastro das UCs e perguntas frequentes.</p></div>
+      <span class="ir" style="margin:0">Abrir →</span>
+    </a>
   </section>
+
 </main>
 
-<footer>IEF-MG · Gerência de Prevenção e Combate a Incêndios Florestais — Previncêndio · Um login vale para todas as páginas restritas.</footer>
+<footer>
+  <div style="display:flex;gap:10px 24px;flex-wrap:wrap;justify-content:space-between">
+    <div>IEF-MG · Gerência de Prevenção e Combate a Incêndios Florestais — Previncêndio<br>
+    Rodovia João Paulo II, 4143 — Serra Verde — Belo Horizonte/MG · Sala de Situação: 0800 283 23 23</div>
+    <div><a href="sala.html" style="color:inherit">Acesso da equipe</a> · <a href="manual.html" style="color:inherit">Manual</a> · <a href="https://www.ief.mg.gov.br/acessibilidade" target="_blank" rel="noopener" style="color:inherit">Acessibilidade</a></div>
+  </div>
+</footer>
 </body>
 </html>
