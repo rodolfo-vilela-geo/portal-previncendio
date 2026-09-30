@@ -1,4 +1,5 @@
-// Estrutura do PIPCIF no sistema: módulos e os blocos (seções do modelo 2026) de cada um.
+// Módulos de informação de cada UC e os blocos (seções do modelo do PIPCIF 2026) de cada um.
+// O PIPCIF passa a ser um relatório gerado a partir desses módulos (ver PIPCIF_RELATORIO).
 // Usado na página inicial e no Cadastro das UCs. mapa = bloco com dados georreferenciados.
 window.PIPCIF_MODULOS = [
   {n:1, id:"cadastro", nome:"Cadastro da UC", pronto:true, blocos:[
@@ -28,9 +29,10 @@ window.PIPCIF_MODULOS = [
     {s:"16", t:"Atuação dos brigadistas contratados", d:"rondas, escala, plantão e pontos estratégicos"}]},
   {n:6, id:"risco", nome:"Mapa de risco", blocos:[
     {s:"14", t:"Setores de risco", d:"fatores favoráveis e adversos por setor, com o histórico de cicatrizes do BDG", mapa:true}]},
-  {n:7, id:"documento", nome:"Plano operacional e documento", blocos:[
-    {s:"15", t:"Plano operacional de combate", d:"procedimentos iniciais, intermediários, dos parceiros e pós-incêndio"},
-    {s:"17", t:"Distribuição do PIPCIF", d:"destinatários e quantidades"},
-    {s:"—",  t:"Termo de participação", d:"gerente, URFBio, CBMMG, PMMAmb e outros signatários"},
-    {s:"—",  t:"Gerar o PIPCIF", d:"documento completo da UC para o SEI"}]}
+  {n:7, id:"operacional", nome:"Plano operacional", blocos:[
+    {s:"15", t:"Plano operacional de combate", d:"procedimentos iniciais, intermediários (grandes incêndios), dos parceiros e pós-incêndio"}]}
 ];
+
+// Relatório que reúne os módulos (design a definir)
+window.PIPCIF_RELATORIO = {nome:"PIPCIF — Plano Integrado de Prevenção e Combate a Incêndios Florestais",
+  d:"Junta os dados de todos os módulos da UC num documento para exportar em PDF (SEI), com introdução, objetivo, distribuição (seção 17) e termo de participação."};

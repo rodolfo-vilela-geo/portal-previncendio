@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Painel da UC — Portal Previncêndio</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    color-scheme: light;
+    --fundo:#eef0e6; --papel:#fff; --linha:#e3e0da; --grade:#ecebe7; --tinta:#1d1d1f; --suave:#5f6368; --mudo:#77796f;
+    --verde:#2e5603; --verde-esc:#1e3a02; --verde-2:#3f6b12; --realce:#e6eed8;
+    --serie:#5d7f2e; --atual:#c46f1a; --and:#c62828; --erro:#b3261e; --raio:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --fundo:#111110; --papel:#1a1a19; --linha:#2e2e2b; --grade:#262624; --tinta:#f3f2ee; --suave:#b5b4ab; --mudo:#9c9b92;
+      --verde:#1e3a02; --verde-esc:#142801; --verde-2:#9cc46a; --realce:#1d2614; --serie:#8fb35a; --atual:#e08a38; --and:#ef6b63;
+    }
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;background:var(--fundo);color:var(--tinta);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header.topo{background:var(--verde);color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:4px solid var(--verde-esc)}
+  header.topo .inst{font-size:12px;opacity:.9} header.topo .inst a{color:#fff;text-decoration:none}
+  header.topo h1{margin:0;font-size:18px}
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .usuario{font-size:13px;display:flex;gap:10px;align-items:center}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--verde-2);background:var(--papel);color:var(--verde-2);padding:7px 12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+  .btn.primario{background:var(--verde);border-color:var(--verde);color:#fff}
+  header .btn{border-color:#fff;background:transparent;color:#fff;padding:4px 9px;font-size:13px}
+  input,select{font:inherit;color:inherit;background:var(--papel);border:1px solid #c9c5bd;border-radius:7px;padding:7px 8px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:3px}
+
+  #telaLogin{max-width:380px;margin:60px auto;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:24px}
+  #telaLogin input{width:100%}
+  main{max-width:1280px;margin:0 auto;padding:14px 16px 30px}
+  .barra{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+  .barra .sel{flex:1 1 320px;max-width:480px} .barra .sel select{width:100%}
+  .titulo h2{margin:4px 0 0;font-size:24px;color:var(--verde-2)}
+  .titulo .sub{color:var(--suave);font-size:13.5px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0 14px}
+  .tile{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);padding:11px 13px}
+  .tile .rot{font-size:12px;color:var(--suave)}
+  .tile .val{font-size:26px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;margin-top:2px}
+  .tile .val small{font-size:14px;font-weight:600;color:var(--suave)}
+  .tile .sub{font-size:12px;color:var(--mudo)}
+  .tile.alerta{border-left:4px solid var(--and)} .tile.alerta .val{color:var(--and)}
+  .card{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);padding:14px;min-width:0}
+  .card h3{margin:0;font-size:15px}
+  .card .nota{font-size:12px;color:var(--mudo);margin:2px 0 10px}
+  .linha1{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;margin-bottom:14px}
+  .card.mapa{padding:0;overflow:hidden;position:relative}
+  #mapa{height:560px;background:#1b1f17}
+  .norte{position:absolute;right:12px;bottom:34px;z-index:500;background:rgba(255,255,255,.9);border-radius:6px;padding:3px 6px;font:700 12px system-ui;color:#1d1d1f;text-align:center;line-height:1}
+  .legenda{position:absolute;left:10px;bottom:28px;z-index:500;background:rgba(20,22,18,.85);color:#fff;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.7;max-width:260px}
+  .legenda i{display:inline-block;width:14px;height:10px;margin-right:6px;vertical-align:-1px;border-radius:2px}
+  .aviso-mapa{position:absolute;right:10px;top:10px;z-index:500;background:rgba(255,248,225,.95);color:#5a3a00;border:1px solid #f0c64a;border-radius:8px;padding:6px 9px;font-size:12px;max-width:300px}
+  .ficha dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px}
+  .ficha dt{color:var(--suave)} .ficha dd{margin:0;font-weight:600;text-align:right}
+  .ficha h4{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--suave)}
+  .meses{display:flex;flex-wrap:wrap;gap:4px}
+  .meses span{font-size:11.5px;font-weight:700;border-radius:99px;padding:2px 7px;border:1px solid var(--linha);color:var(--mudo)}
+  .meses span.on{background:var(--atual);border-color:var(--atual);color:#fff}
+  .pct{height:6px;background:var(--grade);border-radius:3px;overflow:hidden;margin-top:4px} .pct i{display:block;height:100%;background:var(--verde-2)}
+  .grade2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}
+  .grade3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .grafico svg{display:block;width:100%;overflow:visible}
+  .grafico text{fill:var(--suave);font-size:11px}
+  .grafico text.v{fill:var(--tinta);font-weight:700;font-size:10.5px}
+  .grafico .g{stroke:var(--grade)} .grafico .e{stroke:var(--linha)}
+  .leg{display:flex;gap:14px;font-size:12px;color:var(--suave);margin-bottom:4px;flex-wrap:wrap}
+  .leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .hbar{display:grid;grid-template-columns:minmax(80px,44%) 1fr;gap:6px 10px;align-items:center}
+  .hbar .r{font-size:12.5px;color:var(--suave);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hbar .t{display:flex;align-items:center;gap:6px;min-width:0}
+  .hbar .b{height:13px;background:var(--serie);border-radius:0 4px 4px 0;min-width:2px}
+  .hbar .v{font-size:12px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+  #tip{position:fixed;pointer-events:none;z-index:2000;background:var(--papel);color:var(--tinta);border:1px solid var(--linha);box-shadow:0 4px 18px rgba(0,0,0,.15);border-radius:8px;padding:6px 9px;font-size:12.5px;display:none}
+  #tip b{display:block;font-size:14px}
+  .vazio{color:var(--mudo);font-size:13px;padding:10px 0}
+  .carregando{padding:60px;text-align:center;color:var(--suave)}
+  .rodape{font-size:12px;color:var(--mudo);margin-top:14px}
+  .so-impressao{display:none}
+  @media (max-width:980px){ .linha1{grid-template-columns:1fr} .grade2,.grade3{grid-template-columns:1fr} #mapa{height:440px} }
+  @media print{
+    @page{size:A4 portrait;margin:10mm}
+    body{background:#fff;font-size:11.5px}
+    header.topo,.barra,.leaflet-control-zoom,.leaflet-control-layers,#tip{display:none!important}
+    .so-impressao{display:block}
+    main{padding:0;max-width:none}
+    .tiles{grid-template-columns:repeat(3,1fr);gap:6px} .tile{padding:6px 8px} .tile .val{font-size:18px}
+    .linha1{grid-template-columns:1fr;gap:8px} #mapa{height:420px}
+    .grade2,.grade3{grid-template-columns:1fr 1fr;gap:8px} .card{break-inside:avoid;padding:8px}
+  }
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca"><a href="index.html" class="logo" title="Portal Previncêndio"><img src="img/logo_previncendio.png" alt="Previncêndio"></a>
+    <div><div class="inst"><a href="index.html">← Portal Previncêndio</a> · GPCIF · IEF-MG</div><h1>Painel da Unidade de Conservação</h1></div></div>
+  <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn" id="sair">Sair</button></div>
+</header>
+
+<section id="telaLogin" hidden>
+  <h2 style="margin:0 0 4px;font-size:19px">Entrar</h2>
+  <p style="margin:0 0 14px;font-size:13px;color:var(--suave)">Painel para os gestores das UCs e a equipe da GPCIF.</p>
+  <form id="formLogin">
+    <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+    <div style="height:10px"></div>
+    <label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required>
+    <div style="height:14px"></div>
+    <button class="btn primario" style="width:100%;justify-content:center">Entrar</button>
+    <p id="erroLogin" style="color:var(--erro);min-height:18px;font-size:13px"></p>
+  </form>
+</section>
+
+<main id="app" hidden>
+  <div class="barra">
+    <div class="sel"><label for="selUC">Unidade de Conservação</label><select id="selUC"></select></div>
+    <button class="btn" id="btnImprimir" title="Gera a folha da UC (mapa e indicadores) — escolha “Salvar como PDF”">Imprimir / PDF da UC</button>
+    <a class="btn" id="btnCadastro" href="ucs.html">Cadastro da UC →</a>
+  </div>
+  <div class="so-impressao" style="font-size:11px;color:#555;margin-bottom:4px">Portal Previncêndio · IEF-MG · Painel da UC · gerado em <span id="geradoEm"></span></div>
+  <div id="conteudo"><div class="carregando">Carregando…</div></div>
+</main>
+<div id="tip" role="status"></div>
+
+<script>
+const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtN = (n, d=0) => n == null ? "—" : Number(n).toLocaleString("pt-BR", {minimumFractionDigits:d, maximumFractionDigits:d});
+const fmtD = d => d ? d.slice(0,10).split("-").reverse().join("/") : "";
+const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const CATS = {PAR:"Parque Estadual", APA:"Área de Proteção Ambiental", MONA:"Monumento Natural", ESEC:"Estação Ecológica", REBIO:"Reserva Biológica",
+              RVS:"Refúgio de Vida Silvestre", FLOE:"Floresta Estadual", RDS:"Reserva de Desenvolvimento Sustentável", APE:"Área de Proteção Especial"};
+const SIG = {PAR:"PE", APA:"APA", MONA:"MN", ESEC:"EE", REBIO:"REBIO", RVS:"REVS", FLOE:"FE", RDS:"RDS", APE:"APE"};
+let perfil = null, D = null, mapa = null;
+
+/* ---------------- login ---------------- */
+async function entrar(){
+  const {data:{session}} = await sb.auth.getSession();
+  if (!session){ $("#telaLogin").hidden = false; $("#app").hidden = true; return; }
+  const {data, error} = await sb.rpc("meu_perfil");
+  if (error || !data){ $("#erroLogin").textContent = "Seu e-mail não está cadastrado. Fale com a GPCIF."; await sb.auth.signOut(); $("#telaLogin").hidden = false; return; }
+  perfil = data; $("#quem").textContent = perfil.nome; $("#usuario").hidden = false; $("#telaLogin").hidden = true; $("#app").hidden = false;
+  const {data: ucs} = await sb.from("uc").select("nome_uc,categoria,ufbio").eq("ativo", true).order("nome_uc");
+  const minhas = new Set(perfil.ucs || []), regs = {};
+  (ucs||[]).forEach(u => (regs[u.ufbio || "—"] ||= []).push(u));
+  $("#selUC").innerHTML = (minhas.size ? `<optgroup label="Minhas UCs">${(ucs||[]).filter(u => minhas.has(u.nome_uc)).map(op).join("")}</optgroup>` : "") +
+    Object.keys(regs).sort((a,b)=>a.localeCompare(b,"pt-BR")).map(r => `<optgroup label="${esc(r)}">${regs[r].map(op).join("")}</optgroup>`).join("");
+  const q = new URLSearchParams(location.search).get("uc");
+  $("#selUC").value = q && (ucs||[]).some(u => u.nome_uc === q) ? q : (perfil.ucs?.[0] || (ucs||[])[0]?.nome_uc);
+  carregar();
+}
+const op = u => `<option value="${esc(u.nome_uc)}">${esc(`${SIG[u.categoria]||u.categoria||""} ${u.nome_uc}`.trim())}</option>`;
+$("#formLogin").onsubmit = async e => { e.preventDefault(); $("#erroLogin").textContent = "";
+  const {error} = await sb.auth.signInWithPassword({email: $("#email").value.trim().toLowerCase(), password: $("#senha").value});
+  if (error){ $("#erroLogin").textContent = /invalid/i.test(error.message) ? "E-mail ou senha incorretos." : error.message; return; } entrar(); };
+$("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$("#selUC").onchange = () => { history.replaceState(null, "", "?uc=" + encodeURIComponent($("#selUC").value)); carregar(); };
+$("#btnImprimir").onclick = () => { $("#geradoEm").textContent = new Date().toLocaleString("pt-BR"); if (mapa) mapa.invalidateSize(); setTimeout(() => print(), 400); };
+
+/* ---------------- dados ---------------- */
+async function carregar(){
+  const nome = $("#selUC").value; if (!nome) return;
+  $("#btnCadastro").href = "ucs.html?uc=" + encodeURIComponent(nome);
+  $("#conteudo").innerHTML = `<div class="carregando">Carregando o painel de ${esc(nome)}…</div>`;
+  const {data, error} = await sb.rpc("painel_uc", {p_nome_uc: nome});
+  if (error){ $("#conteudo").innerHTML = `<div class="carregando" style="color:var(--erro)">${esc(error.message)}</div>`; return; }
+  D = data; desenhar();
+}
+
+function desenhar(){
+  const u = D.uc, h = D.hist, c = D.comparacao, a = D.atual, ano = D.ano_atual;
+  const anosH = (h.fim - h.ini + 1), media = h.n / anosH;
+  const pctInt = u.area_limite_ha && h.area_int ? 100 * h.area_int / u.area_limite_ha : null;
+  const anoMax = (h.anos||[]).reduce((m,x) => x.n > (m?.n||0) ? x : m, null);
+  $("#conteudo").innerHTML = `
+    <div class="titulo"><h2>${esc(CATS[u.categoria] ? CATS[u.categoria] + " " + u.nome_uc : u.nome_uc)}</h2>
+      <div class="sub">${esc(u.ufbio||"")} · ${esc((u.municipios||[]).join(", "))} · ${esc(u.base_op||"")} · ${u.area_limite_ha ? fmtN(u.area_limite_ha) + " ha (limite oficial)" : "sem limite cadastrado"}</div></div>
+    <div class="tiles">
+      <div class="tile"><div class="rot">Ocorrências ${h.ini}–${h.fim}</div><div class="val">${fmtN(h.n)}</div><div class="sub">${fmtN(media,1)} por ano${anoMax ? ` · pico em ${anoMax.ano} (${anoMax.n})` : ""}</div></div>
+      <div class="tile"><div class="rot">Área queimada acumulada</div><div class="val">${fmtN(h.area_total)} <small>ha</small></div><div class="sub">${h.area_int ? `${fmtN(h.area_int)} ha dentro da UC${pctInt != null ? (pctInt < 100 ? ` · equivale a ${fmtN(pctInt,0)}% da área da UC` : ` · equivale a ${fmtN(pctInt/100,1)}× a área da UC (áreas queimadas mais de uma vez)`) : ""}` : "—"}</div></div>
+      <div class="tile ${a.andamento ? "alerta" : ""}"><div class="rot">Ocorrências em ${ano}</div><div class="val">${fmtN(a.n)}</div><div class="sub">${a.andamento ? `<b>${a.andamento} em andamento</b> · ` : ""}${fmtN(a.debelados)} debeladas</div></div>
+      <div class="tile"><div class="rot">Tempo de resposta (mediana)</div><div class="val">${h.tp_resp_mediana_min != null ? (h.tp_resp_mediana_min >= 120 ? fmtN(h.tp_resp_mediana_min/60,1) + " <small>h</small>" : fmtN(h.tp_resp_mediana_min) + " <small>min</small>") : "—"}</div><div class="sub">da detecção ao início do combate</div></div>
+      <div class="tile"><div class="rot">Duração (mediana)</div><div class="val">${h.dur_mediana_h != null ? fmtN(h.dur_mediana_h,1) + " <small>h</small>" : "—"}</div><div class="sub">${fmtN(h.sem_combate)} sem combate</div></div>
+      <div class="tile"><div class="rot">Posição entre as UCs</div><div class="val">${c.posicao ? c.posicao + "ª" : "—"} <small>de ${c.n_ucs}</small></div><div class="sub">média/ano: UC ${fmtN(c.media_uc,1)} · regional ${fmtN(c.media_regional,1)} · estado ${fmtN(c.media_estado,1)}</div></div>
+    </div>
+
+    <div class="linha1">
+      <div class="card mapa"><div id="mapa"></div><div class="norte">▲<br>N</div><div class="legenda" id="legenda"></div><div class="aviso-mapa" id="avisoMapa" hidden></div></div>
+      <div class="card ficha">
+        <h3>Ficha da UC</h3>
+        <dl style="margin-top:8px">
+          <dt>Gerente</dt><dd>${esc(u.gerente || "—")}</dd>
+          <dt>Funcionários</dt><dd>${u.func_adm != null || u.func_oper != null ? `${fmtN(u.func_adm ?? 0)} adm. · ${fmtN(u.func_oper ?? 0)} oper.` : "—"}</dd>
+          <dt>Responsáveis na ausência</dt><dd>${u.n_responsaveis}${u.n_responsaveis < 2 ? " ⚠" : ""}</dd>
+          <dt>Situação fundiária</dt><dd>${u.fundiaria_pct != null ? fmtN(u.fundiaria_pct) + "% regularizada" : u.fundiaria_ha != null ? fmtN(u.fundiaria_ha) + " ha" : "—"}</dd>
+          <dt>Biomas</dt><dd>${esc((u.biomas||[u.bioma_uc]).filter(Boolean).join(", ") || "—")}</dd>
+          <dt>Área (decreto / limite)</dt><dd>${u.area_decreto_ha ? fmtN(u.area_decreto_ha) : "—"} / ${u.area_limite_ha ? fmtN(u.area_limite_ha) : "—"} ha</dd>
+        </dl>
+        <h4>Meses críticos declarados</h4>
+        <div class="meses">${MESES.map((m,i) => `<span class="${(u.meses_criticos||[]).includes(i+1) ? "on" : ""}">${m}</span>`).join("")}</div>
+        ${!(u.meses_criticos||[]).length ? `<div class="vazio">Ainda não informados no cadastro.</div>` : ""}
+        <h4>Cadastro (PIPCIF seção 3)</h4>
+        <div style="font-size:13px">${fmtN(u.completo_pct)}% preenchido<div class="pct"><i style="width:${u.completo_pct||0}%"></i></div></div>
+        <h4>ROIs</h4>
+        <div style="font-size:13px">${a.roi_pendentes ? `<b>${a.roi_pendentes}</b> incêndio(s) encerrado(s) nos últimos 30 dias ainda sem ROI enviado pelo sistema${a.roi_atrasados ? ` · <b style="color:var(--and)">${a.roi_atrasados} atrasado(s)</b>` : ""}` : "Nenhum ROI pendente nos últimos 30 dias."}</div>
+        <h4>Quem mais apoiou em ${ano}</h4>
+        ${(a.apoios||[]).length ? `<div class="hbar">${hbarLinhas(a.apoios.map(x => ({t:x.t, n:x.pd})), " pessoas-dia")}</div>` : `<div class="vazio">Sem atuações registradas pela sala.</div>`}
+      </div>
+    </div>
+
+    <div class="grade2">
+      <div class="card"><h3>Ocorrências por ano</h3><p class="nota">ROIs de ${h.ini} a ${h.fim} e RIs de ${ano} (até hoje).</p>
+        <div class="leg"><span><i style="background:var(--serie)"></i>Histórico (ROI)</span><span><i style="background:var(--atual)"></i>${ano} (RI)</span></div>
+        <div class="grafico" id="gAnos"></div></div>
+      <div class="card"><h3>Área queimada por ano (ha)</h3><p class="nota">Soma das áreas dos ROIs (dentro e fora da UC).</p><div class="grafico" id="gArea"></div></div>
+    </div>
+    <div class="grade2">
+      <div class="card"><h3>Em que meses o fogo acontece</h3><p class="nota">Ocorrências por mês de detecção (${h.ini}–${h.fim}). Faixa laranja: meses declarados críticos no cadastro.</p><div class="grafico" id="gMeses"></div></div>
+      <div class="card"><h3>Causas prováveis</h3><p class="nota">As mais frequentes no histórico.</p><div class="hbar" id="gCausas"></div></div>
+    </div>
+    <div class="grade3">
+      <div class="card"><h3>Forma de detecção</h3><div class="hbar" id="gDetec" style="margin-top:8px"></div></div>
+      <div class="card"><h3>Local de início</h3><div class="hbar" id="gLocal" style="margin-top:8px"></div></div>
+      <div class="card"><h3>${ano} até agora</h3><p class="nota">RIs registrados pela Sala de Situação.</p>
+        ${(a.ris||[]).length ? `<div style="max-height:190px;overflow:auto;font-size:12.5px">${a.ris.map(r => `<div style="padding:4px 0;border-bottom:1px solid var(--grade)"><b>RI ${r.ri}</b> · ${fmtD(r.data)} · ${esc(r.municipio||"")} · ${esc(r.local||"")} · <span style="color:${r.status==="andamento"?"var(--and)":"var(--mudo)"}">${r.status}</span>${r.pessoas ? ` · ${r.pessoas} pessoas` : ""}</div>`).join("")}</div>` : `<div class="vazio">Nenhum RI em ${ano}.</div>`}</div>
+    </div>
+    <p class="rodape">Fontes: BDG Previncêndio (ROIs ${h.ini}–${h.fim}), Registro de Incêndios da Sala de Situação (${ano}), cadastro das UCs (PIPCIF), limites IDE-Sisema. Tempos e durações pela mediana, que não é distorcida por poucos registros extremos.</p>`;
+  const anos = [...(h.anos||[]).map(x => ({r: String(x.ano), v: x.n})), {r: String(ano), v: a.n, atual: true}];
+  colunas("#gAnos", anos, "ocorrências");
+  colunas("#gArea", (h.anos||[]).map(x => ({r: String(x.ano), v: x.area})), "ha");
+  colunas("#gMeses", (h.meses||[]).map((v,i) => ({r: MESES[i], v, faixa: (u.meses_criticos||[]).includes(i+1)})), "ocorrências");
+  $("#gCausas").innerHTML = hbarLinhas(h.causas) || `<span class="vazio">—</span>`;
+  $("#gDetec").innerHTML = hbarLinhas(h.deteccao) || `<span class="vazio">—</span>`;
+  $("#gLocal").innerHTML = hbarLinhas(h.local) || `<span class="vazio">—</span>`;
+  montarMapa();
+}
+
+/* ---------------- gráficos ---------------- */
+function hbarLinhas(L, suf=""){
+  if (!L || !L.length) return "";
+  const max = Math.max(...L.map(x => x.n), 1), tot = L.reduce((s,x)=>s+x.n,0);
+  return L.map(x => `<span class="r" title="${esc(x.t)}">${esc(x.t)}</span><span class="t"><span class="b" style="width:${Math.max(1, x.n/max*100)}%"></span><span class="v">${fmtN(x.n)}${suf}${!suf && tot ? ` <span style="color:var(--mudo);font-weight:400">· ${fmtN(100*x.n/tot)}%</span>` : ""}</span></span>`).join("");
+}
+function colunas(sel, dados, unidade){
+  const el = $(sel), W = Math.max(300, el.clientWidth), H = 210, m = {t:18, r:4, b:22, l:36};
+  const iw = W-m.l-m.r, ih = H-m.t-m.b, max = Math.max(...dados.map(d => d.v), 1);
+  const passo = [1,2,5,10,20,25,50,100,200,250,500,1000,2000,2500,5000,10000,20000,50000].find(p => max/p <= 4) || Math.ceil(max/4);
+  const top = Math.ceil(max/passo)*passo, n = dados.length, g = iw/n, bw = Math.max(4, Math.min(30, g-6));
+  const Y = v => m.t + ih - ih*v/top;
+  let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img">`;
+  dados.forEach((d,i) => { if (d.faixa) s += `<rect x="${m.l+g*i}" y="${m.t}" width="${g}" height="${ih}" fill="var(--atual)" opacity=".13"/>`; });
+  for (let v = 0; v <= top; v += passo){ const y = Y(v); s += `<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" class="${v?"g":"e"}"/><text x="${m.l-5}" y="${y+4}" text-anchor="end">${fmtN(v)}</text>`; }
+  const rotulos = n <= 14;
+  dados.forEach((d,i) => {
+    const x = m.l + g*i + (g-bw)/2, h = ih*d.v/top, y = m.t+ih-h, r = Math.min(4, bw/2, h);
+    const path = h > 0 ? `M${x},${m.t+ih}V${y+r}Q${x},${y} ${x+r},${y}H${x+bw-r}Q${x+bw},${y} ${x+bw},${y+r}V${m.t+ih}Z` : "";
+    s += `<path d="${path}" fill="${d.atual ? "var(--atual)" : "var(--serie)"}"/>`;
+    if (rotulos && d.v) s += `<text class="v" x="${x+bw/2}" y="${y-4}" text-anchor="middle">${fmtN(d.v)}</text>`;
+    s += `<text x="${x+bw/2}" y="${H-6}" text-anchor="middle">${n > 12 ? "'" + d.r.slice(-2) : d.r}</text>`;
+    s += `<rect x="${m.l+g*i}" y="${m.t}" width="${g}" height="${ih}" fill="transparent" data-tip="${fmtN(d.v, unidade==="ha"?1:0)} ${unidade}|${d.r}${d.faixa ? " · mês crítico declarado" : ""}"/>`;
+  });
+  el.innerHTML = s + "</svg>";
+  $$("[data-tip]", el).forEach(r => {
+    r.addEventListener("pointermove", e => { const [v,t] = r.dataset.tip.split("|"), tip = $("#tip"); tip.innerHTML = `<b>${esc(v)}</b>${esc(t)}`; tip.style.display = "block";
+      tip.style.left = Math.min(e.clientX+12, innerWidth-tip.offsetWidth-8)+"px"; tip.style.top = (e.clientY+12)+"px"; });
+    r.addEventListener("pointerleave", () => $("#tip").style.display = "none");
+  });
+}
+
+/* ---------------- mapa ---------------- */
+function montarMapa(){
+  if (mapa){ mapa.remove(); mapa = null; }
+  const u = D.uc, g = D.geo;
+  mapa = L.map("mapa", {zoomSnap:.25});
+  const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar", crossOrigin:true});
+  const ruas = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {maxZoom:18, subdomains:"abcd", attribution:"© OpenStreetMap · © CARTO", crossOrigin:true});
+  sat.addTo(mapa);
+  const cam = {}, leg = [];
+  if (g.za_3km){ cam["Raio de 3 km (ZA)"] = L.geoJSON(g.za_3km, {style:{color:"#ffffff", weight:1.5, dashArray:"4 4", fill:false}, interactive:false}).addTo(mapa); leg.push(`<i style="border:1.5px dashed #fff;background:none"></i>Raio de 3 km`); }
+  if (g.za_pm){ cam["ZA do plano de manejo"] = L.geoJSON(g.za_pm, {style:{color:"#ffd33d", weight:1.8, dashArray:"6 4", fill:false}, interactive:false}).addTo(mapa); leg.push(`<i style="border:1.8px dashed #ffd33d;background:none"></i>ZA do plano de manejo`); }
+  let lim = null;
+  if (g.limite){ lim = cam["Limite da UC"] = L.geoJSON(g.limite, {style:{color:"#8be06b", weight:2.4, fillColor:"#6fd34a", fillOpacity:.12}, interactive:false}).addTo(mapa); leg.push(`<i style="border:2px solid #8be06b;background:rgba(111,211,74,.25)"></i>Limite da UC`); }
+  if ((g.cicatrizes||[]).length){
+    cam["Cicatrizes (ROI)"] = L.featureGroup(g.cicatrizes.map(ci => L.geoJSON(ci.geo, {style:{color:"#ff5a3c", weight:1, fillColor:"#ff3b30", fillOpacity:.45}}).bindTooltip(`${esc(ci.cod)} · ${ci.ano}`))).addTo(mapa);
+    leg.push(`<i style="background:rgba(255,59,48,.6)"></i>Cicatrizes (${g.cicatrizes.length})`);
+  }
+  const hist = (D.ocorrencias||[]);
+  if (hist.length){
+    cam["Ocorrências do histórico"] = L.featureGroup(hist.map(o => L.circleMarker([o.lat, o.lon], {radius:4, color:"#fff", weight:1, fillColor:"#f0a33a", fillOpacity:.9})
+      .bindTooltip(`${esc(o.cod)} · ${fmtD(o.data)}${o.area ? " · " + fmtN(o.area,1) + " ha" : ""}`))).addTo(mapa);
+    leg.push(`<i style="background:#f0a33a;border-radius:50%;width:10px"></i>Ocorrências ${D.hist.ini}–${D.hist.fim} (${hist.length})`);
+  }
+  const ris = (D.atual.ris||[]).filter(r => r.lat != null && r.lon != null);
+  if (ris.length){
+    cam[`RIs de ${D.ano_atual}`] = L.featureGroup(ris.map(r => L.circleMarker([r.lat, r.lon], {radius:6, color:"#fff", weight:1.5, fillColor: r.status==="andamento" ? "#ff1f1f" : "#ff7a1a", fillOpacity:1})
+      .bindTooltip(`RI ${r.ri} · ${fmtD(r.data)} · ${esc(r.status)}`))).addTo(mapa);
+    leg.push(`<i style="background:#ff7a1a;border-radius:50%;width:10px"></i>RIs de ${D.ano_atual} (${ris.length})`);
+  }
+  const pts = [];
+  if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: L.divIcon({className:"", html:`<div style="width:13px;height:13px;background:#fff;border:3px solid #1f6feb;box-shadow:0 0 3px #000"></div>`, iconSize:[13,13], iconAnchor:[6,6]})}).bindTooltip("Sede da UC")); leg.push(`<i style="background:#fff;border:3px solid #1f6feb;width:10px;height:10px"></i>Sede`); }
+  if (pts.length) cam["Sede"] = L.featureGroup(pts).addTo(mapa);
+  L.control.layers({"Satélite": sat, "Mapa": ruas}, cam, {collapsed: innerWidth < 700}).addTo(mapa);
+  L.control.scale({imperial:false, maxWidth:140}).addTo(mapa);
+  $("#legenda").innerHTML = leg.join("<br>") || "—";
+  const alvo = lim || cam["RIs de " + D.ano_atual];
+  if (alvo) mapa.fitBounds(alvo.getBounds(), {padding:[24,24]}); else mapa.fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);
+  const semHist = !hist.length && D.hist.n > 0;
+  $("#avisoMapa").hidden = !semHist;
+  if (semHist) $("#avisoMapa").textContent = `As ${fmtN(D.hist.n)} ocorrências de ${D.hist.ini}–${D.hist.fim} ainda não têm localização no banco: aparecem quando os polígonos históricos do BDG forem carregados.`;
+}
+let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { if (D){ const u = D.uc, h = D.hist; colunas("#gAnos", [...(h.anos||[]).map(x => ({r:String(x.ano), v:x.n})), {r:String(D.ano_atual), v:D.atual.n, atual:true}], "ocorrências");
+  colunas("#gArea", (h.anos||[]).map(x => ({r:String(x.ano), v:x.area})), "ha"); colunas("#gMeses", (h.meses||[]).map((v,i) => ({r:MESES[i], v, faixa:(u.meses_criticos||[]).includes(i+1)})), "ocorrências"); } }, 150); });
+entrar();
+</script>
+</body>
+</html>

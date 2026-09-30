@@ -377,7 +377,7 @@ async function abrirUC(nome){
     <div class="cabec"><div>
       <h2>${esc(CATS[u.categoria] ? CATS[u.categoria] + " " + u.nome_uc : u.nome_uc)}</h2>
       <div class="dica">${esc(u.ufbio||"")} · ${esc((u.municipios||[]).join(", "))}</div></div>
-      <div>${ed ? `<span class="selo">Você pode editar</span>` : `<span class="selo ro">Somente leitura</span>`}</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><a class="btn peq" href="painel_uc.html?uc=${encodeURIComponent(nome)}">Painel da UC →</a>${ed ? `<span class="selo">Você pode editar</span>` : `<span class="selo ro">Somente leitura</span>`}</div></div>
 
     <fieldset><legend>Dados fixos</legend>
       <div class="fixos">
