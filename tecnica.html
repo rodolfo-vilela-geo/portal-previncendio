@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Sala Técnica — Colibri</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --linha:#dcd8d0;
+    --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --alerta:#9a5b00; --erro:#b3261e; --azul:#1f5fa8;
+  }
+  *{box-sizing:border-box} [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--fundo);color:var(--tinta);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header.topo{background:var(--verde);color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  header.topo .inst{font-size:12px;opacity:.9} header.topo .inst a{color:#fff;text-decoration:none}
+  header.topo h1{margin:0;font-size:18px}
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .usuario{font-size:13px;display:flex;gap:10px;align-items:center}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--verde);background:#fff;color:var(--verde);padding:7px 12px;cursor:pointer}
+  .btn:hover{background:#eef3e2} .btn.primario{background:var(--verde);color:#fff} .btn.primario:hover{background:var(--verde-esc)}
+  .btn.peq{padding:4px 9px;font-size:13px} .btn[disabled]{opacity:.5;cursor:not-allowed}
+  header .btn{border-color:#fff;background:transparent;color:#fff}
+  input,select,textarea{width:100%;font:inherit;color:inherit;background:#fff;border:1px solid #c9c5bd;border-radius:7px;padding:6px 8px}
+  input:focus,select:focus,textarea:focus{outline:2px solid #b8cf95;border-color:var(--verde)}
+  textarea{min-height:60px;resize:vertical}
+  label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:3px}
+  .dica{font-size:12.5px;color:var(--suave)}
+  #telaLogin{max-width:380px;margin:40px auto;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:22px}
+  main{max-width:1400px;margin:0 auto;padding:12px 16px 40px}
+  .abas{display:flex;gap:4px;border-bottom:1px solid var(--linha);background:var(--papel);padding:0 16px;overflow-x:auto}
+  .abas button{font:inherit;font-weight:600;border:0;background:transparent;padding:10px 14px;border-bottom:3px solid transparent;color:var(--suave);cursor:pointer;white-space:nowrap}
+  .abas button[aria-selected=true]{color:var(--verde);border-bottom-color:var(--verde)}
+  .filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:10px 0 14px}
+  .filtros>div{min-width:150px}
+  .cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+  .card{background:var(--papel);border:1px solid var(--linha);border-left:5px solid var(--c,#999);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit}
+  .card:hover{box-shadow:0 3px 12px rgba(0,0,0,.08)}
+  .card .n{font-size:28px;font-weight:800;color:var(--c)} .card .t{font-weight:650} .card .d{font-size:12px;color:var(--suave)}
+  .bloco{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin-top:14px}
+  .bloco h2{font-size:16px;margin:0 0 8px}
+  .grupo{border-top:1px solid #eee;padding:8px 0}
+  .grupo summary{cursor:pointer;list-style:none} .grupo summary::-webkit-details-marker{display:none} .grupo summary b::before{content:"▸ ";color:var(--suave)} .grupo[open] summary b::before{content:"▾ "}
+  .grupo>.dica{margin:6px 0 4px 16px}
+  .grupo .cab{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+  .grupo .cab b{font-size:14px}
+  table.tab{border-collapse:collapse;width:100%;font-size:13px;background:var(--papel)}
+  table.tab th{background:#e9eddf;text-align:left;padding:6px;position:sticky;top:0;white-space:nowrap;z-index:1}
+  table.tab td{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:top}
+  table.tab tbody tr{cursor:pointer} table.tab tbody tr:hover{background:#f6f8ef}
+  .tab-wrap{overflow:auto;max-height:calc(100vh - 250px);border:1px solid var(--linha);border-radius:8px}
+  .etapa{display:inline-block;font-size:11px;font-weight:700;border-radius:99px;padding:1px 8px;white-space:nowrap;background:#eee;color:#444}
+  .e-aguardando{background:#fdecea;color:#b3261e} .e-roi{background:#fff4cc;color:#8a5a00} .e-reds{background:#fde6d7;color:#b04a0c}
+  .e-pronto{background:#e3edf9;color:#1f5fa8} .e-assina{background:#eee8fb;color:#5b3fb0} .e-enc{background:#e3f0dc;color:#2e6b1a}
+  .e-inq{background:#d6ecd0;color:#1e5a10} .e-fim{background:#eee;color:#666}
+  .pend{font-size:11px;font-weight:700;color:var(--erro)}
+  .atraso{color:var(--erro);font-weight:700} .aviso{color:var(--alerta);font-weight:700}
+  dialog{border:0;border-radius:12px;padding:0;width:min(980px,96vw);max-height:92vh;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .ficha-cab{position:sticky;top:0;background:var(--verde);color:#fff;padding:10px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center;z-index:2}
+  .ficha-cab h2{margin:0;font-size:17px}
+  .ficha-corpo{padding:12px 16px}
+  .resumo{display:grid;gap:6px 14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));font-size:13px;background:#f6f8ef;border-radius:8px;padding:10px 12px}
+  .resumo b{display:block;font-size:11px;color:var(--suave);text-transform:uppercase;letter-spacing:.03em}
+  fieldset{border:1px solid var(--linha);border-radius:10px;margin:12px 0 0;padding:8px 12px 12px;min-width:0}
+  legend{font-weight:700;font-size:13.5px;padding:0 4px}
+  .grade{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+  .grade .largo{grid-column:1/-1} .grade .duplo{grid-column:span 2}
+  .chk{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:600;color:var(--tinta)} .chk input{width:auto}
+  .ficha-rod{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--linha);padding:10px 16px;display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;align-items:center}
+  #msg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:9px;font-size:14px;z-index:99;max-width:90vw}
+  #msg:empty{display:none} #msg.erro{background:var(--erro)} #msg.ok{background:var(--ok)}
+  .hist{font-size:12.5px;padding-left:18px} .hist li{margin-bottom:5px} .hist .q{color:var(--suave)}
+  .imp-res{font-size:13px} .imp-res td,.imp-res th{padding:4px 8px}
+  @media (max-width:700px){ .grade .duplo{grid-column:auto} }
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca"><a href="index.html" class="logo" title="Colibri"><img src="img/logo_portal_selo.png" alt="Colibri"></a>
+    <div><div class="inst"><a href="index.html">← Colibri</a> · Previncêndio · Força-Tarefa · IEF-MG</div><h1>Sala Técnica — Trâmite das ocorrências</h1></div></div>
+  <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn peq" id="sair">Sair</button></div>
+</header>
+
+<section id="telaLogin" hidden>
+  <h2 style="margin-top:0">Entrar</h2>
+  <p class="dica" style="margin:0 0 14px">Acesso restrito à Sala Técnica e ao Previncêndio.</p>
+  <form id="formLogin">
+    <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+    <div style="height:10px"></div>
+    <label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required>
+    <div style="height:14px"></div>
+    <button class="btn primario" style="width:100%">Entrar</button>
+    <p id="erroLogin" class="dica" style="color:var(--erro);min-height:18px"></p>
+  </form>
+</section>
+
+<div id="app" hidden>
+  <nav class="abas" role="tablist">
+    <button data-aba="pendencias" aria-selected="true">Pendências e cobranças</button>
+    <button data-aba="processos" aria-selected="false">Ocorrências e processos</button>
+    <button data-aba="importar" aria-selected="false" id="abaImportar">Importar planilha</button>
+  </nav>
+  <main>
+    <div class="filtros">
+      <div><label for="fAno">Ano</label><select id="fAno"></select></div>
+      <div><label for="fSala">Sala Técnica</label><select id="fSala"><option value="">Curvelo e Januária</option><option>Curvelo</option><option>Januária</option></select></div>
+      <div><button class="btn" id="atualizar" title="Recarregar">↻ Atualizar</button></div>
+      <div class="dica" id="resumoAno" style="flex:1;min-width:240px"></div>
+    </div>
+
+    <section data-painel="pendencias">
+      <div class="cards" id="cards"></div>
+      <div class="bloco"><h2>Cobrança de REDS (PM Ambiental)</h2>
+        <p class="dica" style="margin:0 0 6px">Pelo manual: cobrar a partir de <b>4 dias</b> do acionamento (militar de plantão na Sala de Situação: saladesituacao.pmamb@meioambiente.mg.gov.br; fora do período crítico, Coordenação de Informações). Depois de <b>10 dias</b>, o REDS está atrasado.</p>
+        <div id="cobReds"></div></div>
+      <div class="bloco"><h2>Cobrança de ROI (gerentes)</h2>
+        <p class="dica" style="margin:0 0 6px">Prazo: 10 dias corridos após a extinção. 1ª cobrança por e-mail institucional com prazo de 3 dias úteis; sem retorno, 2ª cobrança e comunicação à Coordenação de Informações.</p>
+        <div id="cobRoi"></div></div>
+    </section>
+
+    <section data-painel="processos" hidden>
+      <div class="filtros" style="margin-top:0">
+        <div style="min-width:220px"><label for="fEtapa">Etapa</label><select id="fEtapa"></select></div>
+        <div style="flex:1;min-width:240px"><label for="fBusca">Buscar (RI, cod_bdp, UC, REDS, SEI, DPC)</label><input id="fBusca" placeholder="ex.: 0380, Cabral, 2025-0123"></div>
+        <div><button class="btn" id="csv">Exportar CSV</button></div>
+      </div>
+      <div class="tab-wrap"><table class="tab" id="tabela"></table></div>
+      <div class="dica" id="rodTabela" style="margin-top:6px"></div>
+    </section>
+
+    <section data-painel="importar" hidden>
+      <div class="bloco"><h2>Importar a planilha de acompanhamento da Sala Técnica</h2>
+        <p class="dica" style="margin:0 0 10px">Lê as abas “Planilha AAAA” (2016 em diante), monta o <b>cod_bdp</b> (ano-RI-ROI) e confere com o BDG. Campos já preenchidos no sistema não são apagados — a planilha só completa o que estiver vazio. De 2013 a 2017 os processos eram físicos (sem número SEI).</p>
+        <input type="file" id="arquivo" accept=".xlsx,.xls" style="max-width:420px">
+        <div id="impRes" class="imp-res" style="margin-top:12px"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="ficha"></dialog>
+<div id="msg"></div>
+
+<script>
+const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+const $ = (s, el=document) => el.querySelector(s), $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const txt = v => { const s=(v??"").toString().trim(); return s===""?null:s; };
+const fmtD = d => d ? String(d).slice(0,10).split("-").reverse().join("/") : "";
+const hoje = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+let tMsg; function msg(t, tipo=""){ const m=$("#msg"); m.textContent=t; m.className=tipo; clearTimeout(tMsg); tMsg=setTimeout(()=>{ if (m.textContent===t) m.textContent=""; }, 5000); }
+const CATS = {PAR:"PE", APA:"APA", MONA:"MN", ESEC:"EE", REBIO:"REBIO", RVS:"RVS", FLOE:"FE", RDS:"RDS", APE:"APE"};
+const rotUC = r => r.nome_uc ? `${CATS[r.categoria]||r.categoria||""} ${r.nome_uc}`.trim() : "—";
+const ETAPAS = ["Aguardando ROI","ROI em análise","ROI devolvido para correção","Falta REDS","Pronto para abrir processo","Processo aberto",
+  "Em assinatura / envio","Encaminhado à DPC","Encaminhado à CAINF/NAI","Inquérito instaurado","Não gera processo","Cancelado"];
+const classeEtapa = e => ({"Aguardando ROI":"e-aguardando","ROI em análise":"e-roi","ROI devolvido para correção":"e-roi","Falta REDS":"e-reds",
+  "Pronto para abrir processo":"e-pronto","Processo aberto":"e-pronto","Em assinatura / envio":"e-assina","Encaminhado à DPC":"e-enc",
+  "Encaminhado à CAINF/NAI":"e-enc","Inquérito instaurado":"e-inq"})[e] || "e-fim";
+let perfil = null, dados = [], filtroCard = null, mostrar = 300;
+
+/* ======================= LOGIN ======================= */
+async function entrar(){
+  const {data:{session}} = await sb.auth.getSession();
+  if (!session){ $("#telaLogin").hidden = false; $("#app").hidden = true; return; }
+  const {data} = await sb.rpc("meu_perfil");
+  if (!data || !["tecnica","gpcif","admin"].includes(data.papel)){
+    $("#telaLogin").hidden = false; $("#app").hidden = true;
+    $("#erroLogin").textContent = data ? "Seu perfil não tem acesso à Sala Técnica. Fale com o Previncêndio." : "E-mail não cadastrado na equipe.";
+    return;
+  }
+  perfil = data; $("#quem").textContent = `${perfil.nome} · ${({tecnica:"Sala Técnica",gpcif:"Previncêndio",admin:"administrador"})[perfil.papel]}`;
+  $("#usuario").hidden = false; $("#telaLogin").hidden = true; $("#app").hidden = false;
+  const a = new Date().getFullYear(); $("#fAno").innerHTML = Array.from({length: a - 2015}, (_, i) => `<option>${a - i}</option>`).join("");
+  $("#fEtapa").innerHTML = `<option value="">Todas</option>` + ETAPAS.map(e => `<option>${e}</option>`).join("");
+  const q = new URLSearchParams(location.search); if (q.get("ano")) $("#fAno").value = q.get("ano");
+  await carregar();
+  if (q.get("cod")) abrirFicha(q.get("cod"));
+}
+$("#formLogin").onsubmit = async e => { e.preventDefault(); $("#erroLogin").textContent = "";
+  const {error} = await sb.auth.signInWithPassword({email: $("#email").value.trim(), password: $("#senha").value});
+  if (error) return $("#erroLogin").textContent = /invalid/i.test(error.message) ? "E-mail ou senha incorretos." : error.message;
+  entrar(); };
+$("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$$(".abas button").forEach(b => b.onclick = () => {
+  $$(".abas button").forEach(x => x.setAttribute("aria-selected", x === b));
+  $$("[data-painel]").forEach(p => p.hidden = p.dataset.painel !== b.dataset.aba);
+});
+
+/* ======================= DADOS ======================= */
+async function carregar(){
+  let q = sb.from("vw_tramite").select("*").eq("ano", +$("#fAno").value).order("ri").order("cod_bdp");
+  if ($("#fSala").value) q = q.eq("sala_tecnica", $("#fSala").value);
+  const {data, error} = await q.range(0, 4999);
+  if (error) return msg("Erro ao carregar: " + error.message, "erro");
+  dados = data || [];
+  const n = dados.length, enc = dados.filter(r => ["Encaminhado à DPC","Encaminhado à CAINF/NAI","Inquérito instaurado"].includes(r.etapa)).length;
+  const comReds = dados.filter(r => r.tem_reds).length, dias = dados.map(r => r.dias_tramite).filter(x => x != null).sort((a,b)=>a-b);
+  $("#resumoAno").innerHTML = n ? `${n} ocorrências · ${Math.round(100*comReds/n)}% com REDS · ${Math.round(100*enc/n)}% encaminhadas${dias.length ? ` · trâmite mediano: ${dias[Math.floor(dias.length/2)]} dias` : ""}` : "Nenhuma ocorrência no ano.";
+  desenharCards(); desenharCobrancas(); desenharTabela();
+}
+["#fAno","#fSala"].forEach(s => $(s).onchange = () => { filtroCard = null; carregar(); });
+$("#atualizar").onclick = carregar;
+
+const ativo = r => !["Cancelado","Não gera processo","Encaminhado à DPC","Encaminhado à CAINF/NAI","Inquérito instaurado"].includes(r.etapa);
+const CARDS = [
+  {id:"roiAtraso", t:"ROI atrasado", d:"mais de 10 dias após a extinção, sem ROI", c:"#b3261e", f:r => ativo(r) && r.roi_dias_atraso > 0},
+  {id:"roiDev", t:"ROI devolvido", d:"aguardando correção do gerente", c:"#9a5b00", f:r => r.etapa === "ROI devolvido para correção"},
+  {id:"redsCobrar", t:"REDS a cobrar", d:"4 a 10 dias do acionamento, sem REDS", c:"#d9480f", f:r => ativo(r) && !r.tem_reds && r.reds_dias >= 4 && r.reds_dias <= 10},
+  {id:"redsAtraso", t:"REDS atrasado", d:"mais de 10 dias do acionamento", c:"#b3261e", f:r => ativo(r) && !r.tem_reds && r.reds_dias > 10},
+  {id:"semAcion", t:"Sem acionamento da PM", d:"não há data de acionamento registrada", c:"#6b6b6b", f:r => ativo(r) && !r.tem_reds && r.acionamento == null},
+  {id:"pronto", t:"Pronto para abrir processo", d:"ROI e REDS recebidos", c:"#1f5fa8", f:r => r.etapa === "Pronto para abrir processo"},
+  {id:"aberto", t:"Processo aberto", d:"montagem no SEI em andamento", c:"#1f5fa8", f:r => r.etapa === "Processo aberto"},
+  {id:"assina", t:"Em assinatura / envio", d:"ofício ou memorando elaborado", c:"#5b3fb0", f:r => r.etapa === "Em assinatura / envio"},
+  {id:"enc", t:"Encaminhados", d:"DPC, CAINF/NAI ou inquérito", c:"#2e6b1a", f:r => !ativo(r) && !["Cancelado","Não gera processo"].includes(r.etapa)}];
+function desenharCards(){
+  $("#cards").innerHTML = CARDS.map(c => `<button class="card" data-card="${c.id}" style="--c:${c.c}"><div class="n">${dados.filter(c.f).length}</div><div class="t">${c.t}</div><div class="d">${c.d}</div></button>`).join("");
+  $$("[data-card]").forEach(b => b.onclick = () => { filtroCard = CARDS.find(c => c.id === b.dataset.card); $("#fEtapa").value = ""; $('.abas [data-aba="processos"]').click(); desenharTabela(); });
+}
+
+/* ======================= COBRANÇAS ======================= */
+function desenharCobrancas(){
+  // REDS: por contato/município da PM
+  const reds = dados.filter(r => ativo(r) && !r.tem_reds && r.reds_dias >= 4);
+  const norm = t => (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
+  const gR = {}, nomes = {};
+  reds.forEach(r => { const k = norm(r.pm_contato) + "|" + norm(r.pm_municipio);
+    nomes[k] = nomes[k] || `${r.pm_contato || "Contato não informado"} · ${r.pm_municipio || "município não informado"}`; (gR[k] = gR[k] || []).push(r); });
+  const ordR = Object.entries(gR).sort((a,b) => b[1].length - a[1].length);
+  $("#cobReds").innerHTML = ordR.length ? ordR.map(([k, L], i) => `<details class="grupo">
+    <summary class="cab"><b>${esc(nomes[k])} <span class="dica">(${L.length} · ${L.filter(r => r.reds_dias > 10).length} atrasados)</span></b><span>
+      <button class="btn peq" data-copiar-reds="${i}">Copiar texto da cobrança</button>
+      <button class="btn peq" data-marcar-reds="${i}">Registrar cobrança hoje</button></span></summary>
+    <div class="dica">${L.map(r => `<a href="#" data-cod="${r.cod_bdp}">RI ${r.ri}/${r.ano}</a> ${esc(rotUC(r))} — acionada em ${fmtD(r.acionamento)} <span class="${r.reds_dias > 10 ? "atraso" : "aviso"}">(${r.reds_dias} dias)</span>${r.reds_cobranca ? ` · cobrado em ${fmtD(r.reds_cobranca)}` : ""}`).join("<br>")}</div></details>`).join("")
+    : `<div class="dica">Nenhum REDS a cobrar. ✓</div>`;
+  const grupos = ordR.map(x => x[1]);
+  $$("[data-copiar-reds]").forEach(b => b.onclick = ev => ev.preventDefault() || copiar(textoReds(grupos[+b.dataset.copiarReds])));
+  $$("[data-marcar-reds]").forEach(b => b.onclick = ev => ev.preventDefault() || marcar(grupos[+b.dataset.marcarReds], {reds_cobranca: hoje()}, "Cobrança de REDS registrada."));
+  // ROI: por UC
+  const roi = dados.filter(r => ativo(r) && r.roi_dias_atraso > 0);
+  const gU = {}; roi.forEach(r => { (gU[rotUC(r)] = gU[rotUC(r)] || []).push(r); });
+  const ordU = Object.entries(gU).sort((a,b) => b[1].length - a[1].length);
+  $("#cobRoi").innerHTML = ordU.length ? ordU.map(([k, L], i) => `<details class="grupo">
+    <summary class="cab"><b>${esc(k)} <span class="dica">(${L.length})</span></b><span>
+      <button class="btn peq" data-copiar-roi="${i}">Copiar texto da cobrança</button>
+      <button class="btn peq" data-marcar-roi="${i}">Registrar cobrança hoje</button></span></summary>
+    <div class="dica">${L.map(r => `<a href="#" data-cod="${r.cod_bdp}">RI ${r.ri}/${r.ano}</a> — extinção em ${fmtD(r.dat_final)}, prazo ${fmtD(r.prazo_roi)} <span class="atraso">(${r.roi_dias_atraso} dias de atraso)</span>${r.roi_cobranca1 ? ` · 1ª cobrança ${fmtD(r.roi_cobranca1)}` : ""}${r.roi_cobranca2 ? ` · 2ª cobrança ${fmtD(r.roi_cobranca2)}` : ""}`).join("<br>")}</div></details>`).join("")
+    : `<div class="dica">Nenhum ROI atrasado. ✓</div>`;
+  const gruposU = ordU.map(x => x[1]);
+  $$("[data-copiar-roi]").forEach(b => b.onclick = ev => ev.preventDefault() || copiar(textoRoi(gruposU[+b.dataset.copiarRoi])));
+  $$("[data-marcar-roi]").forEach(b => b.onclick = ev => { ev.preventDefault();
+    const L = gruposU[+b.dataset.marcarRoi];
+    marcarCada(L, r => r.roi_cobranca1 ? (r.roi_cobranca2 ? null : {roi_cobranca2: hoje()}) : {roi_cobranca1: hoje()}, "Cobrança de ROI registrada.");
+  });
+  $$("[data-cod]").forEach(a => a.onclick = e => { e.preventDefault(); abrirFicha(a.dataset.cod); });
+}
+function textoReds(L){
+  return `Prezados,\n\nSolicitamos o envio do(s) REDS referente(s) ao(s) acionamento(s) da PM Ambiental nos incêndios florestais abaixo, registrados pela Força-Tarefa Previncêndio:\n\n` +
+    L.map(r => `- RI ${r.ri}/${r.ano} — ${rotUC(r)}${r.municipio ? ` (${r.municipio})` : ""} — acionamento em ${fmtD(r.acionamento)}`).join("\n") +
+    `\n\nOs documentos devem ser encaminhados à Sala Técnica (salatecnica@meioambiente.mg.gov.br).\n\nAtenciosamente,\n${perfil.nome}\nSala Técnica — Força-Tarefa Previncêndio / IEF-MG`;
+}
+function textoRoi(L){
+  return `Prezado(a) gerente,\n\nInformamos que o prazo de 10 dias corridos para envio do ROI das ocorrências abaixo já foi ultrapassado. Solicitamos o envio, em PDF assinado, no prazo de 3 (três) dias úteis:\n\n` +
+    L.map(r => `- RI ${r.ri}/${r.ano} — extinção em ${fmtD(r.dat_final)} (prazo: ${fmtD(r.prazo_roi)})`).join("\n") +
+    `\n\nEnviar com o polígono da área queimada para salatecnica@meioambiente.mg.gov.br.\n\nAtenciosamente,\n${perfil.nome}\nSala Técnica — Força-Tarefa Previncêndio / IEF-MG`;
+}
+async function copiar(t){ try{ await navigator.clipboard.writeText(t); msg("Texto copiado — cole no e-mail.", "ok"); }catch(e){ prompt("Copie o texto:", t); } }
+async function marcar(L, o, ok){
+  const {error} = await sb.from("tramite").update(o).in("cod_bdp", L.map(r => r.cod_bdp));
+  if (error) return msg(error.message, "erro"); msg(ok, "ok"); carregar();
+}
+async function marcarCada(L, f, ok){
+  for (const r of L){ const o = f(r); if (!o) continue; const {error} = await sb.from("tramite").update(o).eq("cod_bdp", r.cod_bdp); if (error) return msg(error.message, "erro"); }
+  msg(ok, "ok"); carregar();
+}
+
+/* ======================= LISTA ======================= */
+const COLS = [["RI", r => `<b>${r.ri}</b>/${r.ano}<div class="dica">${esc(r.cod_bdp)}</div>`], ["UC", r => `${esc(rotUC(r))}<div class="dica">${esc(r.municipio||"")}${r.local ? " · "+esc(r.local) : ""}</div>`],
+  ["Extinção", r => fmtD(r.dat_final)], ["Etapa", r => `<span class="etapa ${classeEtapa(r.etapa)}">${esc(r.etapa)}</span>${(r.pendencias||[]).length ? `<div class="pend">falta: ${r.pendencias.join(", ")}</div>` : ""}`],
+  ["ROI", r => r.tem_roi ? "✓" : r.roi_dias_atraso ? `<span class="atraso">${r.roi_dias_atraso} d</span>` : ""],
+  ["REDS", r => r.reds_num ? esc(r.reds_num) : r.reds_dias != null ? `<span class="${r.reds_dias > 10 ? "atraso" : r.reds_dias >= 4 ? "aviso" : ""}">${r.reds_dias} d</span>` : ""],
+  ["Processo SEI", r => r.processo_sei ? esc(r.processo_sei) : r.processo_fisico ? "físico" : ""], ["DPC", r => esc(r.dpc||"")],
+  ["Dias", r => r.dias_tramite ?? ""]];
+function filtrados(){
+  const e = $("#fEtapa").value, b = $("#fBusca").value.trim().toLowerCase();
+  return dados.filter(r => (!filtroCard || filtroCard.f(r)) && (!e || r.etapa === e) &&
+    (!b || [r.ri, r.cod_bdp, r.nome_uc, r.reds_num, r.processo_sei, r.dpc, r.municipio].some(x => (x||"").toLowerCase().includes(b))));
+}
+function desenharTabela(){
+  const L = filtrados();
+  $("#tabela").innerHTML = `<thead><tr>${COLS.map(c => `<th>${c[0]}</th>`).join("")}</tr></thead><tbody>` +
+    L.slice(0, mostrar).map(r => `<tr data-cod="${r.cod_bdp}">${COLS.map(c => `<td>${c[1](r)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+  $("#rodTabela").innerHTML = `${L.length} de ${dados.length} ocorrências${filtroCard ? ` · filtro: <b>${filtroCard.t}</b> <a href="#" id="limparCard">limpar</a>` : ""}${L.length > mostrar ? ` · mostrando ${mostrar} <a href="#" id="mais">mostrar mais</a>` : ""}`;
+  $$("#tabela tbody tr").forEach(tr => tr.onclick = () => abrirFicha(tr.dataset.cod));
+  $("#limparCard")?.addEventListener("click", e => { e.preventDefault(); filtroCard = null; desenharTabela(); });
+  $("#mais")?.addEventListener("click", e => { e.preventDefault(); mostrar += 500; desenharTabela(); });
+}
+["#fEtapa","#fBusca"].forEach(s => $(s).addEventListener("input", () => { mostrar = 300; desenharTabela(); }));
+$("#csv").onclick = () => {
+  const cols = ["cod_bdp","ano","ri","roi_n","sala_tecnica","nome_uc","municipio","local","dat_final","etapa","pendencias","roi_recebido_email","roi_recebido_sei","poligono_recebido",
+    "roi_cobranca1","roi_cobranca2","pm_municipio","pm_contato","acionamento","reds_cobranca","reds_recebido","reds_num","reds_bm","ai_num","prioritario","processo_sei","processo_fisico",
+    "oficio_num","dpc","envio_dpc","envio_cainf","inquerito_num","dias_tramite","desfecho","obs"];
+  const q = v => v==null ? "" : Array.isArray(v) ? v.join(", ") : /[";\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v);
+  const csv = "﻿" + cols.join(";") + "\n" + filtrados().map(r => cols.map(c => q(r[c])).join(";")).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"})); a.download = `sala_tecnica_${$("#fAno").value}.csv`; a.click();
+};
+
+/* ======================= FICHA ======================= */
+const GRUPOS = [
+  ["ROI", [["roi_recebido_email","Recebido por e-mail","date"],["roi_recebido_sei","Recebido via SEI","date"],["roi_original","Original assinado recebido","date"],["poligono_recebido","Polígono recebido","date"],
+           ["roi_analise","Análise do ROI","sel",[["","—"],["em_analise","Em análise"],["devolvido","Devolvido para correção"],["aceito","Aceito"]]],["roi_devolvido_em","Devolvido em","date"],
+           ["roi_cobranca1","1ª cobrança","date"],["roi_cobranca2","2ª cobrança","date"],["roi_escalado","Comunicado à Coordenação/GEUC","date"],["roi_pendencias","Pendências apontadas","area"]]],
+  ["PM Ambiental — REDS e Auto de Infração", [["pm_municipio","Município de acionamento"],["pm_contato","Contato (militar / unidade)","duplo"],["pm_acionamento","Data do acionamento","date"],
+           ["reds_cobranca","Cobrança do REDS","date"],["reds_recebido","REDS recebido em","date"],["reds_num","Nº do REDS"],["reds_bm","REDS do Corpo de Bombeiros"],
+           ["reds_devolvido","REDS devolvido à PMAmb (sem AI)","date"],["ai_num","Nº do Auto de Infração"],["ai_recebido","AI recebido em","date"]]],
+  ["Processo administrativo", [["processo_sei","Nº do processo SEI","duplo"],["processo_fisico","Processo físico (sem SEI)","chk"],["processo_aberto","Aberto em","date"],
+           ["prioritario","Prioritário","chk"],["prioritario_num","PRIORITÁRIO Nº"]]],
+  ["Encaminhamentos", [["oficio_num","Ofício de encaminhamento"],["oficio_data","Data do ofício","date"],["dpc","Polícia Civil — jurisdição (DPC)","duplo"],["envio_dpc","Enviado à DPC em","date"],
+           ["memorando_cainf","Memorando à CAINF/NAI"],["envio_cainf","Enviado à CAINF/NAI em","date"],["envio_chefia_pc","Cópia à chefia da PCMG em","date"],
+           ["inquerito_num","Inquérito policial nº"],["inquerito_data","Inquérito instaurado em","date"]]],
+  ["Encerramento e observações", [["desfecho","Desfecho fora do fluxo","sel",[["","—"],["nao_gera","Não gera processo"],["cancelado","Cancelado"]]],["obs","Observações","area"]]]];
+const ROT = Object.fromEntries(GRUPOS.flatMap(g => g[1].map(c => [c[0], c[1]])));
+async function abrirFicha(cod){
+  const [{data: r, error}, {data: hist}] = await Promise.all([
+    sb.from("vw_tramite").select("*").eq("cod_bdp", cod).maybeSingle(),
+    sb.from("auditoria").select("*").eq("tabela", "tramite").eq("chave", cod).order("quando", {ascending:false}).limit(50)]);
+  if (error || !r) return msg("Ocorrência não encontrada.", "erro");
+  const campo = ([k, rot, tipo, ops]) => {
+    const v = r[k];
+    if (tipo === "chk") return `<div><label>&nbsp;</label><label class="chk"><input type="checkbox" data-k="${k}" ${v ? "checked" : ""}> ${esc(rot)}</label></div>`;
+    if (tipo === "sel") return `<div><label>${esc(rot)}</label><select data-k="${k}">${ops.map(([o,t]) => `<option value="${o}" ${(v||"")===o?"selected":""}>${t}</option>`).join("")}</select></div>`;
+    if (tipo === "area") return `<div class="largo"><label>${esc(rot)}</label><textarea data-k="${k}">${esc(v||"")}</textarea></div>`;
+    return `<div class="${tipo === "duplo" ? "duplo" : ""}"><label>${esc(rot)}</label><input data-k="${k}" type="${tipo === "date" ? "date" : "text"}" value="${esc(v ?? "")}"></div>`;
+  };
+  $("#ficha").innerHTML = `<div class="ficha-cab"><h2>RI ${r.ri}/${r.ano} · ${esc(rotUC(r))} <span class="etapa ${classeEtapa(r.etapa)}" style="margin-left:6px">${esc(r.etapa)}</span></h2>
+      <button class="btn peq" style="border-color:#fff;color:#fff;background:transparent" id="fechar">Fechar</button></div>
+    <div class="ficha-corpo">
+      <div class="resumo">
+        <div><b>cod_bdp</b>${esc(r.cod_bdp)}</div><div><b>Sala Técnica</b>${esc(r.sala_tecnica||"—")}</div><div><b>Regional</b>${esc(r.regional||"—")}</div>
+        <div><b>Município / local</b>${esc(r.municipio||"—")}${r.local ? " · "+esc(r.local) : ""}</div><div><b>Detecção</b>${fmtD(r.dat_detec)||"—"}</div>
+        <div><b>Extinção</b>${fmtD(r.dat_final)||"—"}</div><div><b>Prazo do ROI</b>${fmtD(r.prazo_roi)||"—"}${r.roi_dias_atraso ? ` <span class="atraso">(${r.roi_dias_atraso} d de atraso)</span>` : ""}</div>
+        <div><b>Área queimada</b>${r.area_ha != null ? String(r.area_ha).replace(".",",")+" ha" : "—"}</div>
+        <div><b>Acionamento PM</b>${fmtD(r.acionamento)||"—"}${r.reds_dias != null ? ` <span class="${r.reds_dias > 10 ? "atraso" : r.reds_dias >= 4 ? "aviso" : ""}">(${r.reds_dias} d sem REDS)</span>` : ""}</div>
+        <div><b>ROI no banco (BDG)</b>${r.roi_no_banco ? "sim" : "não"}</div>
+        ${r.situacao_planilha ? `<div class="largo" style="grid-column:1/-1"><b>Situação na planilha antiga</b>${esc(r.situacao_planilha)}</div>` : ""}
+      </div>
+      <div class="dica" style="margin-top:6px">${r.ano >= 2026 ? `<a href="sala.html?ano=${r.ano}&ri=${r.ri}" target="_blank">abrir o RI na Sala de Situação ↗</a> · ` : ""}${(r.pendencias||[]).length ? `<span class="pend">Falta: ${r.pendencias.join(", ")}</span>` : "Sem pendências de documento."}</div>
+      ${GRUPOS.map(([t, cs]) => `<fieldset><legend>${t}</legend><div class="grade">${cs.map(campo).join("")}</div></fieldset>`).join("")}
+      <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Histórico de alterações (${(hist||[]).length})</summary>
+        <ul class="hist">${(hist||[]).map(h => `<li><span class="q">${new Date(h.quando).toLocaleString("pt-BR")} · ${esc(h.quem)}</span> — ${h.operacao === "alterar" ? (h.campos||[]).map(c => `${esc(ROT[c]||c)}: <del>${esc(h.antes?.[c] ?? "vazio")}</del> → <ins>${esc(h.depois?.[c] ?? "vazio")}</ins>`).join("; ") : h.operacao}</li>`).join("") || "<li>Sem alterações.</li>"}</ul></details>
+    </div>
+    <div class="ficha-rod"><span class="dica">Atualizado ${r.atualizado_em ? new Date(r.atualizado_em).toLocaleString("pt-BR") : ""}${r.atualizado_por ? " por " + esc(r.atualizado_por) : ""}</span>
+      <span><button class="btn" id="cancelarF">Cancelar</button> <button class="btn primario" id="salvarF">Salvar</button></span></div>`;
+  $("#ficha").showModal();
+  $("#fechar").onclick = $("#cancelarF").onclick = () => $("#ficha").close();
+  $("#salvarF").onclick = async () => {
+    const o = {};
+    $$("#ficha [data-k]").forEach(el => { const k = el.dataset.k; o[k] = el.type === "checkbox" ? el.checked : txt(el.value); });
+    const {error} = await sb.from("tramite").update(o).eq("cod_bdp", cod);
+    if (error) return msg("Não foi possível salvar: " + error.message, "erro");
+    msg("Salvo.", "ok"); $("#ficha").close(); carregar();
+  };
+}
+
+/* ======================= IMPORTAÇÃO DA PLANILHA ======================= */
+let XLSXcarregado = null;
+function carregarXLSX(){ return XLSXcarregado ||= new Promise((ok, erro) => { const s = document.createElement("script");
+  s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = ok; s.onerror = () => erro(new Error("Não foi possível carregar o leitor de planilhas.")); document.head.appendChild(s); }); }
+const lixo = v => v == null || (typeof v === "string" && (/^[\s\-\/\\=\[\]]*$/.test(v) || /^ok$/i.test(v.trim())));
+function data(v){
+  if (lixo(v)) return null;
+  if (v instanceof Date){ if (isNaN(v)) return null; const y = v.getFullYear(); if (y < 2005 || y > 2035) return null;
+    return `${y}-${String(v.getMonth()+1).padStart(2,"0")}-${String(v.getDate()).padStart(2,"0")}`; }
+  if (typeof v === "number"){ const s = String(Math.round(v)); if (/^\d{7,8}$/.test(s)){ const t = s.padStart(8,"0"); return valida(`${t.slice(4)}-${t.slice(2,4)}-${t.slice(0,2)}`); } return null; }
+  const m = String(v).match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/); if (m){ const y = m[3].length === 2 ? "20"+m[3] : m[3]; return valida(`${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`); }
+  return null;
+}
+const valida = s => { const d = new Date(s+"T12:00"); return isNaN(d) || d.getFullYear() < 2005 || d.getFullYear() > 2035 ? null : s; };
+const texto = v => lixo(v) ? null : (v instanceof Date ? data(v) : String(v).replace(/\s+/g, " ").trim()) || null;
+function lerAba(ws, ano){
+  const M = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  const h = M.findIndex(r => r && r.some(c => typeof c === "string" && /detec[çc][ãa]o do foco/i.test(c)));
+  if (h < 0) return [];
+  const H = M[h].map(c => (c||"").toString().toLowerCase()), S = (M[h+1]||[]).map(c => (c||"").toString().toLowerCase().replace(/\s+/g," "));
+  const iH = re => H.findIndex(c => re.test(c)), iS = re => S.findIndex(c => re.test(c));
+  let iReg = iH(/n[ºo°] de registro/); const iLanc = iH(/data de (lan[çc]amento|envio)/); if (iReg < 0 && iLanc > 0) iReg = iLanc - 1;
+  const iSei = iH(/sei|^processo|protocolo/), iSt = iH(/^sala t[ée]cnica/), iObs = iH(/observa/);
+  const C = {roi: iS(/n[úu]mero ?do roi/), email: iS(/vers[ãa]o digital|via e-?mail/), sei: iS(/vers[ãa]o impressa|via sei|recebido via sei/), impressa: iS(/vers[ãa]o impressa/),
+    pol: iS(/recebimento do pol/), mun: iS(/munic[ií]pio de acionamento/), cont: iS(/^contato/), acion: iS(/data do acionamento/), redsData: iS(/recebimento ?do reds/),
+    redsNum: iS(/n[ºo°] do reds/), form: iS(/formaliza/), oficio: iS(/of[ií]cio de encaminhamento/), envio: iS(/envio da documenta/), jur: iS(/jurisdi/), inq: iS(/inqu[ée]rito/)};
+  const linhas = [];
+  for (const r of M.slice(h + 2)){
+    const reg = r && r[iReg] != null ? String(r[iReg]).match(/(\d+)\s*\/\s*(\d{4})/) : null; if (!reg) continue;
+    const a = +reg[2] || ano, ri = reg[1].padStart(4, "0"), nroi = C.roi >= 0 && typeof r[C.roi] === "number" ? Math.round(r[C.roi]) : null;
+    const st = iSt >= 0 && iSt !== iSei ? texto(r[iSt]) : null, stU = (st||"").toUpperCase();
+    const sei = iSei >= 0 ? texto(r[iSei]) : null, seiOk = sei && /\d{4}\.\d{2}\.\d+\/\d{4}/.test(sei) ? sei.match(/\d{4}\.\d{2}\.\d+\/\d{4}-?\d*/)[0] : null;
+    const reds = C.redsNum >= 0 ? texto(r[C.redsNum]) : null, redsOk = reds && /\d{4}-\d+/.test(reds) ? reds.match(/\d{4}-\d+-\d+|\d{4}-\d+/)[0] : null;
+    const oficio = C.oficio >= 0 ? texto(r[C.oficio]) : null, envio = C.envio >= 0 ? data(r[C.envio]) : null;
+    const form = C.form >= 0 ? r[C.form] : null, formData = data(form), formTxt = typeof form === "string" ? form.trim().toUpperCase() : "";
+    const jur = C.jur >= 0 ? texto(r[C.jur]) : null, inq = C.inq >= 0 ? texto(r[C.inq]) : null;
+    let desfecho = /N[ÃA]O GERA/.test(stU + " " + formTxt) ? "nao_gera" : /CANCEL/.test(stU) ? "cancelado" : null;
+    let encam = /(ENCAMI|ENVIAD).*DPC|DPC/.test(stU) ? "dpc" : /NAI/.test(stU) ? "nai" : null;
+    const dpcSt = stU.match(/\d+\s*[ºo°]?\s*DPC/);
+    linhas.push({cod_bdp: `${a}-${ri}-${String(nroi || 1).padStart(3, "0")}`, ano: a, ri, roi_n: nroi, _semRoi: !nroi,
+      roi_recebido_email: C.email >= 0 ? data(r[C.email]) : null,
+      roi_recebido_sei: C.sei >= 0 && C.sei !== C.impressa ? data(r[C.sei]) : null,
+      roi_original: C.impressa >= 0 ? data(r[C.impressa]) : null,
+      poligono_recebido: C.pol >= 0 ? data(r[C.pol]) : null,
+      pm_municipio: C.mun >= 0 ? texto(r[C.mun]) : null, pm_contato: C.cont >= 0 ? texto(r[C.cont]) : null,
+      pm_acionamento: C.acion >= 0 ? data(r[C.acion]) : null, reds_recebido: C.redsData >= 0 ? data(r[C.redsData]) : null, reds_num: redsOk,
+      processo_sei: seiOk, processo_fisico: !seiOk && a <= 2018 && !!(formData || oficio || envio || /ENVIO/.test(formTxt)),
+      processo_aberto: formData, oficio_num: oficio && /\d/.test(oficio) ? oficio : null,
+      dpc: jur || (dpcSt ? dpcSt[0].replace(/\s+/g, "") : null), envio_dpc: envio, inquerito_num: inq && /\d/.test(inq) ? inq : null,
+      desfecho, encaminhado_planilha: envio ? null : encam, obs: iObs >= 0 ? texto(r[iObs]) : null, situacao_planilha: st});
+  }
+  return linhas;
+}
+$("#arquivo").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $("#impRes").innerHTML = `<div class="dica">Lendo a planilha…</div>`;
+  try{
+    await carregarXLSX();
+    const wb = XLSX.read(await f.arrayBuffer(), {type:"array", cellDates:true});
+    const porAno = {};
+    for (const nome of wb.SheetNames){ const m = nome.match(/(20\d\d)/); if (!m || !/planilha/i.test(nome)) continue; porAno[m[1]] = lerAba(wb.Sheets[nome], +m[1]); }
+    const anos = Object.keys(porAno).sort(); if (!anos.length) throw new Error("Nenhuma aba “Planilha AAAA” encontrada.");
+    // confere com o BDG
+    const res = [], todas = [];
+    for (const a of anos){
+      const {data: ch} = await sb.rpc("bdg_chaves", {p_ano: +a}); const cods = new Set((ch||[]).map(x => x.cod_bdp));
+      const porRi = {}; (ch||[]).forEach(x => (porRi[x.ri] = porRi[x.ri] || []).push(x.cod_bdp));
+      const vistos = new Map();
+      for (const l of porAno[a]){
+        // ano do registro digitado diferente do ano da aba (ex.: "312/2012" na aba 2018): fica o que existir no BDG
+        if (l.ano !== +a && !cods.has(l.cod_bdp)){ const alt = l.cod_bdp.replace(/^\d{4}/, a); if (cods.has(alt) || l.ano < 2013 || l.ano > +a){ l.cod_bdp = alt; l.ano = +a; } }
+        if (l._semRoi && !cods.has(l.cod_bdp) && porRi[l.ri]?.length === 1) l.cod_bdp = porRi[l.ri][0];
+        l._noBdg = cods.has(l.cod_bdp); delete l._semRoi; vistos.set(l.cod_bdp, l);
+      }
+      const L = [...vistos.values()]; todas.push(...L);
+      res.push({ano: a, n: L.length, bdg: L.filter(l => l._noBdg).length, sei: L.filter(l => l.processo_sei).length, reds: L.filter(l => l.reds_num).length,
+                fora: L.filter(l => !l._noBdg).map(l => l.cod_bdp)});
+    }
+    $("#impRes").innerHTML = `<table class="tab imp-res"><thead><tr><th>Ano</th><th>Linhas</th><th>Encontradas no BDG</th><th>Com nº SEI</th><th>Com nº REDS</th><th>Não encontradas no BDG</th></tr></thead><tbody>
+      ${res.map(x => `<tr><td>${x.ano}</td><td>${x.n}</td><td>${x.bdg}</td><td>${x.sei}</td><td>${x.reds}</td><td class="dica">${x.fora.slice(0, 12).join(", ")}${x.fora.length > 12 ? ` … (+${x.fora.length - 12})` : ""}</td></tr>`).join("")}</tbody></table>
+      <p class="dica">As não encontradas no BDG também são importadas (podem ser ROIs ainda não lançados ou números digitados de forma diferente) — confira depois pelo filtro de busca.</p>
+      <button class="btn primario" id="confirmarImp">Importar ${todas.length} ocorrências</button> <span class="dica" id="impProg"></span>`;
+    $("#confirmarImp").onclick = async () => {
+      $("#confirmarImp").disabled = true; let novas = 0, atual = 0;
+      for (let i = 0; i < todas.length; i += 400){
+        const lote = todas.slice(i, i + 400).map(({_noBdg, ...l}) => l);
+        const {data: r, error} = await sb.rpc("tramite_importar", {p_linhas: lote});
+        if (error){ $("#impProg").textContent = "Erro: " + error.message; $("#confirmarImp").disabled = false; return; }
+        novas += r.novas; atual += r.atualizadas; $("#impProg").textContent = `${Math.min(i + 400, todas.length)} de ${todas.length}…`;
+      }
+      const {data: comp} = await sb.rpc("tramite_completar");
+      $("#impProg").textContent = `Concluído: ${novas} novas, ${atual} atualizadas${comp ? ` · ${comp} RIs encerrados do Colibri ganharam ficha` : ""}.`;
+      msg("Planilha importada.", "ok"); carregar();
+    };
+  }catch(err){ $("#impRes").innerHTML = `<div class="dica" style="color:var(--erro)">${esc(err.message)}</div>`; }
+};
+
+entrar();
+</script>
+</body>
+</html>

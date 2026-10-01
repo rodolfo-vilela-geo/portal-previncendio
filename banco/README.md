@@ -41,6 +41,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 18_infraestrutura.sql         módulo 2: alojamento/camping e pontos de infraestrutura (4.2–4.10)
 19_recursos_apoio.sql         módulos 3 e 4: veículos, rádios, materiais; parceiros, prestadores, colaboradores, brigadistas
 20_ri_campos.sql              RI: forma de detecção, início do combate, responsáveis, fechamento, contatos e PM Ambiental
+21_sala_tecnica.sql           Sala Técnica: trâmite por cod_bdp (ROI, REDS/AI, processo SEI, DPC, CAINF), prazos e importação da planilha
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
@@ -78,6 +79,7 @@ Quase toda no banco, em SQL padrão — por isso a migração é viável:
 
 - **Classes do BDG** (tempo de resposta, duração, classe de área, dia da semana): visão `vw_bdg` (01).
 - **Prazos dos ROIs**: `vw_prazos` (10b).
+- **Trâmite da Sala Técnica** (etapa, pendências, prazos de ROI e REDS): `vw_tramite` (21).
 - **Boletim público**: `boletim_publico()` (11/12) — não expõe descrições, informantes nem coordenadas.
 - **Consolidação das atuações** (turnos, horas-homem, recursos por instituição): `vw_atuacao_dia` (12).
 - **Permissões**: `is_equipe()`, `is_usuario()`, `is_gpcif()`, `is_admin()`, `pode_editar_uc()` + políticas RLS em cada tabela.
