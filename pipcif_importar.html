@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Importar PIPCIF — Colibri</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --linha:#dcd8d0;
+    --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --alerta:#9a5b00; --erro:#b3261e; --fogo:#c2410c;
+  }
+  *{box-sizing:border-box} [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--fundo);color:var(--tinta);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header.topo{background:var(--verde);color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  header.topo .inst{font-size:12px;opacity:.9} header.topo .inst a{color:#fff;text-decoration:none}
+  header.topo h1{margin:0;font-size:18px}
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .usuario{font-size:13px;display:flex;gap:10px;align-items:center}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--verde);background:#fff;color:var(--verde);padding:7px 12px;cursor:pointer}
+  .btn:hover{background:#eef3e2} .btn.primario{background:var(--verde);color:#fff} .btn.primario:hover{background:var(--verde-esc)}
+  .btn.peq{padding:3px 9px;font-size:12.5px} .btn[disabled]{opacity:.5;cursor:not-allowed} .btn.perigo{border-color:var(--erro);color:var(--erro)}
+  header .btn{border-color:#fff;background:transparent;color:#fff}
+  input,select{width:100%;font:inherit;color:inherit;background:#fff;border:1px solid #c9c5bd;border-radius:7px;padding:6px 8px}
+  input:focus,select:focus{outline:2px solid #b8cf95;border-color:var(--verde)}
+  label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:3px}
+  .dica{font-size:12.5px;color:var(--suave)}
+  #telaLogin{max-width:380px;margin:40px auto;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:22px}
+  main{max-width:1300px;margin:0 auto;padding:12px 16px 40px}
+  .abas{display:flex;gap:4px;border-bottom:1px solid var(--linha);background:var(--papel);padding:0 16px;overflow-x:auto}
+  .abas button{font:inherit;font-weight:600;border:0;background:transparent;padding:10px 14px;border-bottom:3px solid transparent;color:var(--suave);cursor:pointer;white-space:nowrap}
+  .abas button[aria-selected=true]{color:var(--verde);border-bottom-color:var(--verde)}
+  .cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-top:4px}
+  .card{background:var(--papel);border:1px solid var(--linha);border-left:5px solid var(--c,#999);border-radius:10px;padding:10px 12px}
+  .card .n{font-size:28px;font-weight:800;color:var(--c)} .card .t{font-weight:650} .card .d{font-size:12px;color:var(--suave)}
+  .bloco{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin-top:14px}
+  .bloco h2{font-size:16px;margin:0 0 8px}
+  .filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:6px 0 10px}
+  .filtros>div{min-width:150px}
+  table.tab{border-collapse:collapse;width:100%;font-size:13px;background:var(--papel)}
+  table.tab th{background:#e9eddf;text-align:left;padding:6px;position:sticky;top:0;white-space:nowrap;z-index:1}
+  table.tab td{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:middle}
+  table.tab td.num,table.tab th.num{text-align:right}
+  .tab-wrap{overflow:auto;max-height:calc(100vh - 260px);border:1px solid var(--linha);border-radius:8px}
+  .barra-ano{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#f1d5c8;min-width:120px}
+  .barra-ano i{display:block;background:#5b8a2b}
+  .aus{color:var(--fogo);font-weight:700}
+  .passo{border:1px dashed #c9cdb8;border-radius:10px;padding:10px 12px;margin-top:10px;background:#fbfcf7}
+  .opcoes{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0} .opcoes label{display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--tinta);font-weight:500} .opcoes input{width:auto}
+  .prog{height:10px;background:#e7eadf;border-radius:6px;overflow:hidden;margin:8px 0} .prog i{display:block;height:100%;background:var(--verde);width:0;transition:width .2s}
+  .res td,.res th{padding:3px 10px 3px 0;font-size:13px;text-align:left}
+  dialog{border:0;border-radius:12px;padding:0;width:min(760px,96vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .dlg-cab{background:var(--verde);color:#fff;padding:10px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .dlg-cab h2{margin:0;font-size:16px}
+  .dlg-corpo{padding:12px 16px} #mapaPrev{height:340px;border-radius:8px;margin-top:8px;background:#ddd}
+  .dlg-rod{border-top:1px solid var(--linha);padding:10px 16px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  #msg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:9px;font-size:14px;z-index:9999;max-width:90vw}
+  #msg:empty{display:none} #msg.erro{background:var(--erro)} #msg.ok{background:var(--ok)}
+  .uc{border:1px solid var(--linha);border-radius:10px;padding:10px 12px;margin-top:12px;background:#fff}
+  .uc h3{margin:0 0 6px;font-size:15px} .uc table{border-collapse:collapse;font-size:12.5px;margin:6px 0}
+  .uc td,.uc th{padding:2px 10px 2px 0;text-align:left} .uc td.num{text-align:right}
+  .log{font-size:12.5px;color:var(--suave);margin-top:6px;white-space:pre-line}
+  .ok{color:var(--ok);font-weight:700} .err{color:var(--erro);font-weight:700}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca"><a href="index.html" class="logo" title="Colibri"><img src="img/logo_portal_selo.png" alt="Colibri"></a>
+    <div><div class="inst"><a href="index.html">← Colibri</a> · Previncêndio · IEF-MG</div><h1>Importar PIPCIF para o cadastro das UCs</h1></div></div>
+  <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn peq" id="sair">Sair</button></div>
+</header>
+<section id="telaLogin" hidden>
+  <h2 style="margin-top:0">Entrar</h2>
+  <p class="dica" style="margin:0 0 14px">Acesso do Previncêndio.</p>
+  <form id="formLogin">
+    <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+    <div style="height:10px"></div>
+    <label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required>
+    <div style="height:14px"></div>
+    <button class="btn primario" style="width:100%">Entrar</button>
+    <p id="erroLogin" class="dica" style="color:var(--erro);min-height:18px"></p>
+  </form>
+</section>
+<main id="app" hidden>
+  <div class="bloco"><h2>Arquivos de PIPCIF convertidos</h2>
+    <p class="dica" style="margin:0 0 8px">Escolha um ou mais arquivos <b>.json</b> gerados a partir dos PIPCIFs (formato Colibri). Antes de gravar, a página mostra o que há no arquivo e o que já existe no banco para cada UC. Dados já cadastrados só são trocados se você marcar <b>substituir</b>. Tudo fica no histórico da UC com o seu nome.</p>
+    <input type="file" id="arquivos" accept=".json" multiple style="max-width:460px">
+    <div id="lista"></div>
+  </div>
+</main>
+<div id="msg"></div>
+<script>
+const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+const $ = (s, el=document) => el.querySelector(s), $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let tMsg; function msg(t, tipo=""){ const m=$("#msg"); m.textContent=t; m.className=tipo; clearTimeout(tMsg); tMsg=setTimeout(()=>{ if (m.textContent===t) m.textContent=""; }, 6000); }
+const ROT = {uc_ponto:"Pontos (vigilância, pistas, helipontos, estações, água)", uc_veiculo:"Veículos", uc_radio:"Rádios", uc_material:"Materiais e EPIs",
+  uc_parceiro:"Parceiros", uc_prestador:"Prestadores de serviço", uc_colaborador:"Colaboradores e brigadistas voluntários", uc_via:"Aceiros, estradas e trilhas",
+  uc_elemento:"Elementos favoráveis e adversos", uc_acao_preventiva:"Ações preventivas", uc_projeto:"Projetos de sustentabilidade", uc_brigada:"Brigadistas contratados"};
+let ARQS = [];
+
+async function entrar(){
+  const {data:{session}} = await sb.auth.getSession();
+  if (!session){ $("#telaLogin").hidden = false; $("#app").hidden = true; return; }
+  const {data} = await sb.rpc("meu_perfil");
+  if (!data || !["gpcif","admin"].includes(data.papel)){
+    $("#telaLogin").hidden = false; $("#app").hidden = true;
+    $("#erroLogin").textContent = data ? "Somente o Previncêndio importa PIPCIFs." : "E-mail não cadastrado na equipe."; return;
+  }
+  $("#quem").textContent = data.nome; $("#usuario").hidden = false; $("#telaLogin").hidden = true; $("#app").hidden = false;
+}
+$("#formLogin").onsubmit = async e => { e.preventDefault(); $("#erroLogin").textContent = "";
+  const {error} = await sb.auth.signInWithPassword({email: $("#email").value.trim(), password: $("#senha").value});
+  if (error) return $("#erroLogin").textContent = /invalid/i.test(error.message) ? "E-mail ou senha incorretos." : error.message;
+  entrar(); };
+$("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+$("#arquivos").onchange = async e => {
+  ARQS = [];
+  for (const f of e.target.files){
+    try{ const d = JSON.parse(await f.text()); if (d.formato !== "colibri-pipcif-1" || !d.nome_uc) throw new Error("formato não reconhecido"); d._arq = f.name; ARQS.push(d); }
+    catch(err){ msg(`${f.name}: ${err.message}`, "erro"); }
+  }
+  await analisar();
+};
+async function contagens(uc){
+  const c = {};
+  await Promise.all(Object.keys(ROT).map(async t => { const {count} = await sb.from(t).select("id", {count:"exact", head:true}).eq("nome_uc", uc); c[t] = count || 0; }));
+  const [{data: cad}, {data: inf}, {data: u}] = await Promise.all([
+    sb.from("uc_cadastro").select("gerente_nome,pipcif_ano").eq("nome_uc", uc).maybeSingle(),
+    sb.from("uc_infra").select("nome_uc").eq("nome_uc", uc).maybeSingle(),
+    sb.from("uc").select("nome_uc").eq("nome_uc", uc).maybeSingle()]);
+  return {c, cad, inf, existe: !!u};
+}
+async function analisar(){
+  $("#lista").innerHTML = ARQS.length ? `<p class="dica">Conferindo o banco…</p>` : "";
+  for (const d of ARQS) d._banco = await contagens(d.nome_uc);
+  $("#lista").innerHTML = ARQS.map((d, i) => { const b = d._banco, tem = Object.values(b.c).some(n => n) || b.cad?.gerente_nome;
+    return `<div class="uc" data-i="${i}"><h3>${esc(d.nome_uc)} <span class="dica">— ${esc(d._arq)} · PIPCIF ${d.cadastro?.pipcif_ano || "?"}</span></h3>
+      ${!b.existe ? `<p class="err">UC não encontrada no banco.</p>` : `
+      <table><tr><th>Parte</th><th class="num">No arquivo</th><th class="num">No banco</th></tr>
+        <tr><td>Cadastro (seção 3 e sede)</td><td class="num">${d.cadastro ? "sim" : "—"}</td><td class="num">${b.cad?.gerente_nome ? "preenchido" : "vazio"}</td></tr>
+        <tr><td>Infraestrutura geral, rotina dos brigadistas</td><td class="num">${d.infra ? "sim" : "—"}</td><td class="num">${b.inf ? "existe" : "vazio"}</td></tr>
+        ${Object.entries(ROT).map(([t, r]) => `<tr><td>${r}</td><td class="num">${(d.tabelas[t] || []).length}</td><td class="num ${b.c[t] && (d.tabelas[t] || []).length ? "err" : ""}">${b.c[t]}</td></tr>`).join("")}</table>
+      ${tem ? `<label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--tinta)"><input type="checkbox" data-sub style="width:auto"> Substituir o que já existe no banco para esta UC (listas com número em vermelho são apagadas e regravadas)</label>` : ""}
+      <div style="margin-top:8px"><button class="btn primario" data-gravar>Gravar ${esc(d.nome_uc)}</button></div><div class="log" data-log></div>`}</div>`; }).join("");
+  $$("[data-gravar]").forEach(b => b.onclick = () => gravar(+b.closest(".uc").dataset.i));
+}
+async function gravar(i){
+  const d = ARQS[i], box = $(`.uc[data-i="${i}"]`), log = $("[data-log]", box), sub = $("[data-sub]", box)?.checked, uc = d.nome_uc;
+  const L = t => log.textContent += t + "\n", falha = (t, e) => { L(`✗ ${t}: ${e.message}`); msg(`${uc}: erro em ${t}`, "erro"); };
+  $("[data-gravar]", box).disabled = true; log.textContent = "";
+  try{
+    if (d.regional?.nome && d.regional.coordenador){
+      const {data: r} = await sb.from("regional").select("coordenador").eq("nome", d.regional.nome).maybeSingle();
+      if (r && !r.coordenador){ const {error} = await sb.from("regional").update({telefones: d.regional.telefones, coordenador: d.regional.coordenador, coord_contatos: d.regional.coord_contatos}).eq("nome", d.regional.nome);
+        if (error) throw Object.assign(error, {parte:"regional"}); L(`✓ Regional ${d.regional.nome}: coordenador ${d.regional.coordenador}`); }
+    }
+    if (d.cadastro){ const {error} = await sb.from("uc_cadastro").update(d.cadastro).eq("nome_uc", uc); if (error) throw Object.assign(error, {parte:"cadastro"}); L("✓ Cadastro"); }
+    if (d.infra){
+      if (d._banco.inf && !sub){ const {nao_possui, ...resto} = d.infra; const {error} = await sb.from("uc_infra").update({...resto, nao_possui}).eq("nome_uc", uc); if (error) throw Object.assign(error, {parte:"infraestrutura"}); }
+      else { const {error} = await sb.from("uc_infra").upsert(d.infra, {onConflict:"nome_uc"}); if (error) throw Object.assign(error, {parte:"infraestrutura"}); }
+      L("✓ Infraestrutura geral");
+    }
+    for (const [t, rows] of Object.entries(d.tabelas)){
+      if (!rows.length) continue;
+      if (d._banco.c[t]){ if (!sub){ L(`– ${ROT[t]}: já havia ${d._banco.c[t]} no banco (mantido)`); continue; }
+        const {error} = await sb.from(t).delete().eq("nome_uc", uc); if (error) throw Object.assign(error, {parte: ROT[t]}); }
+      for (let k = 0; k < rows.length; k += 200){ const {error} = await sb.from(t).insert(rows.slice(k, k + 200)); if (error) throw Object.assign(error, {parte: ROT[t]}); }
+      L(`✓ ${ROT[t]}: ${rows.length}`);
+    }
+    L("Concluído."); msg(`${uc} gravada.`, "ok");
+  }catch(e){ falha(e.parte || "gravação", e); }
+  d._banco = await contagens(uc); $("[data-gravar]", box).disabled = false;
+}
+entrar();
+</script>
+</body>
+</html>
