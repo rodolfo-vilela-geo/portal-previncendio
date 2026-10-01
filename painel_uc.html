@@ -56,10 +56,15 @@
   .card h3{margin:0;font-size:15px}
   .card .nota{font-size:12px;color:var(--mudo);margin:2px 0 10px}
   .linha1{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;margin-bottom:14px}
-  .card.mapa{padding:0;overflow:hidden;position:relative}
-  #mapa{height:560px;background:#1b1f17}
-  .norte{position:absolute;right:12px;bottom:34px;z-index:500;background:rgba(255,255,255,.9);border-radius:6px;padding:3px 6px;font:700 12px system-ui;color:#1d1d1f;text-align:center;line-height:1}
-  .legenda{position:absolute;left:10px;bottom:28px;z-index:500;background:rgba(20,22,18,.85);color:#fff;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.7;max-width:260px}
+  .card.mapa{padding:0;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  #mapa{flex:1;min-height:560px;background:#1b1f17}
+  .norte{background:rgba(255,255,255,.92);border-radius:6px;padding:4px 7px;font:700 12px system-ui;color:#1d1d1f;text-align:center;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .legenda{background:rgba(20,22,18,.86);color:#fff;border-radius:8px;padding:6px 10px 7px;font-size:12px;line-height:1.55;box-shadow:0 1px 5px rgba(0,0,0,.4);max-width:min(440px,calc(100vw - 60px))}
+  .legenda .lg-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700}
+  .legenda .lg-top button{background:none;border:0;color:#fff;font:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 2px}
+  .legenda .lg-itens{display:grid;grid-template-columns:repeat(var(--cols,1),minmax(0,auto));gap:1px 16px;margin-top:4px;max-height:220px;overflow:auto}
+  .legenda .lg-itens>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .legenda .lg-itens>.lg-largo{grid-column:1/-1;white-space:normal}
+  .legenda.fechada .lg-itens{display:none}
   .legenda i{display:inline-block;width:14px;height:10px;margin-right:6px;vertical-align:-1px;border-radius:2px}
   .sel-anos{background:rgba(20,22,18,.88);color:#fff;border-radius:8px;padding:7px 9px;font-size:12px;width:246px;box-shadow:0 1px 5px rgba(0,0,0,.4)}
   .sel-anos .sa-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -101,7 +106,7 @@
   .carregando{padding:60px;text-align:center;color:var(--suave)}
   .rodape{font-size:12px;color:var(--mudo);margin-top:14px}
   .so-impressao{display:none}
-  @media (max-width:980px){ .linha1{grid-template-columns:1fr} .grade2,.grade3{grid-template-columns:1fr} #mapa{height:440px} }
+  @media (max-width:980px){ .linha1{grid-template-columns:1fr} .grade2,.grade3{grid-template-columns:1fr} #mapa{min-height:440px} }
   @media print{
     @page{size:A4 portrait;margin:10mm}
     body{background:#fff;font-size:11.5px}
@@ -109,7 +114,7 @@
     .so-impressao{display:block}
     main{padding:0;max-width:none}
     .tiles{grid-template-columns:repeat(3,1fr);gap:6px} .tile{padding:6px 8px} .tile .val{font-size:18px}
-    .linha1{grid-template-columns:1fr;gap:8px} #mapa{height:420px}
+    .linha1{grid-template-columns:1fr;gap:8px} #mapa{min-height:420px;height:420px} .legenda .lg-itens{display:grid!important;max-height:none} .legenda .lg-top button{display:none}
     .grade2,.grade3{grid-template-columns:1fr 1fr;gap:8px} .card{break-inside:avoid;padding:8px}
   }
 </style>
@@ -215,7 +220,7 @@ function desenhar(){
     </div>
 
     <div class="linha1">
-      <div class="card mapa"><div id="mapa"></div><div class="norte">▲<br>N</div><div class="legenda" id="legenda"></div><div class="aviso-mapa" id="avisoMapa" hidden></div></div>
+      <div class="card mapa"><div id="mapa"></div><div class="aviso-mapa" id="avisoMapa" hidden></div></div>
       <div class="card ficha">
         <h3>Ficha da UC</h3>
         <dl style="margin-top:8px">
@@ -419,9 +424,19 @@ function montarMapa(){
   const pts = [];
   if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: iconeMapa("sede", {tam:26}), zIndexOffset:600}).bindTooltip("Sede da UC")); leg.push(`${iconeLegenda("sede", 16)}Sede`); }
   if (pts.length) cam["Sede"] = L.featureGroup(pts).addTo(mapa);
-  L.control.layers({"Satélite": sat, "Mapa": ruas}, cam, {collapsed: innerWidth < 700}).addTo(mapa);
+  L.control.layers({"Satélite": sat, "Mapa": ruas}, cam, {collapsed: true}).addTo(mapa);
+  // norte e legenda dentro do mapa (não vazam para fora quando a ficha ao lado é mais alta)
+  const Norte = L.Control.extend({onAdd(){ const d = L.DomUtil.create("div", "norte"); d.innerHTML = "▲<br>N"; return d; }});
+  new Norte({position:"topleft"}).addTo(mapa);
+  const Leg = L.Control.extend({onAdd(){
+    const d = L.DomUtil.create("div", "legenda"); d.id = "legenda";
+    d.innerHTML = `<div class="lg-top"><span>Legenda</span><button type="button" title="Recolher">–</button></div><div class="lg-itens" style="--cols:${leg.length > 7 ? 2 : 1}">${leg.map(x => `<span ${/legCic|href=|ligar no seletor/.test(x) || x.replace(/<[^>]+>/g, "").length > 32 ? 'class="lg-largo"' : ""}>${x}</span>`).join("") || "—"}</div>`;
+    d.querySelector("button").onclick = () => { d.classList.toggle("fechada"); d.querySelector("button").textContent = d.classList.contains("fechada") ? "+" : "–"; };
+    if (innerWidth < 700) d.classList.add("fechada");
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    return d; }});
+  new Leg({position:"bottomleft"}).addTo(mapa);
   L.control.scale({imperial:false, maxWidth:140, position:"bottomright"}).addTo(mapa);
-  $("#legenda").innerHTML = leg.join("<br>") || "—";
   if (cic.length || hist.length) aplicarAnos();
   const alvo = lim || cam["RIs de " + D.ano_atual];
   if (alvo) mapa.fitBounds(alvo.getBounds(), {padding:[24,24]}); else mapa.fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);
