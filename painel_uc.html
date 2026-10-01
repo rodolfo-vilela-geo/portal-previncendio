@@ -61,6 +61,19 @@
   .norte{position:absolute;right:12px;bottom:34px;z-index:500;background:rgba(255,255,255,.9);border-radius:6px;padding:3px 6px;font:700 12px system-ui;color:#1d1d1f;text-align:center;line-height:1}
   .legenda{position:absolute;left:10px;bottom:28px;z-index:500;background:rgba(20,22,18,.85);color:#fff;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.7;max-width:260px}
   .legenda i{display:inline-block;width:14px;height:10px;margin-right:6px;vertical-align:-1px;border-radius:2px}
+  .sel-anos{background:rgba(20,22,18,.88);color:#fff;border-radius:8px;padding:7px 9px;font-size:12px;width:246px;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+  .sel-anos .sa-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .sel-anos button{font:inherit;color:inherit;cursor:pointer}
+  .sel-anos .sa-rec{background:none;border:0;font-size:16px;line-height:1;padding:0 2px}
+  .sel-anos.fechado .sa-corpo{display:none}
+  .sa-grade{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}
+  .sa-grade button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:3px 4px;min-width:0;display:flex;align-items:center;gap:4px;font-weight:650}
+  .sa-grade button i{width:9px;height:9px;border-radius:2px;flex:none;opacity:.35}
+  .sa-grade button small{margin-left:auto;font-weight:400;opacity:.7;font-size:10.5px}
+  .sa-grade button[aria-pressed=true]{background:rgba(255,255,255,.24);border-color:#fff} .sa-grade button[aria-pressed=true] i{opacity:1}
+  .sa-grade button:disabled{opacity:.35;cursor:default}
+  .sa-atalhos{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap} .sa-atalhos button{background:none;border:0;text-decoration:underline;padding:0 3px;opacity:.9}
+  .sa-vazio{margin-top:6px;color:#ffd38a}
   .aviso-mapa{position:absolute;right:10px;top:10px;z-index:500;background:rgba(255,248,225,.95);color:#5a3a00;border:1px solid #f0c64a;border-radius:8px;padding:6px 9px;font-size:12px;max-width:300px}
   .ficha dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px}
   .ficha dt{color:var(--suave)} .ficha dd{margin:0;font-weight:600;text-align:right}
@@ -92,7 +105,7 @@
   @media print{
     @page{size:A4 portrait;margin:10mm}
     body{background:#fff;font-size:11.5px}
-    header.topo,.barra,.leaflet-control-zoom,.leaflet-control-layers,#tip{display:none!important}
+    header.topo,.barra,.leaflet-control-zoom,.leaflet-control-layers,.sel-anos,#tip{display:none!important}
     .so-impressao{display:block}
     main{padding:0;max-width:none}
     .tiles{grid-template-columns:repeat(3,1fr);gap:6px} .tile{padding:6px 8px} .tile .val{font-size:18px}
@@ -329,17 +342,44 @@ function montarMapa(){
   if (g.za_pm){ cam["ZA do plano de manejo"] = L.geoJSON(g.za_pm, {style:{color:"#ffd33d", weight:1.8, dashArray:"6 4", fill:false}, interactive:false}).addTo(mapa); leg.push(`<i style="border:1.8px dashed #ffd33d;background:none"></i>ZA do plano de manejo`); }
   let lim = null;
   if (g.limite){ lim = cam["Limite da UC"] = L.geoJSON(g.limite, {style:{color:"#8be06b", weight:2.4, fillColor:"#6fd34a", fillOpacity:.12}, interactive:false}).addTo(mapa); leg.push(`<i style="border:2px solid #8be06b;background:rgba(111,211,74,.25)"></i>Limite da UC`); }
-  if ((g.cicatrizes||[]).length){
-    const tela = L.canvas({padding:.3});
-    cam["Cicatrizes (BDG e ROI)"] = L.geoJSON({type:"FeatureCollection", features: g.cicatrizes.map(ci => ({type:"Feature", properties:{cod: ci.cod, ano: ci.ano}, geometry: ci.geo}))},
-      {renderer: tela, style:{color:"#ff5a3c", weight:1, fillColor:"#ff3b30", fillOpacity:.4}, onEachFeature:(f, l) => l.bindTooltip(`${esc(f.properties.cod)} · ${f.properties.ano}`, {sticky:true})}).addTo(mapa);
-    leg.push(`<i style="background:rgba(255,59,48,.6)"></i>Cicatrizes (${fmtN(g.cicatrizes.length)})`);
-  }
-  const hist = (D.ocorrencias||[]);
-  if (hist.length){
-    cam["Ocorrências do histórico"] = L.featureGroup(hist.map(o => L.circleMarker([o.lat, o.lon], {radius:4, color:"#fff", weight:1, fillColor:"#f0a33a", fillOpacity:.9})
-      .bindTooltip(`${esc(o.cod)} · ${fmtD(o.data)}${o.area ? " · " + fmtN(o.area,1) + " ha" : ""}${o.do_poligono ? " · ponto no polígono" : ""}`))).addTo((g.cicatrizes||[]).length ? L.layerGroup() : mapa);
-    leg.push(`<i style="background:#f0a33a;border-radius:50%;width:10px"></i>Ocorrências ${D.hist.ini}–${D.hist.fim} (${fmtN(hist.length)})${(g.cicatrizes||[]).length ? " — ligar no seletor de camadas" : ""}`);
+  // cicatrizes e ocorrências por ano: por padrão só o ano corrente; os demais se ligam no seletor de anos do mapa
+  const cic = g.cicatrizes || [], hist = D.ocorrencias || [], tela = L.canvas({padding:.3});
+  const anosMapa = [...new Set([...cic.map(c => c.ano), ...hist.map(o => o.ano), D.ano_atual])].sort((a, b) => b - a);
+  const corAno = a => { const t = anosMapa.length > 1 ? (a - anosMapa.at(-1)) / (anosMapa[0] - anosMapa.at(-1)) : 1; return `hsl(${Math.round(52 - 52 * t)},95%,${Math.round(62 - 16 * t)}%)`; };
+  const camCic = {}, pontos = L.layerGroup();
+  anosMapa.forEach(a => { const L1 = cic.filter(c => c.ano === a); if (L1.length) camCic[a] = L.geoJSON({type:"FeatureCollection", features: L1.map(ci => ({type:"Feature", properties:{cod: ci.cod, ano: ci.ano}, geometry: ci.geo}))},
+      {renderer: tela, style:{color: corAno(a), weight:1, fillColor: corAno(a), fillOpacity:.45}, onEachFeature:(f, l) => l.bindTooltip(`${esc(f.properties.cod)} · ${f.properties.ano}`, {sticky:true})}); });
+  if (hist.length) cam["Pontos das ocorrências (anos escolhidos)"] = pontos;
+  if (!cic.length && hist.length) pontos.addTo(mapa);
+  const sel = new Set([D.ano_atual]);
+  const aplicarAnos = () => {
+    anosMapa.forEach(a => { const c = camCic[a]; if (!c) return; sel.has(a) ? c.addTo(mapa) : mapa.removeLayer(c); });
+    pontos.clearLayers();
+    hist.filter(o => sel.has(o.ano)).forEach(o => pontos.addLayer(L.circleMarker([o.lat, o.lon], {radius:4, color:"#fff", weight:1, fillColor: corAno(o.ano), fillOpacity:.95})
+      .bindTooltip(`${esc(o.cod)} · ${fmtD(o.data)}${o.area ? " · " + fmtN(o.area,1) + " ha" : ""}${o.do_poligono ? " · ponto no polígono" : ""}`)));
+    const nC = cic.filter(c => sel.has(c.ano)).length, nO = hist.filter(o => sel.has(o.ano)).length, an = [...sel].sort();
+    const quais = !an.length ? "nenhum ano" : an.length === 1 ? String(an[0]) : an.length === anosMapa.length ? `todos os anos` : an.length > 3 ? `${an.length} anos` : an.join(", ");
+    $("#legCic").innerHTML = `<i style="background:${an.length > 1 ? `linear-gradient(90deg,${corAno(anosMapa.at(-1))},${corAno(anosMapa[0])})` : an.length ? corAno(an[0]) : "#777"}"></i>Cicatrizes — ${quais} (${fmtN(nC)})${nO ? ` · ${fmtN(nO)} ocorrências` : ""}`;
+    $$("#selAnos [data-ano]").forEach(b => b.setAttribute("aria-pressed", sel.has(+b.dataset.ano)));
+    $("#selAnosVazio").hidden = !(sel.size === 1 && sel.has(D.ano_atual) && !nC);
+  };
+  if (cic.length || hist.length){
+    leg.push(`<span id="legCic"></span>`);
+    const Ctl = L.Control.extend({onAdd(){
+      const d = L.DomUtil.create("div", "sel-anos"); d.id = "selAnos";
+      d.innerHTML = `<div class="sa-top"><b>Cicatrizes por ano</b><button type="button" class="sa-rec" title="Recolher">–</button></div><div class="sa-corpo">
+        <div class="sa-grade">${anosMapa.map(a => { const n = cic.filter(c => c.ano === a).length || hist.filter(o => o.ano === a).length;
+          return `<button type="button" data-ano="${a}" aria-pressed="false" ${n ? "" : "disabled"} title="${n} ocorrência(s)"><i style="background:${corAno(a)}"></i>${a}<small>${n}</small></button>`; }).join("")}</div>
+        <div class="sa-atalhos"><button type="button" data-q="1">Ano atual</button><button type="button" data-q="5">5 anos</button><button type="button" data-q="todos">Todos</button><button type="button" data-q="0">Nenhum</button></div>
+        <div class="sa-vazio" id="selAnosVazio" hidden>Ainda não há cicatrizes de ${D.ano_atual}. Escolha outros anos acima.</div></div>`;
+      L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+      d.querySelectorAll("[data-ano]").forEach(b => b.onclick = () => { const a = +b.dataset.ano; sel.has(a) ? sel.delete(a) : sel.add(a); aplicarAnos(); });
+      d.querySelectorAll("[data-q]").forEach(b => b.onclick = () => { sel.clear(); const q = b.dataset.q;
+        (q === "todos" ? anosMapa : q === "0" ? [] : anosMapa.filter(a => a > D.ano_atual - +q)).forEach(a => sel.add(a)); aplicarAnos(); });
+      d.querySelector(".sa-rec").onclick = () => { d.classList.toggle("fechado"); d.querySelector(".sa-rec").textContent = d.classList.contains("fechado") ? "+" : "–"; };
+      if (innerWidth < 700) d.classList.add("fechado");
+      return d; }});
+    new Ctl({position:"bottomright"}).addTo(mapa);
   }
   if (D.sem_poligono){
     leg.push(`<a href="bdg.html" style="color:inherit">${fmtN(D.sem_poligono)} ocorrência${D.sem_poligono > 1 ? "s" : ""} sem polígono</a>`);
@@ -380,6 +420,7 @@ function montarMapa(){
   L.control.layers({"Satélite": sat, "Mapa": ruas}, cam, {collapsed: innerWidth < 700}).addTo(mapa);
   L.control.scale({imperial:false, maxWidth:140, position:"bottomright"}).addTo(mapa);
   $("#legenda").innerHTML = leg.join("<br>") || "—";
+  if (cic.length || hist.length) aplicarAnos();
   const alvo = lim || cam["RIs de " + D.ano_atual];
   if (alvo) mapa.fitBounds(alvo.getBounds(), {padding:[24,24]}); else mapa.fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);
   const semHist = !hist.length && D.hist.n > 0;
