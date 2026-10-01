@@ -42,6 +42,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 19_recursos_apoio.sql         módulos 3 e 4: veículos, rádios, materiais; parceiros, prestadores, colaboradores, brigadistas
 20_ri_campos.sql              RI: forma de detecção, início do combate, responsáveis, fechamento, contatos e PM Ambiental
 21_sala_tecnica.sql           Sala Técnica: trâmite por cod_bdp (ROI, REDS/AI, processo SEI, DPC, CAINF), prazos e importação da planilha
+22_atividades_preventivas.sql Módulo 5 · Atividades Preventivas: aceiros, estradas e trilhas (traçado PostGIS), elementos favoráveis/adversos, cronograma de ações, projetos e brigadistas contratados
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador

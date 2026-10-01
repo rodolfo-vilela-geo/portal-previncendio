@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="icones_mapa.js?v=20261001b"></script>
+<script src="icones_mapa.js?v=20261001c"></script>
 <style>
   :root{
     color-scheme: light;
@@ -175,10 +175,11 @@ async function carregar(){
   const nome = $("#selUC").value; if (!nome) return;
   $("#btnCadastro").href = "ucs.html?uc=" + encodeURIComponent(nome);
   $("#conteudo").innerHTML = `<div class="carregando">Carregando o painel de ${esc(nome)}…</div>`;
-  const [{data, error}, {data: infra}, {data: rec}, {data: rede}] = await Promise.all([sb.rpc("painel_uc", {p_nome_uc: nome}),
+  const [{data, error}, {data: infra}, {data: rec}, {data: rede}, {data: prev}, {data: vias}] = await Promise.all([sb.rpc("painel_uc", {p_nome_uc: nome}),
     sb.from("vw_uc_ponto").select("tipo,nome,lat,lon,situacao,dist_uc_km,atributos").eq("nome_uc", nome),
-    sb.rpc("uc_recursos_resumo", {p_nome_uc: nome}), sb.from("vw_uc_rede_geo").select("tabela,tipo,nome,lat,lon,situacao").eq("nome_uc", nome)]);
-  if (data){ data.infra = infra || []; data.rec = rec || null; data.rede = rede || []; }
+    sb.rpc("uc_recursos_resumo", {p_nome_uc: nome}), sb.from("vw_uc_rede_geo").select("tabela,tipo,nome,lat,lon,situacao").eq("nome_uc", nome),
+    sb.rpc("uc_prevencao_resumo", {p_nome_uc: nome}), sb.from("uc_via").select("tipo,nome,geojson,tracado_origem,condicao").eq("nome_uc", nome).not("geojson", "is", null)]);
+  if (data){ data.infra = infra || []; data.rec = rec || null; data.rede = rede || []; data.prev = prev || null; data.vias = vias || []; }
   if (error){ $("#conteudo").innerHTML = `<div class="carregando" style="color:var(--erro)">${esc(error.message)}</div>`; return; }
   D = data; desenhar();
 }
@@ -216,6 +217,8 @@ function desenhar(){
         ${(D.infra||[]).length ? `<div style="font-size:13px">${Object.entries(INFRA).map(([t,[r]]) => { const n = D.infra.filter(x => x.tipo === t).length; return n ? `${n} ${r.toLowerCase()}${n>1 && !r.endsWith("s") ? "s" : ""}` : null; }).filter(Boolean).join(" · ")}</div>` : `<div class="vazio">Nada cadastrado no módulo Infraestrutura.</div>`}
         <h4>Recursos e rede de apoio</h4>
         ${htmlRecursos(D.rec)}
+        <h4>Atividades preventivas</h4>
+        ${htmlPrevencao(D.prev)}
         <h4>Meses críticos declarados</h4>
         <div class="meses">${MESES.map((m,i) => `<span class="${(u.meses_criticos||[]).includes(i+1) ? "on" : ""}">${m}</span>`).join("")}</div>
         ${!(u.meses_criticos||[]).length ? `<div class="vazio">Ainda não informados no cadastro.</div>` : ""}
@@ -300,6 +303,19 @@ function htmlRecursos(r){
     it(r.colaboradores, "colaboradores/moradores"), it(r.brigadistas, "brigadistas voluntários")].filter(Boolean);
   return `<div style="font-size:13px;line-height:1.7">${linhas.join(" · ")}</div>`;
 }
+const COR_VIA = {aceiro:"#ff9f1c", estrada:"#ffe066", trilha:"#5ce1e6"}, ROT_VIA = {aceiro:"aceiros", estrada:"estradas", trilha:"trilhas"};
+function htmlPrevencao(p){
+  const v = p?.vias || {}, nv = Object.values(v).reduce((s, x) => s + x.n, 0);
+  if (!p || !(nv + p.favoraveis + p.adversos + p.acoes + p.projetos) && !p.brigada) return `<div class="vazio">Nada cadastrado no módulo Atividades Preventivas.</div>`;
+  const it = (n, t, extra) => n ? `<b>${fmtN(n)}</b> ${t}${extra ? ` <span style="color:var(--suave)">(${extra})</span>` : ""}` : null;
+  const linhas = [
+    ...Object.entries(v).map(([t, x]) => it(x.n, ROT_VIA[t] || t, [x.km && fmtN(x.km, 1) + " km", x.ruins && x.ruins + " a refazer"].filter(Boolean).join(" · "))),
+    it(p.acoes, `ações preventivas em ${p.acoes_ano}`, p.acoes_feitas ? `${p.acoes_feitas} realizadas` : null),
+    it(p.projetos, "projetos de sustentabilidade"),
+    p.brigada?.quantidade ? it(p.brigada.quantidade, `brigadistas contratados em ${p.brigada.ano}`) : null,
+    p.favoraveis + p.adversos ? `<b>${p.favoraveis}</b> elementos favoráveis e <b>${p.adversos}</b> adversos` : null].filter(Boolean);
+  return `<div style="font-size:13px;line-height:1.7">${linhas.join(" · ")}</div>`;
+}
 function montarMapa(){
   if (mapa){ mapa.remove(); mapa = null; }
   const u = D.uc, g = D.geo;
@@ -343,6 +359,14 @@ function montarMapa(){
     cam["Rede de apoio e rádios"] = L.featureGroup(rede.map(x => L.marker([x.lat, x.lon], {icon: iconeMapa(ic(x), {tam:22, situacao: x.situacao === "inoperante" ? "inoperante" : x.situacao === "ruim" ? "parcial" : null}), zIndexOffset:400})
       .bindTooltip(`${ICONES_ROTULO[ic(x)] || ""}: ${esc(x.nome)}`))).addTo(mapa);
     [...new Set(rede.map(ic))].forEach(t => leg.push(`${iconeLegenda(t, 16)}${t === "radio" ? "Rádio" : ICONES_ROTULO[t]}`));
+  }
+  if ((D.vias||[]).length){
+    const ll = g => g.type === "LineString" ? [g.coordinates.map(([x, y]) => [y, x])] : g.coordinates.map(p => p.map(([x, y]) => [y, x]));
+    cam["Aceiros, estradas e trilhas"] = L.featureGroup(D.vias.flatMap(x => [L.polyline(ll(x.geojson), {color:"#000", weight:5, opacity:.45, interactive:false}),
+      L.polyline(ll(x.geojson), {color: COR_VIA[x.tipo], weight:3, dashArray: x.tracado_origem === "pontos" ? "6 6" : null})
+        .bindTooltip(`${esc(x.nome)}${x.tracado_origem === "pontos" ? " (traçado aproximado)" : ""}${x.condicao ? " · " + x.condicao : ""}`, {sticky:true})])).addTo(mapa);
+    [...new Set(D.vias.map(x => x.tipo))].forEach(t => leg.push(`<i style="height:0;border-top:3px solid ${COR_VIA[t]};width:14px;background:none;vertical-align:middle"></i>${ROT_VIA[t][0].toUpperCase() + ROT_VIA[t].slice(1)}`));
+    if (D.vias.some(x => x.tracado_origem === "pontos")) leg.push(`<i style="height:0;border-top:2px dashed #ccc;width:14px;background:none;vertical-align:middle"></i>Traçado aproximado (início–fim)`);
   }
   const pts = [];
   if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: iconeMapa("sede", {tam:26}), zIndexOffset:600}).bindTooltip("Sede da UC")); leg.push(`${iconeLegenda("sede", 16)}Sede`); }

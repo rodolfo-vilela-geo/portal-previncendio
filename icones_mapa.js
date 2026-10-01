@@ -18,14 +18,18 @@
     saude:     {f:'<path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6z"/>'},
     abastecimento:{s:'<path d="M5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16M3.5 21h12M7 8h5M14 10h2a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 0 3 0V8l-3-3"/>'},
     outro:     {s:'<circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/>'},
+    projeto:   {s:'<path d="M12 21v-8.5"/><path d="M12 12.5c0-4.2 2.8-7 7.5-7 0 4.2-2.8 7-7.5 7zM12 14.5c0-3.3-2.3-5.6-6-5.6 0 3.3 2.3 5.6 6 5.6z"/>'},
+    acao:      {s:'<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15.2l2 2 4-4"/>'},
     fogo:      {f:'<path d="M12 2.5c.8 3.2 4.8 5.2 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.3 1.2-3.5 1.3-5.5 1.3 1 2 2.2 2.5 2.4.3-2.2 0-4.6 1-6.9z"/>'}
   };
   const COR = {heliponto:"#ff7a1a", pista:"#2f7df6", vigilancia:"#e0b000", camera:"#e0b000", estacao:"#9b6bff", agua:"#12a9d8",
                sede:"#2e5603", antena:"#d6336c", fogo:"#e0301e",
-               radio:"#b83280", parceiro:"#1f5fd1", colaborador:"#8a5a2b", brigadista:"#c46f1a", alimentacao:"#e8590c", saude:"#0f9d58", abastecimento:"#495057", outro:"#868e96"};
+               radio:"#b83280", parceiro:"#1f5fd1", colaborador:"#8a5a2b", brigadista:"#c46f1a", alimentacao:"#e8590c", saude:"#0f9d58", abastecimento:"#495057", outro:"#868e96",
+               projeto:"#2f9e44", acao:"#b7791f"};
   const ROT = {heliponto:"Heliponto", pista:"Pista de pouso", vigilancia:"Torre / posto de observação", camera:"Câmera",
                estacao:"Estação meteorológica", agua:"Ponto de água", sede:"Sede da UC", antena:"Repetidora / antena", fogo:"Incêndio",
-               radio:"Rádio fixo", parceiro:"Parceiro", colaborador:"Colaborador / morador", brigadista:"Brigadista voluntário", alimentacao:"Alimentação", saude:"Unidade de saúde", abastecimento:"Abastecimento", outro:"Outro prestador"};
+               radio:"Rádio fixo", parceiro:"Parceiro", colaborador:"Colaborador / morador", brigadista:"Brigadista voluntário", alimentacao:"Alimentação", saude:"Unidade de saúde", abastecimento:"Abastecimento", outro:"Outro prestador",
+               projeto:"Projeto de sustentabilidade", acao:"Ação preventiva"};
   function svg(tipo, tam){
     const g = G[tipo] || G.vigilancia;
     const corpo = g.f ? `<g fill="#fff">${g.f}</g>` : `<g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${g.s}</g>`;
