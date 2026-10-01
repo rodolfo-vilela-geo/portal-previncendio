@@ -201,6 +201,7 @@
       <li><a href="#roi">3. ROI — relatório</a></li>
       <li><a href="#prazos">Prazos dos ROIs</a></li>
       <li><a href="#tecnica">Sala Técnica</a></li>
+      <li><a href="#bdg">Polígonos do BDG</a></li>
       <li><a href="#boletim">Boletim e painel</a></li>
       <li><a href="#painel_uc">Painel da UC</a></li>
       <li><a href="#pipcif">Cadastro das UCs</a></li>
@@ -316,6 +317,18 @@
       <h2>Prazos dos ROIs</h2>
       <p class="quem">Quem usa: Sala de Situação, Previncêndio · <a href="sala.html?aba=prazos">abrir os prazos</a></p>
       <p>Lista cada RI encerrado com a data limite do ROI e a situação: <b>no prazo</b>, <b>vence em até 2 dias</b>, <b>atrasado</b> ou <b>entregue</b>. O ROI conta como entregue quando é enviado com o mesmo ano e nº de RI.</p>
+    </section>
+
+    <section id="bdg">
+      <h2>Polígonos do BDG</h2>
+      <p>Em <b>Gestão do sistema → Polígonos do BDG</b> ficam as cicatrizes de área queimada de 2013 em diante, ligadas a cada ocorrência pelo <b>cod_bdp</b>. A página mostra, por ano, quantos ROIs têm polígono e quantos estão <b>ausentes</b>, com a lista das ocorrências sem polígono (filtros por ano, regional e busca; exportação em CSV).</p>
+      <ul>
+        <li><b>Achou o polígono de uma ocorrência?</b> Na linha dela, <b>Enviar polígono…</b> aceita KML/KMZ (inclusive o do SMC), GeoJSON ou shapefile em .zip; o mapa mostra o polígono e o limite da UC, com a área do arquivo e a declarada no ROI, antes de gravar.</li>
+        <li><b>Vários polígonos de uma vez:</b> aba <b>Importar arquivo</b> — escolha o campo com o cod_bdp e se o arquivo só completa os ausentes ou substitui os existentes.</li>
+        <li><b>Polígono errado:</b> em <b>Corrigir o polígono de uma ocorrência</b>, substitua ou apague.</li>
+        <li>Os arquivos precisam estar em coordenadas geográficas (WGS 84 ou SIRGAS 2000). A geometria é corrigida e a área recalculada pelo banco.</li>
+      </ul>
+      <p class="nota">No Painel da UC, as cicatrizes aparecem no mapa e as ocorrências históricas ganham um ponto dentro do polígono; a legenda indica quantas ocorrências da UC ainda estão sem polígono.</p>
     </section>
 
     <section id="tecnica">

@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Polígonos do BDG — Colibri</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --linha:#dcd8d0;
+    --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --alerta:#9a5b00; --erro:#b3261e; --fogo:#c2410c;
+  }
+  *{box-sizing:border-box} [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--fundo);color:var(--tinta);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header.topo{background:var(--verde);color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  header.topo .inst{font-size:12px;opacity:.9} header.topo .inst a{color:#fff;text-decoration:none}
+  header.topo h1{margin:0;font-size:18px}
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .usuario{font-size:13px;display:flex;gap:10px;align-items:center}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--verde);background:#fff;color:var(--verde);padding:7px 12px;cursor:pointer}
+  .btn:hover{background:#eef3e2} .btn.primario{background:var(--verde);color:#fff} .btn.primario:hover{background:var(--verde-esc)}
+  .btn.peq{padding:3px 9px;font-size:12.5px} .btn[disabled]{opacity:.5;cursor:not-allowed} .btn.perigo{border-color:var(--erro);color:var(--erro)}
+  header .btn{border-color:#fff;background:transparent;color:#fff}
+  input,select{width:100%;font:inherit;color:inherit;background:#fff;border:1px solid #c9c5bd;border-radius:7px;padding:6px 8px}
+  input:focus,select:focus{outline:2px solid #b8cf95;border-color:var(--verde)}
+  label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:3px}
+  .dica{font-size:12.5px;color:var(--suave)}
+  #telaLogin{max-width:380px;margin:40px auto;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:22px}
+  main{max-width:1300px;margin:0 auto;padding:12px 16px 40px}
+  .abas{display:flex;gap:4px;border-bottom:1px solid var(--linha);background:var(--papel);padding:0 16px;overflow-x:auto}
+  .abas button{font:inherit;font-weight:600;border:0;background:transparent;padding:10px 14px;border-bottom:3px solid transparent;color:var(--suave);cursor:pointer;white-space:nowrap}
+  .abas button[aria-selected=true]{color:var(--verde);border-bottom-color:var(--verde)}
+  .cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-top:4px}
+  .card{background:var(--papel);border:1px solid var(--linha);border-left:5px solid var(--c,#999);border-radius:10px;padding:10px 12px}
+  .card .n{font-size:28px;font-weight:800;color:var(--c)} .card .t{font-weight:650} .card .d{font-size:12px;color:var(--suave)}
+  .bloco{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin-top:14px}
+  .bloco h2{font-size:16px;margin:0 0 8px}
+  .filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:6px 0 10px}
+  .filtros>div{min-width:150px}
+  table.tab{border-collapse:collapse;width:100%;font-size:13px;background:var(--papel)}
+  table.tab th{background:#e9eddf;text-align:left;padding:6px;position:sticky;top:0;white-space:nowrap;z-index:1}
+  table.tab td{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:middle}
+  table.tab td.num,table.tab th.num{text-align:right}
+  .tab-wrap{overflow:auto;max-height:calc(100vh - 260px);border:1px solid var(--linha);border-radius:8px}
+  .barra-ano{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#f1d5c8;min-width:120px}
+  .barra-ano i{display:block;background:#5b8a2b}
+  .aus{color:var(--fogo);font-weight:700}
+  .passo{border:1px dashed #c9cdb8;border-radius:10px;padding:10px 12px;margin-top:10px;background:#fbfcf7}
+  .opcoes{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0} .opcoes label{display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--tinta);font-weight:500} .opcoes input{width:auto}
+  .prog{height:10px;background:#e7eadf;border-radius:6px;overflow:hidden;margin:8px 0} .prog i{display:block;height:100%;background:var(--verde);width:0;transition:width .2s}
+  .res td,.res th{padding:3px 10px 3px 0;font-size:13px;text-align:left}
+  dialog{border:0;border-radius:12px;padding:0;width:min(760px,96vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .dlg-cab{background:var(--verde);color:#fff;padding:10px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .dlg-cab h2{margin:0;font-size:16px}
+  .dlg-corpo{padding:12px 16px} #mapaPrev{height:340px;border-radius:8px;margin-top:8px;background:#ddd}
+  .dlg-rod{border-top:1px solid var(--linha);padding:10px 16px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  #msg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:9px;font-size:14px;z-index:9999;max-width:90vw}
+  #msg:empty{display:none} #msg.erro{background:var(--erro)} #msg.ok{background:var(--ok)}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca"><a href="index.html" class="logo" title="Colibri"><img src="img/logo_portal_selo.png" alt="Colibri"></a>
+    <div><div class="inst"><a href="index.html">← Colibri</a> · Previncêndio · IEF-MG</div><h1>Polígonos do BDG — cicatrizes de área queimada</h1></div></div>
+  <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn peq" id="sair">Sair</button></div>
+</header>
+
+<section id="telaLogin" hidden>
+  <h2 style="margin-top:0">Entrar</h2>
+  <p class="dica" style="margin:0 0 14px">Acesso da equipe do Previncêndio.</p>
+  <form id="formLogin">
+    <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+    <div style="height:10px"></div>
+    <label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required>
+    <div style="height:14px"></div>
+    <button class="btn primario" style="width:100%">Entrar</button>
+    <p id="erroLogin" class="dica" style="color:var(--erro);min-height:18px"></p>
+  </form>
+</section>
+
+<div id="app" hidden>
+  <nav class="abas" role="tablist">
+    <button data-aba="resumo" aria-selected="true">Resumo e polígonos ausentes</button>
+    <button data-aba="importar" aria-selected="false" id="abaImportar">Importar arquivo</button>
+  </nav>
+  <main>
+    <section data-painel="resumo">
+      <div class="cards" id="cards"></div>
+      <div class="bloco"><h2>Por ano</h2><div class="tab-wrap" style="max-height:none"><table class="tab" id="tabAnos"></table></div></div>
+      <div class="bloco"><h2>ROIs sem polígono (polígonos ausentes)</h2>
+        <p class="dica" style="margin:0 0 6px">Ocorrências do BDG que ainda não têm a cicatriz mapeada. Quando o polígono for encontrado (arquivo antigo, SMC, campo), envie-o pela linha da ocorrência ou em lote na aba <b>Importar arquivo</b> — a lista se atualiza sozinha.</p>
+        <div class="filtros">
+          <div style="min-width:110px"><label for="fAno">Ano</label><select id="fAno"><option value="">Todos</option></select></div>
+          <div><label for="fReg">Regional</label><select id="fReg"><option value="">Todas</option></select></div>
+          <div style="flex:1;min-width:220px"><label for="fBusca">Buscar (cod_bdp, UC, município)</label><input id="fBusca" placeholder="ex.: 2014-0153, Cabral, Diamantina"></div>
+          <div><button class="btn" id="csv">Exportar CSV</button></div>
+        </div>
+        <div class="tab-wrap"><table class="tab" id="tabAus"></table></div>
+        <div class="dica" id="rodAus" style="margin-top:6px"></div>
+        <details id="semRoi" style="margin-top:12px" hidden><summary class="dica" style="cursor:pointer"></summary><div class="dica" id="listaSemRoi" style="margin-top:6px"></div></details>
+      </div>
+    </section>
+
+    <section data-painel="importar" hidden>
+      <div class="bloco"><h2>Importar polígonos em lote</h2>
+        <p class="dica" style="margin:0 0 8px">Shapefile (o .zip com .shp, .dbf, .prj e .cpg, ou os arquivos soltos), GeoJSON ou KML/KMZ, em coordenadas geográficas (WGS 84 ou SIRGAS 2000).
+          Cada polígono precisa de um campo com o <b>cod_bdp</b> (ano-RI-ROI). A geometria é corrigida e a área recalculada pelo banco.</p>
+        <input type="file" id="arquivo" accept=".zip,.shp,.dbf,.prj,.cpg,.geojson,.json,.kml,.kmz" multiple style="max-width:460px">
+        <div id="analise"></div>
+      </div>
+      <div class="bloco"><h2>Corrigir o polígono de uma ocorrência</h2>
+        <p class="dica" style="margin:0 0 8px">Para trocar ou apagar um polígono gravado errado. A troca mostra o novo polígono no mapa antes de gravar.</p>
+        <div class="filtros" style="margin:0"><div style="min-width:200px"><label for="cCod">cod_bdp</label><input id="cCod" placeholder="2019-0814-010"></div>
+          <div><button class="btn" id="cTrocar">Substituir polígono…</button></div><div><button class="btn perigo" id="cApagar">Apagar polígono</button></div>
+          <div class="dica" id="cInfo" style="flex:1;min-width:200px"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-cab"><h2 id="dlgTit"></h2><button class="btn peq" id="dlgFechar" style="border-color:#fff;color:#fff;background:transparent">Fechar</button></div>
+  <div class="dlg-corpo"><div id="dlgInfo"></div><div id="mapaPrev"></div></div>
+  <div class="dlg-rod"><button class="btn" id="dlgOutro">Escolher outro arquivo</button><button class="btn primario" id="dlgOk">Gravar polígono</button></div>
+</dialog>
+<input type="file" id="arqUm" accept=".zip,.shp,.dbf,.geojson,.json,.kml,.kmz" multiple hidden>
+<div id="msg"></div>
+
+<script>
+const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+const $ = (s, el=document) => el.querySelector(s), $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtD = d => d ? String(d).slice(0,10).split("-").reverse().join("/") : "";
+const fmtN = (n, c=0) => n == null ? "—" : (+n).toLocaleString("pt-BR", {minimumFractionDigits:c, maximumFractionDigits:c});
+let tMsg; function msg(t, tipo=""){ const m=$("#msg"); m.textContent=t; m.className=tipo; clearTimeout(tMsg); tMsg=setTimeout(()=>{ if (m.textContent===t) m.textContent=""; }, 6000); }
+const CATS = {PAR:"PE", APA:"APA", MONA:"MN", ESEC:"EE", REBIO:"REBIO", RVS:"RVS", FLOE:"FE", RDS:"RDS", APE:"APE"};
+const rotUC = r => r.nome_uc ? `${CATS[r.categoria]||r.categoria||""} ${r.nome_uc}`.trim() : "—";
+let perfil = null, podeImportar = false, todos = [], semRoi = [];
+
+/* ======================= LOGIN ======================= */
+async function entrar(){
+  const {data:{session}} = await sb.auth.getSession();
+  if (!session){ $("#telaLogin").hidden = false; $("#app").hidden = true; return; }
+  const {data} = await sb.rpc("meu_perfil");
+  if (!data || data.papel === "gerente"){
+    $("#telaLogin").hidden = false; $("#app").hidden = true;
+    $("#erroLogin").textContent = data ? "Esta página é da equipe do Previncêndio." : "E-mail não cadastrado na equipe.";
+    return;
+  }
+  perfil = data; podeImportar = ["gpcif","admin"].includes(perfil.papel);
+  $("#quem").textContent = perfil.nome;
+  $("#usuario").hidden = false; $("#telaLogin").hidden = true; $("#app").hidden = false;
+  $("#abaImportar").hidden = !podeImportar;
+  await carregar();
+}
+$("#formLogin").onsubmit = async e => { e.preventDefault(); $("#erroLogin").textContent = "";
+  const {error} = await sb.auth.signInWithPassword({email: $("#email").value.trim(), password: $("#senha").value});
+  if (error) return $("#erroLogin").textContent = /invalid/i.test(error.message) ? "E-mail ou senha incorretos." : error.message;
+  entrar(); };
+$("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$$(".abas button").forEach(b => b.onclick = () => {
+  $$(".abas button").forEach(x => x.setAttribute("aria-selected", x === b));
+  $$("[data-painel]").forEach(p => p.hidden = p.dataset.painel !== b.dataset.aba);
+});
+
+/* ======================= RESUMO ======================= */
+async function carregar(){
+  todos = [];
+  for (let i = 0; ; i += 5000){
+    const {data, error} = await sb.from("vw_bdg_poligonos").select("cod_bdp,ano,ri,roi,categoria,nome_uc,ufbio,municipio,local,dat_detec,area_declarada,n_pol,area_pol,fonte").order("cod_bdp").range(i, i + 4999);
+    if (error) return msg("Erro ao carregar: " + error.message, "erro");
+    todos.push(...data); if (data.length < 5000) break;
+  }
+  const r2 = await sb.from("vw_area_sem_roi").select("*").order("cod_bdp");
+  semRoi = r2.data || [];
+  const anoAt = new Date().getFullYear(), hist = todos.filter(r => r.ano >= 2013 && r.ano < anoAt), atual = todos.filter(r => r.ano >= anoAt);
+  const com = hist.filter(r => r.n_pol).length, aus = hist.length - com;
+  $("#cards").innerHTML = [
+    ["#2e5603", fmtN(hist.length), `ROIs 2013–${anoAt - 1}`, "registros do BDG"],
+    ["#5b8a2b", fmtN(com), "com polígono", `${fmtN(100 * com / Math.max(hist.length, 1), 1)}% do total`],
+    ["#c2410c", fmtN(aus), "polígonos ausentes", "ROIs sem a cicatriz mapeada"],
+    ["#1f5fa8", fmtN(atual.filter(r => r.n_pol).length) + " / " + fmtN(atual.length), `ROIs de ${anoAt} com polígono`, "enviados pelo SMC / ROI"],
+    ...(semRoi.length ? [["#7c3aed", fmtN(semRoi.length), "polígonos sem ROI", "cod_bdp que não existe na tabela"]] : [])
+  ].map(([c, n, t, d]) => `<div class="card" style="--c:${c}"><div class="n">${n}</div><div class="t">${t}</div><div class="d">${d}</div></div>`).join("");
+  const anos = [...new Set(todos.map(r => r.ano))].sort((a, b) => a - b);
+  $("#tabAnos").innerHTML = `<thead><tr><th>Ano</th><th class="num">ROIs</th><th class="num">Com polígono</th><th class="num">Ausentes</th><th class="num">%</th><th style="width:40%"></th></tr></thead><tbody>`
+    + anos.map(a => { const L = todos.filter(r => r.ano === a), c = L.filter(r => r.n_pol).length, p = L.length ? 100 * c / L.length : 0;
+      return `<tr><td><b>${a}</b></td><td class="num">${fmtN(L.length)}</td><td class="num">${fmtN(c)}</td><td class="num ${L.length - c ? "aus" : ""}">${fmtN(L.length - c)}</td><td class="num">${fmtN(p, 1)}%</td>
+        <td><div class="barra-ano" title="${fmtN(p, 1)}% com polígono"><i style="width:${p}%"></i></div></td></tr>`; }).join("") + "</tbody>";
+  const selA = $("#fAno").value, selR = $("#fReg").value;
+  $("#fAno").innerHTML = `<option value="">Todos</option>` + anos.filter(a => todos.some(r => r.ano === a && !r.n_pol)).map(a => `<option>${a}</option>`).join(""); $("#fAno").value = selA;
+  $("#fReg").innerHTML = `<option value="">Todas</option>` + [...new Set(todos.map(r => r.ufbio).filter(Boolean))].sort().map(u => `<option>${esc(u)}</option>`).join(""); $("#fReg").value = selR;
+  $("#semRoi").hidden = !semRoi.length;
+  if (semRoi.length){ $("#semRoi summary").textContent = `${semRoi.length} polígono(s) com cod_bdp que não existe na tabela de ROIs — conferir o código`;
+    $("#listaSemRoi").innerHTML = semRoi.map(x => `<b>${esc(x.cod_bdp)}</b> (${esc(x.fonte || "")}, ${fmtN(x.area_ha, 2)} ha)`).join(" · "); }
+  listarAusentes();
+}
+function filtrados(){
+  const a = $("#fAno").value, g = $("#fReg").value, q = $("#fBusca").value.trim().toLowerCase(), anoAt = new Date().getFullYear();
+  return todos.filter(r => !r.n_pol && r.ano < anoAt && (!a || r.ano === +a) && (!g || r.ufbio === g)
+    && (!q || [r.cod_bdp, r.nome_uc, rotUC(r), r.municipio].some(x => (x || "").toLowerCase().includes(q))));
+}
+function listarAusentes(){
+  const L = filtrados();
+  $("#tabAus").innerHTML = `<thead><tr><th>cod_bdp</th><th>UC</th><th>Regional</th><th>Município</th><th>Local</th><th>Detecção</th><th class="num">Área declarada (ha)</th>${podeImportar ? "<th></th>" : ""}</tr></thead><tbody>`
+    + L.slice(0, 600).map(r => `<tr><td><b>${esc(r.cod_bdp)}</b></td><td>${esc(rotUC(r))}</td><td>${esc(r.ufbio || "")}</td><td>${esc(r.municipio || "")}</td><td>${esc(r.local || "")}</td>
+      <td>${fmtD(r.dat_detec)}</td><td class="num">${r.area_declarada ? fmtN(r.area_declarada, 2) : "—"}</td>
+      ${podeImportar ? `<td><button class="btn peq" data-env="${esc(r.cod_bdp)}">Enviar polígono…</button></td>` : ""}</tr>`).join("") + "</tbody>";
+  $("#rodAus").textContent = `${fmtN(L.length)} ROI(s) sem polígono${L.length > 600 ? " — mostrando os 600 primeiros; use os filtros ou exporte o CSV" : ""}. Área declarada somada: ${fmtN(L.reduce((s, r) => s + (+r.area_declarada || 0), 0), 1)} ha.`;
+  $$("[data-env]").forEach(b => b.onclick = () => { alvo = todos.find(r => r.cod_bdp === b.dataset.env); trocar = false; $("#arqUm").click(); });
+}
+["fAno","fReg"].forEach(id => $("#" + id).onchange = listarAusentes);
+$("#fBusca").oninput = listarAusentes;
+$("#csv").onclick = () => {
+  const cols = ["cod_bdp","ano","ri","roi","categoria","nome_uc","ufbio","municipio","local","dat_detec","area_declarada"];
+  const q = v => { const s = (v ?? "").toString(); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const csv = "﻿" + cols.join(";") + "\n" + filtrados().map(r => cols.map(c => q(c === "area_declarada" && r[c] != null ? String(r[c]).replace(".", ",") : r[c])).join(";")).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  a.download = `poligonos_ausentes_BDG${$("#fAno").value ? "_" + $("#fAno").value : ""}.csv`; document.body.appendChild(a); a.click(); a.remove();
+};
+
+/* ======================= LEITURA DE ARQUIVOS ======================= */
+// zip sem biblioteca: diretório central + DecompressionStream
+function listarZip(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), td = new TextDecoder();
+  let e = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50){ e = i; break; }
+  if (e < 0) throw new Error("Arquivo .zip inválido.");
+  const out = {}; let p = dv.getUint32(e + 16, true);
+  for (let k = 0, n = dv.getUint16(e + 10, true); k < n; k++){
+    const met = dv.getUint16(p + 10, true), tam = dv.getUint32(p + 20, true), ln = dv.getUint16(p + 28, true), off = dv.getUint32(p + 42, true);
+    const nome = td.decode(u8.subarray(p + 46, p + 46 + ln)); p += 46 + ln + dv.getUint16(p + 30, true) + dv.getUint16(p + 32, true);
+    if (nome.endsWith("/") || /(^|\/)(__MACOSX|\.)/.test(nome)) continue;
+    out[nome] = async () => {
+      const ini = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true), dados = u8.slice(ini, ini + tam);
+      if (met === 0) return dados.buffer;
+      if (met !== 8 || !window.DecompressionStream) throw new Error("Este navegador não abre o .zip. Use os arquivos soltos (.shp e .dbf).");
+      return await new Response(new Blob([dados]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer();
+    };
+  }
+  return out;
+}
+// soma de (x2-x1)(y2+y1) nas arestas: positiva = sentido horário (anel externo no shapefile)
+const horario = r => { let s = 0; for (let i = 0; i < r.length - 1; i++) s += (r[i + 1][0] - r[i][0]) * (r[i + 1][1] + r[i][1]); return s > 0; };
+// shapefile de polígonos (tipos 5, 15, 25): anéis horários = externos, anti-horários = buracos
+function lerShp(buf){
+  const dv = new DataView(buf), feats = []; let p = 100;
+  const tipo = dv.getInt32(32, true);
+  if (![5, 15, 25].includes(tipo)) throw new Error("O shapefile não é de polígonos (tipo " + tipo + ").");
+  while (p + 8 <= buf.byteLength){
+    const len = dv.getInt32(p + 4) * 2, c = p + 8, st = dv.getInt32(c, true);
+    if (st === 0){ feats.push(null); p = c + len; continue; }
+    const np = dv.getInt32(c + 36, true), npt = dv.getInt32(c + 40, true), partes = [];
+    for (let i = 0; i < np; i++) partes.push(dv.getInt32(c + 44 + 4 * i, true));
+    const pts = c + 44 + 4 * np, aneis = [];
+    for (let i = 0; i < np; i++){
+      const a = partes[i], b = i + 1 < np ? partes[i + 1] : npt, anel = [];
+      for (let k = a; k < b; k++) anel.push([dv.getFloat64(pts + 16 * k, true), dv.getFloat64(pts + 16 * k + 8, true)]);
+      aneis.push(anel);
+    }
+    const polis = [];
+    for (const r of aneis){ if (r.length < 4) continue; if (horario(r) || !polis.length) polis.push([r]); else polis[polis.length - 1].push(r); }
+    feats.push(polis.length ? {type:"MultiPolygon", coordinates: polis} : null);
+    p = c + len;
+  }
+  return feats;
+}
+function lerDbf(buf, cpg){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), n = dv.getUint32(4, true), hl = dv.getUint16(8, true), rl = dv.getUint16(10, true);
+  const td = new TextDecoder(/utf-?8/i.test(cpg || "") ? "utf-8" : /1252|latin|8859/i.test(cpg || "") ? "windows-1252" : "utf-8");
+  const campos = []; let off = 1;
+  for (let p = 32; p < hl - 1 && u8[p] !== 0x0D; p += 32){
+    let nome = ""; for (let i = 0; i < 11 && u8[p + i]; i++) nome += String.fromCharCode(u8[p + i]);
+    const tam = u8[p + 16]; campos.push({nome, off, tam}); off += tam;
+  }
+  return {n, campos, valor: (i, campo) => { const c = campos.find(x => x.nome === campo); if (!c) return null; const a = hl + i * rl + c.off; return td.decode(u8.subarray(a, a + c.tam)).trim(); }};
+}
+function poligonosGeoJSON(g){
+  const out = [], add = (gm, props) => { if (!gm) return;
+    if (gm.type === "Polygon") out.push({props, geom:{type:"MultiPolygon", coordinates:[gm.coordinates]}});
+    else if (gm.type === "MultiPolygon") out.push({props, geom:gm});
+    else if (gm.type === "GeometryCollection") gm.geometries.forEach(x => add(x, props)); };
+  (g.type === "FeatureCollection" ? g.features : g.type === "Feature" ? [g] : [{geometry:g, properties:{}}]).forEach(f => add(f.geometry, f.properties || {}));
+  return out;
+}
+function poligonosKML(txt){
+  const x = new DOMParser().parseFromString(txt, "application/xml");
+  if (x.getElementsByTagName("parsererror").length) throw new Error("KML inválido.");
+  const tags = (el, n) => [...el.getElementsByTagNameNS("*", n)];
+  const anel = el => (tags(el, "coordinates")[0]?.textContent || "").trim().split(/\s+/).map(t => t.split(",").map(Number)).filter(a => a.length >= 2 && isFinite(a[0])).map(([lo, la]) => [lo, la]);
+  return tags(x, "Placemark").map(pm => {
+    const props = {name: [...pm.children].find(c => c.localName === "name")?.textContent?.trim() || ""};
+    tags(pm, "Data").forEach(d => props[d.getAttribute("name")] = tags(d, "value")[0]?.textContent?.trim());
+    tags(pm, "SimpleData").forEach(d => props[d.getAttribute("name")] = d.textContent.trim());
+    const polis = tags(pm, "Polygon").map(pg => [...tags(pg, "outerBoundaryIs").map(anel), ...tags(pg, "innerBoundaryIs").map(anel)].filter(r => r.length >= 4));
+    return polis.length ? {props, geom:{type:"MultiPolygon", coordinates: polis.filter(p => p.length)}} : null;
+  }).filter(Boolean);
+}
+// devolve {feats:[{props, geom}], campos:[...], props(i) lazy para shapefile}
+async function lerArquivos(files){
+  let arqs = {};
+  for (const f of files){
+    if (/\.zip$/i.test(f.name)) Object.assign(arqs, listarZip(await f.arrayBuffer()));
+    else arqs[f.name] = () => f.arrayBuffer();
+  }
+  const nomes = Object.keys(arqs), ach = re => nomes.find(n => re.test(n));
+  const kmz = ach(/\.kmz$/i); if (kmz) Object.assign(arqs, listarZip(await arqs[kmz]()));
+  const nomes2 = Object.keys(arqs), ach2 = re => nomes2.find(n => re.test(n));
+  const shp = ach2(/\.shp$/i);
+  if (shp){
+    const base = shp.replace(/\.shp$/i, ""), dbfN = nomes2.find(n => n.toLowerCase() === base.toLowerCase() + ".dbf") || ach2(/\.dbf$/i);
+    const prjN = nomes2.find(n => n.toLowerCase() === base.toLowerCase() + ".prj"), cpgN = nomes2.find(n => n.toLowerCase() === base.toLowerCase() + ".cpg");
+    if (!dbfN) throw new Error("Falta o arquivo .dbf (atributos) junto do .shp.");
+    const dec = async n => n ? new TextDecoder().decode(await arqs[n]()) : "";
+    const prj = await dec(prjN);
+    if (/PROJCS/i.test(prj)) throw new Error("O shapefile está em coordenadas projetadas (" + (prj.match(/PROJCS\["([^"]+)/) || [,"UTM"])[1] + "). Reprojete para WGS 84 ou SIRGAS 2000 geográfico (graus) e envie de novo.");
+    const geoms = lerShp(await arqs[shp]()), dbf = lerDbf(await arqs[dbfN](), await dec(cpgN));
+    return {n: geoms.length, campos: dbf.campos.map(c => c.nome), geom: i => geoms[i], valor: (i, c) => dbf.valor(i, c), nome: shp.split("/").pop()};
+  }
+  let feats = [], nome = "";
+  const gj = ach2(/\.(geo)?json$/i), kml = ach2(/\.kml$/i);
+  if (gj){ nome = gj; feats = poligonosGeoJSON(JSON.parse(new TextDecoder().decode(await arqs[gj]()))); }
+  else if (kml){ nome = kml; feats = poligonosKML(new TextDecoder().decode(await arqs[kml]())); }
+  else throw new Error("Não encontrei .shp, GeoJSON ou KML no que foi enviado.");
+  const campos = [...new Set(feats.flatMap(f => Object.keys(f.props)))];
+  return {n: feats.length, campos, geom: i => feats[i].geom, valor: (i, c) => { const v = feats[i].props[c]; return v == null ? null : String(v).trim(); }, nome: nome.split("/").pop()};
+}
+const arred = g => ({type:"MultiPolygon", coordinates: g.coordinates.map(p => p.map(r => r.map(([x, y]) => [Math.round(x * 1e6) / 1e6, Math.round(y * 1e6) / 1e6])))});
+const dentroMG = g => g.coordinates.every(p => p.every(r => r.every(([x, y]) => x > -51.5 && x < -39.5 && y > -23.5 && y < -14)));
+const normCod = v => (v || "").trim().toUpperCase();
+const codValido = c => /^\d{4}-[A-Z0-9]{3,5}-\d{3}$/.test(c);
+
+/* ======================= IMPORTAÇÃO EM LOTE ======================= */
+// cod_bdp → já tem polígono? (inclui polígonos cujo cod não está na tabela de ROIs)
+const mapaTem = () => new Map([...todos.map(r => [r.cod_bdp, !!r.n_pol]), ...semRoi.map(x => [x.cod_bdp, true])]);
+let FONTE = null;
+$("#arquivo").onchange = async e => {
+  const files = [...e.target.files]; if (!files.length) return;
+  $("#analise").innerHTML = `<p class="dica">Lendo ${esc(files.map(f => f.name).join(", "))}…</p>`;
+  try{ FONTE = await lerArquivos(files); }catch(err){ $("#analise").innerHTML = ""; return msg(err.message, "erro"); }
+  const campoCod = FONTE.campos.find(c => /^cod_?bdp$/i.test(c)) || FONTE.campos.find(c => /cod/i.test(c)) || FONTE.campos[0];
+  $("#analise").innerHTML = `<div class="passo"><b>${esc(FONTE.nome)}</b> — ${fmtN(FONTE.n)} feições
+    <div class="filtros" style="margin-top:8px">
+      <div style="min-width:200px"><label for="iCampo">Campo com o cod_bdp</label><select id="iCampo">${FONTE.campos.map(c => `<option ${c === campoCod ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
+      <div style="min-width:220px"><label for="iFonte">Fonte (fica registrada)</label><input id="iFonte" value="BDG"></div>
+    </div>
+    <div class="opcoes"><label><input type="radio" name="iModo" value="ausentes" checked> Só os ROIs que ainda não têm polígono</label>
+      <label><input type="radio" name="iModo" value="substituir"> Substituir os polígonos que já existem</label></div>
+    <div id="iConf"></div></div>`;
+  $("#iCampo").onchange = conferir; conferir();
+};
+function conferir(){
+  const campo = $("#iCampo").value, tem = new Map(todos.map(r => [r.cod_bdp, !!r.n_pol]));
+  let sem = 0, invalidos = 0, foraMG = 0, novos = 0, jaTem = 0, semRoiN = 0; const repet = new Map(), exSemRoi = [];
+  for (let i = 0; i < FONTE.n; i++){
+    const g = FONTE.geom(i), c = normCod(FONTE.valor(i, campo));
+    if (!g){ sem++; continue; }
+    if (!c){ invalidos++; continue; }
+    if (!dentroMG(g)){ foraMG++; continue; }
+    repet.set(c, (repet.get(c) || 0) + 1);
+    if (!tem.has(c)){ semRoiN++; if (exSemRoi.length < 12) exSemRoi.push(c); }
+    else if (tem.get(c)) jaTem++; else novos++;
+  }
+  const dup = [...repet.values()].filter(v => v > 1).length;
+  $("#iConf").innerHTML = `<table class="res" style="margin-top:8px">
+      <tr><th>Polígonos de ROIs sem polígono no sistema</th><td><b>${fmtN(novos)}</b></td></tr>
+      <tr><th>De ROIs que já têm polígono</th><td>${fmtN(jaTem)} <span class="dica">(${$("input[name=iModo]:checked").value === "substituir" ? "serão substituídos" : "serão ignorados"})</span></td></tr>
+      <tr><th>Com cod_bdp que não está na tabela de ROIs</th><td>${fmtN(semRoiN)}${exSemRoi.length ? ` <span class="dica">(ex.: ${esc(exSemRoi.join(", "))})</span>` : ""} <span class="dica">— entram e ficam listados para conferência</span></td></tr>
+      ${dup ? `<tr><th>cod_bdp repetido no arquivo</th><td>${fmtN(dup)} <span class="dica">— as partes são juntadas num só polígono</span></td></tr>` : ""}
+      ${invalidos ? `<tr><th>Sem cod_bdp</th><td>${fmtN(invalidos)} <span class="dica">(não entram)</span></td></tr>` : ""}
+      ${sem ? `<tr><th>Sem geometria</th><td>${fmtN(sem)} <span class="dica">(não entram)</span></td></tr>` : ""}
+      ${foraMG ? `<tr><th>Fora de MG / outro sistema de coordenadas</th><td class="aus">${fmtN(foraMG)} <span class="dica">(não entram)</span></td></tr>` : ""}
+    </table>
+    <div style="margin-top:10px"><button class="btn primario" id="iImportar">Importar</button> <span class="dica" id="iEstado"></span></div>
+    <div class="prog" hidden id="iProg"><i></i></div><div id="iRes"></div>`;
+  $$("input[name=iModo]").forEach(x => x.onchange = conferir);
+  $("#iImportar").onclick = importar;
+}
+async function importar(){
+  const campo = $("#iCampo").value, substituir = $("input[name=iModo]:checked").value === "substituir", fonte = $("#iFonte").value.trim() || "BDG";
+  const tem = mapaTem();
+  // junta as partes de um mesmo cod_bdp
+  const porCod = new Map();
+  for (let i = 0; i < FONTE.n; i++){
+    const g = FONTE.geom(i), c = normCod(FONTE.valor(i, campo));
+    if (!g || !c || !dentroMG(g)) continue;
+    if (!substituir && tem.get(c)) continue;
+    const a = porCod.get(c); if (a) a.coordinates.push(...g.coordinates); else porCod.set(c, {type:"MultiPolygon", coordinates:[...g.coordinates]});
+  }
+  const itens = [...porCod].map(([cod, g]) => ({cod, geom: arred(g)}));
+  if (!itens.length) return msg("Nada a importar com essa opção.", "erro");
+  if (!confirm(`Importar ${fmtN(itens.length)} polígono(s)${substituir ? " (substituindo os existentes)" : ""}?`)) return;
+  $("#iImportar").disabled = true; $("#iProg").hidden = false;
+  const tot = {inseridos:0, substituidos:0, ignorados:0, invalidos:0, sem_roi:[]}; let i = 0;
+  if (substituir){ // apaga antes os polígonos que serão trocados
+    const velhos = itens.map(x => x.cod).filter(c => tem.get(c));
+    for (let k = 0; k < velhos.length; k += 150){
+      $("#iEstado").textContent = `Removendo polígonos antigos… ${fmtN(k)} de ${fmtN(velhos.length)}`;
+      const {error} = await sb.from("area_queimada").delete().in("cod_bdp", velhos.slice(k, k + 150));
+      if (error){ $("#iImportar").disabled = false; return msg("Erro ao remover os polígonos antigos: " + error.message, "erro"); }
+    }
+    tot.substituidos = velhos.length;
+  }
+  while (i < itens.length){
+    // lotes de até ~1,5 MB (ou 300 polígonos)
+    const lote = []; let tam = 0;
+    while (i < itens.length && lote.length < 300){ const s = JSON.stringify(itens[i].geom).length; if (lote.length && tam + s > 1.5e6) break; lote.push(itens[i++]); tam += s; }
+    let r, tent = 0;
+    do { r = await sb.rpc("area_queimada_importar", {p_itens: lote, p_fonte: fonte, p_substituir: substituir}); } while (r.error && ++tent < 3 && await new Promise(ok => setTimeout(ok, 1500 * tent)));
+    if (r.error){ msg("Erro na importação: " + r.error.message, "erro"); break; }
+    for (const k of ["inseridos","ignorados","invalidos"]) tot[k] += r.data[k]; tot.sem_roi.push(...r.data.sem_roi);
+    $("#iProg i").style.width = (100 * i / itens.length) + "%";
+    $("#iEstado").textContent = `${fmtN(i)} de ${fmtN(itens.length)}…`;
+  }
+  $("#iEstado").textContent = "";
+  $("#iRes").innerHTML = `<table class="res"><tr><th>Gravados</th><td><b>${fmtN(tot.inseridos)}</b>${tot.substituidos ? ` (${fmtN(tot.substituidos)} substituindo o anterior)` : ""}</td></tr>
+    <tr><th>Ignorados (já tinham polígono)</th><td>${fmtN(tot.ignorados)}</td></tr><tr><th>Geometria inválida</th><td>${fmtN(tot.invalidos)}</td></tr>
+    ${tot.sem_roi.length ? `<tr><th>Sem ROI correspondente</th><td>${esc(tot.sem_roi.slice(0, 20).join(", "))}${tot.sem_roi.length > 20 ? "…" : ""}</td></tr>` : ""}</table>`;
+  msg(`Importação concluída: ${fmtN(tot.inseridos)} polígono(s) gravado(s).`, "ok");
+  $("#iImportar").disabled = false; await carregar();
+}
+
+/* ======================= UM POLÍGONO PARA UM ROI ======================= */
+let alvo = null, geomUm = null, mapaPrev = null, trocar = false;
+const achaCod = () => { const c = normCod($("#cCod").value), r = todos.find(x => x.cod_bdp === c);
+  $("#cInfo").textContent = !c ? "" : r ? `${rotUC(r)} · ${fmtD(r.dat_detec)} · ${r.n_pol ? `polígono de ${fmtN(r.area_pol, 2)} ha (${r.fonte || ""})` : "sem polígono"}` : "cod_bdp não encontrado na tabela de ROIs";
+  return r; };
+$("#cCod").oninput = achaCod;
+$("#cTrocar").onclick = () => { const r = achaCod(); if (!r) return msg("Informe um cod_bdp existente.", "erro"); alvo = r; trocar = !!r.n_pol; $("#arqUm").click(); };
+$("#cApagar").onclick = async () => { const r = achaCod(); if (!r?.n_pol) return msg("Esta ocorrência não tem polígono.", "erro");
+  if (!confirm(`Apagar o polígono de ${r.cod_bdp}? Ela volta para a lista de polígonos ausentes.`)) return;
+  const {error} = await sb.from("area_queimada").delete().eq("cod_bdp", r.cod_bdp); if (error) return msg(error.message, "erro");
+  msg("Polígono apagado.", "ok"); await carregar(); achaCod(); };
+$("#arqUm").onchange = async e => {
+  const files = [...e.target.files]; e.target.value = ""; if (!files.length || !alvo) return;
+  let F; try{ F = await lerArquivos(files); }catch(err){ return msg(err.message, "erro"); }
+  const polis = []; for (let i = 0; i < F.n; i++){ const g = F.geom(i); if (g) polis.push(...g.coordinates); }
+  if (!polis.length) return msg("Nenhum polígono no arquivo.", "erro");
+  geomUm = {type:"MultiPolygon", coordinates: polis};
+  if (!dentroMG(geomUm)) return msg("O polígono está fora de MG ou em coordenadas projetadas. Use WGS 84/SIRGAS 2000 geográfico.", "erro");
+  const ha = areaHa(geomUm);
+  $("#dlgTit").textContent = `Polígono de ${alvo.cod_bdp}`;
+  $("#dlgInfo").innerHTML = `<div class="dica">${esc(rotUC(alvo))} · ${esc(alvo.municipio || "")} · detecção ${fmtD(alvo.dat_detec)}</div>
+    <div style="margin-top:6px"><b>${esc(F.nome)}</b>: ${polis.length} parte(s) · <b>${fmtN(ha, 2)} ha</b> no arquivo${alvo.area_declarada ? ` · <span class="${Math.abs(ha - alvo.area_declarada) > Math.max(1, .3 * alvo.area_declarada) ? "aus" : ""}">${fmtN(alvo.area_declarada, 2)} ha declarados no ROI</span>` : ""}</div>
+    ${F.n > 1 ? `<div class="dica">O arquivo tem ${F.n} feições: todas serão gravadas juntas para esta ocorrência.</div>` : ""}
+    ${trocar ? `<div class="aus" style="margin-top:4px">Substitui o polígono atual (${fmtN(alvo.area_pol, 2)} ha).</div>` : ""}`;
+  $("#dlg").showModal();
+  if (mapaPrev){ mapaPrev.remove(); mapaPrev = null; }
+  mapaPrev = L.map("mapaPrev");
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar"}).addTo(mapaPrev);
+  const cam = L.geoJSON(geomUm, {style:{color:"#ff5a3c", weight:2, fillColor:"#ff3b30", fillOpacity:.35}}).addTo(mapaPrev);
+  sb.from("uc_limite").select("geom").eq("nome_uc", alvo.nome_uc).eq("tipo", "uc").then(({data}) => (data || []).forEach(x => x.geom?.type && L.geoJSON(x.geom, {style:{color:"#8be06b", weight:2, fill:false}, interactive:false}).addTo(mapaPrev)));
+  setTimeout(() => { mapaPrev.invalidateSize(); mapaPrev.fitBounds(cam.getBounds(), {padding:[20, 20]}); }, 50);
+};
+function areaHa(g){ // aproximação esférica (a do banco é geodésica)
+  const R = 6371008.8, rad = Math.PI / 180, anel = r => { let s = 0; for (let i = 0; i < r.length - 1; i++){ const [x1, y1] = r[i], [x2, y2] = r[i + 1]; s += (x2 - x1) * rad * (2 + Math.sin(y1 * rad) + Math.sin(y2 * rad)); } return Math.abs(s * R * R / 2); };
+  return g.coordinates.reduce((t, p) => t + anel(p[0]) - p.slice(1).reduce((u, h) => u + anel(h), 0), 0) / 1e4;
+}
+$("#dlgFechar").onclick = () => $("#dlg").close();
+$("#dlgOutro").onclick = () => { $("#dlg").close(); $("#arqUm").click(); };
+$("#dlgOk").onclick = async () => {
+  if (trocar){ const {error} = await sb.from("area_queimada").delete().eq("cod_bdp", alvo.cod_bdp); if (error) return msg("Não foi possível remover o polígono antigo: " + error.message, "erro"); }
+  const {data, error} = await sb.rpc("area_queimada_importar", {p_itens:[{cod: alvo.cod_bdp, geom: arred(geomUm)}], p_fonte:(trocar ? "Polígono corrigido (" : "Polígono encontrado (") + new Date().toLocaleDateString("pt-BR") + ")", p_substituir:false});
+  if (error) return msg("Não foi possível gravar: " + error.message, "erro");
+  if (!data.inseridos) return msg(data.ignorados ? "Esta ocorrência já tem polígono." : "Geometria inválida.", "erro");
+  $("#dlg").close(); msg(`Polígono de ${alvo.cod_bdp} gravado.`, "ok"); await carregar(); if ($("#cCod").value) achaCod();
+};
+
+entrar();
+</script>
+</body>
+</html>

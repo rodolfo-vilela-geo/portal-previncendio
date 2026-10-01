@@ -330,14 +330,19 @@ function montarMapa(){
   let lim = null;
   if (g.limite){ lim = cam["Limite da UC"] = L.geoJSON(g.limite, {style:{color:"#8be06b", weight:2.4, fillColor:"#6fd34a", fillOpacity:.12}, interactive:false}).addTo(mapa); leg.push(`<i style="border:2px solid #8be06b;background:rgba(111,211,74,.25)"></i>Limite da UC`); }
   if ((g.cicatrizes||[]).length){
-    cam["Cicatrizes (ROI)"] = L.featureGroup(g.cicatrizes.map(ci => L.geoJSON(ci.geo, {style:{color:"#ff5a3c", weight:1, fillColor:"#ff3b30", fillOpacity:.45}}).bindTooltip(`${esc(ci.cod)} · ${ci.ano}`))).addTo(mapa);
-    leg.push(`<i style="background:rgba(255,59,48,.6)"></i>Cicatrizes (${g.cicatrizes.length})`);
+    const tela = L.canvas({padding:.3});
+    cam["Cicatrizes (BDG e ROI)"] = L.geoJSON({type:"FeatureCollection", features: g.cicatrizes.map(ci => ({type:"Feature", properties:{cod: ci.cod, ano: ci.ano}, geometry: ci.geo}))},
+      {renderer: tela, style:{color:"#ff5a3c", weight:1, fillColor:"#ff3b30", fillOpacity:.4}, onEachFeature:(f, l) => l.bindTooltip(`${esc(f.properties.cod)} · ${f.properties.ano}`, {sticky:true})}).addTo(mapa);
+    leg.push(`<i style="background:rgba(255,59,48,.6)"></i>Cicatrizes (${fmtN(g.cicatrizes.length)})`);
   }
   const hist = (D.ocorrencias||[]);
   if (hist.length){
     cam["Ocorrências do histórico"] = L.featureGroup(hist.map(o => L.circleMarker([o.lat, o.lon], {radius:4, color:"#fff", weight:1, fillColor:"#f0a33a", fillOpacity:.9})
-      .bindTooltip(`${esc(o.cod)} · ${fmtD(o.data)}${o.area ? " · " + fmtN(o.area,1) + " ha" : ""}`))).addTo(mapa);
-    leg.push(`<i style="background:#f0a33a;border-radius:50%;width:10px"></i>Ocorrências ${D.hist.ini}–${D.hist.fim} (${hist.length})`);
+      .bindTooltip(`${esc(o.cod)} · ${fmtD(o.data)}${o.area ? " · " + fmtN(o.area,1) + " ha" : ""}${o.do_poligono ? " · ponto no polígono" : ""}`))).addTo((g.cicatrizes||[]).length ? L.layerGroup() : mapa);
+    leg.push(`<i style="background:#f0a33a;border-radius:50%;width:10px"></i>Ocorrências ${D.hist.ini}–${D.hist.fim} (${fmtN(hist.length)})${(g.cicatrizes||[]).length ? " — ligar no seletor de camadas" : ""}`);
+  }
+  if (D.sem_poligono){
+    leg.push(`<a href="bdg.html" style="color:inherit">${fmtN(D.sem_poligono)} ocorrência${D.sem_poligono > 1 ? "s" : ""} sem polígono</a>`);
   }
   const ris = (D.atual.ris||[]).filter(r => r.lat != null && r.lon != null);
   if (ris.length){
@@ -379,7 +384,7 @@ function montarMapa(){
   if (alvo) mapa.fitBounds(alvo.getBounds(), {padding:[24,24]}); else mapa.fitBounds([[-22.95,-51.1],[-14.2,-39.8]]);
   const semHist = !hist.length && D.hist.n > 0;
   $("#avisoMapa").hidden = !semHist;
-  if (semHist) $("#avisoMapa").textContent = `As ${fmtN(D.hist.n)} ocorrências de ${D.hist.ini}–${D.hist.fim} ainda não têm localização no banco: aparecem quando os polígonos históricos do BDG forem carregados.`;
+  if (semHist) $("#avisoMapa").textContent = `As ${fmtN(D.hist.n)} ocorrências de ${D.hist.ini}–${D.hist.fim} ainda não têm localização no banco: os polígonos do BDG ainda não foram carregados para esta UC.`;
 }
 let t; addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { if (D){ const u = D.uc, h = D.hist; colunas("#gAnos", [...(h.anos||[]).map(x => ({r:String(x.ano), v:x.n})), {r:String(D.ano_atual), v:D.atual.n, atual:true}], "ocorrências");
   colunas("#gArea", (h.anos||[]).map(x => ({r:String(x.ano), v:x.area})), "ha"); colunas("#gMeses", (h.meses||[]).map((v,i) => ({r:MESES[i], v, faixa:(u.meses_criticos||[]).includes(i+1)})), "ocorrências"); } }, 150); });
