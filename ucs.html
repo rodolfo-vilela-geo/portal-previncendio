@@ -70,6 +70,8 @@
   .cabec{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
   .selo{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--realce);color:var(--verde)}
   .selo.ro{background:#f1efe9;color:var(--suave)}
+  .pip{display:inline-block;font-size:10.5px;font-weight:700;border-radius:99px;padding:0 7px;margin-left:2px;background:#e3f0dc;color:#2e6b1a;white-space:nowrap}
+  .pip.velho{background:#fff4cc;color:#8a5a00} .pip.sem{background:#f1efe9;color:#8a8a84;font-weight:600}
   fieldset{border:1px solid var(--linha);border-radius:10px;margin:14px 0 0;padding:10px 12px 12px;min-width:0}
   legend{font-size:12.5px;font-weight:700;color:var(--verde);padding:0 5px;text-transform:uppercase;letter-spacing:.03em}
   .fixos{display:grid;gap:4px 16px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));font-size:13.5px}
@@ -181,6 +183,8 @@
           <div class="seg" role="group" id="segMinhas"><button data-v="minhas" aria-pressed="true">Minhas UCs</button><button data-v="todas" aria-pressed="false">Todas</button></div>
           <select id="fRegional"><option value="">Todas as regionais</option></select>
           <input id="fBusca" placeholder="Buscar UC ou gerente">
+          <div style="display:flex;gap:6px"><select id="fPipcif" title="PIPCIF de onde vieram os dados" style="flex:1"><option value="">PIPCIF: todos</option><option value="atual">PIPCIF do ano</option><option value="antigo">PIPCIF de ano anterior</option><option value="sem">PIPCIF não recebido</option></select>
+            <button class="btn peq" type="button" id="csvPipcif" title="Baixar a lista filtrada (para cobrar as UCs)">CSV</button></div>
           <div class="dica" id="fResumo"></div>
         </div>
         <div class="itens" id="itens"></div>
@@ -298,9 +302,10 @@ $("#dlgSalvar").onclick = async () => {
 
 /* ============================ DADOS ============================ */
 async function carregarUCs(){
-  const {data, error} = await sb.from("vw_uc_cadastro").select("*").order("nome_uc");
+  const [{data, error}, {data: pip}] = await Promise.all([sb.from("vw_uc_cadastro").select("*").order("nome_uc"), sb.from("uc_cadastro").select("nome_uc,pipcif_ano")]);
   if (error) return msg("Erro ao carregar as UCs: " + error.message, "erro");
-  UCS = data || [];
+  const pa = Object.fromEntries((pip || []).map(x => [x.nome_uc, x.pipcif_ano]));
+  UCS = (data || []).map(u => ({...u, pipcif_ano: pa[u.nome_uc] ?? null}));
   const regs = [...new Set(UCS.map(u => u.ufbio).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
   const sel = $("#fRegional").value;
   $("#fRegional").innerHTML = `<option value="">Todas as regionais</option>` + regs.map(r => `<option ${r===sel?"selected":""}>${esc(r)}</option>`).join("");
@@ -318,20 +323,34 @@ const podeEditar = n => ["gpcif","admin"].includes(perfil.papel) || minhas().has
 const rotuloUC = u => `${SIGLA[u.categoria]||u.categoria||""} ${u.nome_uc}`.trim();
 
 function desenharLista(){
-  const b = $("#fBusca").value.trim().toLowerCase(), reg = $("#fRegional").value, m = minhas();
-  const L = UCS.filter(u => (!filtroMinhas || m.has(u.nome_uc)) && (!reg || u.ufbio === reg) &&
-    (!b || u.nome_uc.toLowerCase().includes(b) || (u.gerente_nome||"").toLowerCase().includes(b)));
-  const media = L.length ? Math.round(L.reduce((s,u)=>s+(+u.completo_pct||0),0)/L.length) : 0;
-  $("#fResumo").textContent = `${L.length} UCs · preenchimento médio da seção 3: ${media}%`;
+  const L = ucsFiltradas(), m = minhas();
+  const media = L.length ? Math.round(L.reduce((s,u)=>s+(+u.completo_pct||0),0)/L.length) : 0, comP = L.filter(u => u.pipcif_ano).length;
+  $("#fResumo").textContent = `${L.length} UCs · preenchimento médio da seção 3: ${media}% · PIPCIF carregado: ${comP} de ${L.length}`;
   $("#itens").innerHTML = L.length ? L.map(u => `<div class="item ${atual && atual.nome_uc===u.nome_uc ? "sel":""}" data-uc="${esc(u.nome_uc)}">
       <div class="n"><span>${esc(rotuloUC(u))}</span>${m.has(u.nome_uc) ? `<span class="minha">minha</span>` : ""}</div>
-      <div class="sub">${esc(u.ufbio||"")}${u.gerente_nome ? " · "+esc(u.gerente_nome) : ""}</div>
+      <div class="sub">${esc(u.ufbio||"")}${u.gerente_nome ? " · "+esc(u.gerente_nome) : ""} ${seloPipcif(u)}</div>
       <div class="barra-pct ${u.completo_pct < 50 ? "baixo":""}" title="${u.completo_pct}% da seção 3 preenchida"><i style="width:${u.completo_pct}%"></i></div>
     </div>`).join("") : `<div class="vazio">${filtroMinhas ? "Nenhuma UC ligada ao seu login. Veja “Todas” ou fale com o Previncêndio." : "Nenhuma UC encontrada."}</div>`;
   $$(".item").forEach(el => el.onclick = () => abrirUC(el.dataset.uc));
 }
 $$("#segMinhas button").forEach(b => b.onclick = () => { filtroMinhas = b.dataset.v === "minhas"; $$("#segMinhas button").forEach(x => x.setAttribute("aria-pressed", x===b)); desenharLista(); });
-$("#fRegional").onchange = desenharLista; $("#fBusca").oninput = desenharLista;
+$("#fRegional").onchange = desenharLista; $("#fBusca").oninput = desenharLista; $("#fPipcif").onchange = desenharLista;
+// ano do PIPCIF de onde vieram os dados (acompanhamento da migração)
+const anoPipcif = () => new Date().getFullYear();
+const seloPipcif = u => u.pipcif_ano ? `<span class="pip ${u.pipcif_ano >= anoPipcif() ? "" : "velho"}" title="Dados carregados do PIPCIF ${u.pipcif_ano}">PIPCIF ${u.pipcif_ano}</span>` : `<span class="pip sem" title="PIPCIF ainda não recebido">sem PIPCIF</span>`;
+function ucsFiltradas(){
+  const b = $("#fBusca").value.trim().toLowerCase(), reg = $("#fRegional").value, pf = $("#fPipcif").value, m = minhas();
+  return UCS.filter(u => (!filtroMinhas || m.has(u.nome_uc)) && (!reg || u.ufbio === reg) &&
+    (!b || u.nome_uc.toLowerCase().includes(b) || (u.gerente_nome||"").toLowerCase().includes(b)) &&
+    (!pf || (pf === "sem" ? !u.pipcif_ano : pf === "atual" ? u.pipcif_ano >= anoPipcif() : u.pipcif_ano && u.pipcif_ano < anoPipcif())));
+}
+$("#csvPipcif").onclick = () => {
+  const q = v => { const s = (v ?? "").toString(); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const linhas = ucsFiltradas().map(u => [rotuloUC(u), u.ufbio, u.gerente_nome, u.pipcif_ano || "não recebido", (u.completo_pct ?? 0) + "%"].map(q).join(";"));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeffUC;Regional;Gerente;PIPCIF carregado;Seção 3 preenchida\n" + linhas.join("\n")], {type:"text/csv;charset=utf-8"}));
+  a.download = "pipcif_por_uc.csv"; document.body.appendChild(a); a.click(); a.remove();
+};
 
 /* ============================ COORDENADAS ============================ */
 // aceita -17.98 · 17,98 · 17°58'32,3"S · -19 47' 14,7” ; em MG latitude S e longitude O
@@ -413,7 +432,7 @@ async function abrirUC(nome){
     <div class="cabec"><div>
       <h2>${esc(CATS[u.categoria] ? CATS[u.categoria] + " " + u.nome_uc : u.nome_uc)}</h2>
       <div class="dica">${esc(u.ufbio||"")} · ${esc((u.municipios||[]).join(", "))}</div></div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><a class="btn peq" href="painel_uc.html?uc=${encodeURIComponent(nome)}">Painel da UC →</a>${ed ? `<span class="selo">Você pode editar</span>` : `<span class="selo ro">Somente leitura</span>`}</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${u.pipcif_ano ? `<span class="selo ro" title="Origem dos dados carregados na migração; as mudanças depois disso ficam no histórico">Dados do PIPCIF ${u.pipcif_ano}</span>` : `<span class="selo ro">PIPCIF não recebido</span>`}<a class="btn peq" href="painel_uc.html?uc=${encodeURIComponent(nome)}">Painel da UC →</a>${ed ? `<span class="selo">Você pode editar</span>` : `<span class="selo ro">Somente leitura</span>`}</div></div>
     ${abasModulos()}
     <div id="mod-cadastro">
 
