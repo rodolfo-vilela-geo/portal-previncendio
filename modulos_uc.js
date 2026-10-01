@@ -26,6 +26,13 @@ const CAT_ACAO = {"Capacitação":"#7c3aed","Sensibilização e divulgação":"#
 const CAT_ELEM = ["Infraestrutura e recursos","Comunicação","Parcerias e mobilização","Vigilância e monitoramento","Acesso e relevo","Água","Clima",
   "Vegetação e combustível","Ação humana","Situação fundiária","Outro"];
 const mesesTxt = r => r.mes_ini ? MESES_OP[r.mes_ini - 1][1] + (r.mes_fim && r.mes_fim !== r.mes_ini ? "–" + MESES_OP[r.mes_fim - 1][1] : "") : "";
+const execDe = id => (MU?.dados.uc_acao_execucao || []).filter(e => e.acao_id === id).sort((a, b) => (a.data < b.data ? 1 : -1));
+// pendente: período encerrado (mês final já passou) e nenhum registro de execução
+function acaoPendente(r){
+  if (!["planejada","em_andamento"].includes(r.situacao) || !r.mes_ini || execDe(r.id).length) return false;
+  const fim = r.mes_fim || r.mes_ini, ano = r.ano + (fim < r.mes_ini ? 1 : 0), h = new Date();
+  return ano * 12 + fim < h.getFullYear() * 12 + h.getMonth() + 1;
+}
 const fmtM = m => m == null ? "" : m >= 1000 ? (m / 1000).toLocaleString("pt-BR", {maximumFractionDigits:2}) + " km" : Math.round(m) + " m";
 
 const MODULOS = {
@@ -112,14 +119,20 @@ const MODULOS = {
      grupos:{col:"tipo", valores:{favoravel:"11.1 Elementos favoráveis", adverso:"11.2 Elementos adversos"}},
      cols:[{k:"nome", rot:"Elemento", w:"minmax(0,2.6fr)", obrig:true}, {k:"categoria", rot:"Categoria", w:"minmax(0,1fr)", lista:CAT_ELEM}]},
     {id:"acoes", s:"12", t:"Cronograma de ações preventivas", modo:"fichas", largo:true, tab:"uc_acao_preventiva", np:"acao", rotulo:"Ações de capacitação e sensibilização", icone: () => "acao",
+     extraTabs:["uc_acao_execucao"], execucoes:true,
+     dica:"Abra uma ação para registrar cada vez que ela aconteceu (data, público, relato e até 3 fotos). O primeiro registro marca a ação como realizada.",
+     validar: o => o.situacao === "nao_realizada" && !o.motivo ? "Informe o motivo de a ação não ter sido realizada." : null,
      novo: () => ({ano: new Date().getFullYear(), situacao:"planejada"}), visao: r => gantt(r),
      ordem: (a, b) => b.ano - a.ano || (a.mes_ini || 13) - (b.mes_ini || 13) || a.id - b.id,
      campos:[{k:"nome", rot:"Atividade", duplo:true, obrig:true}, {k:"ano", rot:"Ano", num:true, obrig:true},
              {k:"categoria", rot:"Categoria", opcoes:Object.keys(CAT_ACAO).map(c => [c, c])}, {k:"situacao", rot:"Situação", opcoes:SIT_ACAO},
              {k:"responsavel", rot:"Responsável(is)"}, {k:"mes_ini", rot:"Mês de início", opcoes:MESES_OP, num:true}, {k:"mes_fim", rot:"Mês de término", opcoes:MESES_OP, num:true},
-             {k:"periodo", rot:"Período (datas, se houver)"}, {k:"local", rot:"Local", duplo:true}, {k:"publico", rot:"Público-alvo", duplo:true}, {k:"obs", rot:"Observação", largo:true}],
-     titulo: r => r.nome, resumo: r => [r.ano, mesesTxt(r) || r.periodo, r.local, r.responsavel].filter(Boolean).join(" · "),
-     selo: r => ({realizada:["operante","Realizada"], em_andamento:["parcial","Em andamento"], adiada:["parcial","Adiada"], nao_realizada:["inoperante","Não realizada"]})[r.situacao]},
+             {k:"periodo", rot:"Período (datas, se houver)"}, {k:"local", rot:"Local", duplo:true}, {k:"publico", rot:"Público-alvo", duplo:true},
+             {k:"motivo", rot:"Motivo (se não realizada ou adiada)", largo:true}, {k:"obs", rot:"Observação", largo:true}],
+     titulo: r => r.nome,
+     resumo: r => { const ex = execDe(r.id), p = ex.reduce((s, e) => s + (e.participantes || 0), 0);
+       return [r.ano, mesesTxt(r) || r.periodo, r.local, ex.length && `${ex.length} registro${ex.length > 1 ? "s" : ""}${p ? ` · ${p} pessoas` : ""}`].filter(Boolean).join(" · "); },
+     selo: r => acaoPendente(r) ? ["inoperante","Pendente"] : ({realizada:["operante","Realizada"], em_andamento:["parcial","Em andamento"], adiada:["parcial","Adiada"], nao_realizada:["inoperante","Não realizada"]})[r.situacao]},
     {id:"brigC", s:"16", t:"Brigadistas contratados", modo:"tabela", tab:"uc_brigada", np:"brigada",
      dica:"Uma linha por contratação (ano e contratante). Os nomes dos brigadistas não entram aqui.",
      cols:[{k:"ano", rot:"Ano", w:"76px", num:true, obrig:true}, {k:"nome", rot:"Contratante / programa", w:"minmax(0,1.6fr)", lista:["Previncêndio","Compensação minerária","Prefeitura","Parceria","Outro"]},
@@ -164,7 +177,7 @@ const ehFichas = b => b.modo === "fichas" || b.modo === "linhas";
 window.abrirModuloUC = async function(id, nome){
   const blocos = MODULOS[id], ed = podeEditar(nome), box = $("#mod-conteudo");
   box.innerHTML = `<div class="dica" style="padding:20px">Carregando…</div>`;
-  const tabs = [...new Set(blocos.filter(b => b.tab).map(b => b.tab))];
+  const tabs = [...new Set(blocos.flatMap(b => [b.tab, ...(b.extraTabs || [])]).filter(Boolean))];
   const res = await Promise.all([
     sb.from("uc_infra").select("*").eq("nome_uc", nome).maybeSingle(),
     sb.from("auditoria").select("*").in("tabela", tabs.concat("uc_infra")).eq("chave", nome).order("quando", {ascending:false}).limit(150),
@@ -277,6 +290,7 @@ function editarFicha(b, r){
     <div class="grade" style="margin-top:8px">${campos.map(c => campoHtml(c, r[c.k], dis)).join("")}</div>
     ${b.apoios ? `<div style="margin-top:10px"><label>Apoios disponíveis</label><div class="rep" id="muApoios"></div></div>` : ""}
     ${linha ? htmlGeo(ed) : ""}
+    ${b.execucoes && !r._novo ? `<div class="mu-exec" id="muExec"></div>` : ""}
     ${coord ? `<div style="margin-top:8px">${htmlCoord("fc", r.lat, r.lon, ed)}</div>` : ""}
     ${ed ? `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn primario peq" type="button" id="muSalvar">Salvar</button>${r._novo ? "" : `<button class="btn peq perigo" type="button" id="muExcluir">Excluir</button>`}</div>` : ""}
   </div>`;
@@ -285,6 +299,7 @@ function editarFicha(b, r){
   $$("#muEd [data-c]").forEach(x => x.addEventListener("input", marcarSujo));
   $("#muFechar").onclick = () => { if (sujo && !confirm("Descartar as alterações?")) return; sujo = false; pararGeo(); MU.edit = null; el.innerHTML = ""; listaFichas(b); pintarMU(); };
   if (linha) ligarGeo(r, ed);
+  if (b.execucoes && !r._novo) execucoesAcao(b, r, ed);
   const atualizarRes = () => {
     if (!coord) return;
     const la = lerCoord($('#muEd [data-k="fc_lat"]').value), lo = lerCoord($('#muEd [data-k="fc_lon"]').value), res = $('#muEd [data-res="fc"]'); res.classList.remove("bad");
@@ -309,6 +324,7 @@ function editarFicha(b, r){
     for (const c of campos){ const v = normVal(c, $(`#muEd [data-c="${c.k}"]`).value); if (Number.isNaN(v)) return msg(`Confira “${c.rot}”.`, "erro"); if (c.obrig && v == null) return msg(`Informe “${c.rot}”.`, "erro"); o[c.k] = v; }
     if (b.tab === "uc_radio" && o.quantidade == null) o.quantidade = st === "repetidora" ? 1 : 0;
     if (lerApoios) o.apoios = lerApoios();
+    const inval = b.validar?.(o); if (inval) return msg(inval, "erro");
     if (linha && MU.geo?.mudou){ if (MU.geo.modo === "desenhar") concluirTrecho(); o.geojson = jsonDeGeo(MU.geo.partes); o.tracado_origem = o.geojson ? MU.geo.origem : null; }
     if (coord){
       const la = lerCoord($('#muEd [data-k="fc_lat"]').value), lo = lerCoord($('#muEd [data-k="fc_lon"]').value);
@@ -323,7 +339,9 @@ function editarFicha(b, r){
   });
   $("#muExcluir")?.addEventListener("click", async () => {
     if (!confirm(`Excluir “${b.titulo(r)}”? A exclusão fica registrada no histórico.`)) return;
+    const fotos = b.execucoes ? execDe(r.id).flatMap(e => (e.fotos || []).map(f => f.path)) : [];
     const {error} = await sb.from(b.tab).delete().eq("id", r.id);
+    if (!error && fotos.length) await sb.storage.from(BUCKET_FOTOS).remove(fotos);
     if (error) return msg(error.message, "erro");
     sujo = false; pararGeo(); MU.edit = null; msg("Excluído."); abrirModuloUC(MU.id, MU.nome);
   });
@@ -355,6 +373,7 @@ function montarMapaMU(){
     .map(s => { const ic = b.icone({tipo: s}); return [ic, ICONES_ROTULO[ic] || ic]; }))).entries()];
   $("#legMU").innerHTML = vias.map(([t, rot]) => `<span style="white-space:nowrap;margin-right:10px;display:inline-block;margin-bottom:3px"><span class="mu-traco" style="--c:${COR_VIA[t]}"></span>${esc(rot)}</span>`).join("")
     + (vias.length ? `<span style="white-space:nowrap;margin-right:10px;display:inline-block"><span class="mu-traco tr" style="--c:#fff"></span>tracejado: só início e fim</span>` : "")
+    + ((MU.dados.uc_acao_execucao || []).some(e => e.lat != null) ? `<span style="white-space:nowrap;margin-right:10px;display:inline-block;margin-bottom:3px">${iconeLegenda("acao")}Ação realizada</span>` : "")
     + tipos.map(([t, rot]) => `<span style="white-space:nowrap;margin-right:10px;display:inline-block;margin-bottom:3px">${iconeLegenda(t)}${esc(rot)}</span>`).join("")
     + `<span style="white-space:nowrap">· verde: limite da UC</span>`;
   pintarMU(null, true);
@@ -374,6 +393,10 @@ function pintarMU(prov = null, enquadrar = false){
     itens.push(L.polyline(ll, {color:"#000", weight:6, opacity:.45, interactive:false}),
       L.polyline(ll, {color: COR_VIA[r.tipo], weight:3.5, dashArray: ap ? "7 7" : null}).bindTooltip(esc(b.titulo(r)) + (ap ? " (aproximado)" : ""), {sticky:true}).on("click", () => { if (!MU.geo?.modo) editarFicha(b, r); }));
   }));
+  const bAc = MU.blocos.find(b => b.execucoes);
+  if (bAc) (MU.dados.uc_acao_execucao || []).filter(e => e.lat != null).forEach(e => { const r = (MU.dados[bAc.tab] || []).find(x => x.id === e.acao_id); if (!r) return;
+    itens.push(L.marker([e.lat, e.lon], {icon: iconeMapa("acao", {tam:24}), zIndexOffset:300}).bindTooltip(`${esc(r.nome)} · ${fmtData(e.data)}`)
+      .on("click", () => { if (!MU.geo?.modo) editarFicha(bAc, r); })); });
   if (prov && MU.edit) itens.push(L.marker([prov.lat, prov.lon], {icon: iconeMapa(MU.edit.b.icone(MU.edit.r), {sel:true}), zIndexOffset:2000}));
   camadaMU = L.featureGroup(itens).addTo(mapaMU);
   if (enquadrar){
@@ -737,13 +760,15 @@ function gantt(regs){
   const crit = new Set(MU.cad?.meses_criticos || []), h = new Date(), mAt = h.getFullYear() === ano ? h.getMonth() + 1 : 0;
   const em = (r, m) => { const a = r.mes_ini, f = r.mes_fim || r.mes_ini; return m >= 1 && m <= 12 && !!a && (a <= f ? m >= a && m <= f : m >= a || m <= f); };
   const cats = [...new Set(L.map(r => CAT_ACAO[r.categoria] ? r.categoria : "Outra"))];
+  const mesesEx = r => new Set(execDe(r.id).map(e => { const [y, m] = e.data.split("-").map(Number); return y === ano ? m : y === ano + 1 && r.mes_fim && r.mes_fim < r.mes_ini ? m : 0; }));
+  const nPend = L.filter(acaoPendente).length, nReg = L.reduce((s, r) => s + execDe(r.id).length, 0), nPes = L.reduce((s, r) => s + execDe(r.id).reduce((t, e) => t + (e.participantes || 0), 0), 0);
   return `<div class="gantt"><div class="gantt-top"><b>Cronograma ${anos.length > 1 ? `<select data-ano-g aria-label="Ano do cronograma">${anos.map(a => `<option ${a === ano ? "selected" : ""}>${a}</option>`).join("")}</select>` : ano}</b>
-      <span class="dica">${L.length} ações · ${L.filter(r => r.situacao === "realizada").length} realizadas${crit.size ? " · em laranja, os meses críticos da UC" : ""}</span></div>
+      <span class="dica">${L.length} ações · ${L.filter(r => r.situacao === "realizada").length} realizadas${nPend ? ` · <b class="g-pend">${nPend} pendente${nPend > 1 ? "s" : ""}</b>` : ""}${nReg ? ` · ${nReg} registro${nReg > 1 ? "s" : ""}${nPes ? `, ${nPes} pessoas` : ""}` : ""}${crit.size ? " · em laranja, os meses críticos" : ""} · ● execução registrada</span></div>
     <div class="g-rolagem"><div class="g-lin g-cab"><span></span>${MESES_OP.map(([m, t]) => `<span class="${crit.has(+m) ? "crit" : ""} ${+m === mAt ? "hoje" : ""}" ${crit.has(+m) ? 'title="Mês crítico da UC"' : ""}>${t[0]}<i>${t.slice(1)}</i></span>`).join("")}</div>
-    ${L.map(r => { const c = CAT_ACAO[r.categoria] || CAT_ACAO.Outra, ok = r.situacao === "realizada", nao = r.situacao === "nao_realizada";
+    ${L.map(r => { const c = CAT_ACAO[r.categoria] || CAT_ACAO.Outra, ok = r.situacao === "realizada", nao = r.situacao === "nao_realizada", mx = mesesEx(r), pend = acaoPendente(r);
       return `<div class="g-lin" data-gid="${r.id}" title="${esc([r.nome, r.periodo || mesesTxt(r), r.local, SIT_ACAO.find(s => s[0] === r.situacao)?.[1]].filter(Boolean).join(" · "))}">
-        <span class="g-nome">${ok ? "✓ " : ""}${esc(r.nome)}</span>${r.mes_ini ? MESES_OP.map(([m]) => { m = +m; const on = em(r, m);
-          return `<span class="g-c ${crit.has(m) ? "crit" : ""}">${on ? `<b class="${em(r, m - 1) ? "" : "i"} ${em(r, m + 1) ? "" : "f"}" style="--c:${nao ? "#adb5bd" : c};${ok || nao ? "" : "opacity:.85"}"></b>` : ""}</span>`; }).join("")
+        <span class="g-nome ${pend ? "g-pend" : ""}">${ok ? "✓ " : pend ? "! " : ""}${esc(r.nome)}</span>${r.mes_ini ? MESES_OP.map(([m]) => { m = +m; const on = em(r, m);
+          return `<span class="g-c ${crit.has(m) ? "crit" : ""}">${on ? `<b class="${em(r, m - 1) ? "" : "i"} ${em(r, m + 1) ? "" : "f"}" style="--c:${nao ? "#adb5bd" : c};${ok || nao ? "" : "opacity:.85"}"></b>` : ""}${mx.has(m) ? `<i class="g-ex"></i>` : ""}</span>`; }).join("")
           : `<span class="g-sem">${esc(r.periodo || "sem mês definido")}</span>`}</div>`; }).join("")}</div>
     <div class="g-leg">${cats.map(k => `<span style="--c:${CAT_ACAO[k]}">${esc(k)}</span>`).join("")}</div></div>`;
 }
@@ -775,5 +800,184 @@ document.head.insertAdjacentHTML("beforeend", `<style>
   .g-sem{grid-column:2/-1;font-size:12px;color:var(--suave);font-style:italic;padding:6px}
   .g-leg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--suave);margin-top:8px}
   .g-leg span::before{content:"";display:inline-block;width:14px;height:10px;border-radius:3px;background:var(--c);margin-right:5px;vertical-align:-1px}
+</style>`);
+
+/* ---------- registros de execução das ações (vários por ação, até 3 fotos cada) ---------- */
+const BUCKET_FOTOS = "acoes-fotos", MAX_FOTOS = 3;
+const fmtData = d => d ? d.split("-").reverse().join("/") : "";
+const hojeISO = () => { const h = new Date(); return new Date(h - h.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+async function urlsFotos(paths){
+  MU.urls = MU.urls || {};
+  const faltam = paths.filter(p => !MU.urls[p]);
+  if (faltam.length){
+    const {data} = await sb.storage.from(BUCKET_FOTOS).createSignedUrls(faltam, 3600);
+    (data || []).forEach(x => { if (x.signedUrl) MU.urls[x.path] = x.signedUrl; });
+  }
+  return MU.urls;
+}
+function execucoesAcao(b, r, ed){
+  const box = $("#muExec"); if (!box) return;
+  const L = execDe(r.id), pessoas = L.reduce((s, e) => s + (e.participantes || 0), 0);
+  box.innerHTML = `<div class="mu-exec-top"><b>Registros de execução <span class="dica">(${L.length}${pessoas ? ` · ${pessoas} pessoas alcançadas` : ""})</span></b>
+      ${ed ? `<button class="btn primario peq" type="button" data-ex-novo>+ Registrar execução</button>` : ""}</div>
+    <div id="exForm"></div>
+    ${L.length ? L.map(e => `<div class="ex-item"><div class="ex-cab"><span><b>${fmtData(e.data)}</b>${e.local ? " · " + esc(e.local) : ""}${e.participantes != null ? ` · ${e.participantes} pessoa${e.participantes === 1 ? "" : "s"}` : ""}${e.lat != null ? " · 📍" : ""}</span>
+        ${ed ? `<button class="btn peq" type="button" data-ex-ed="${e.id}">Editar</button>` : ""}</div>
+        ${e.relato ? `<div class="ex-rel">${esc(e.relato)}</div>` : ""}
+        ${(e.fotos || []).length ? `<div class="ex-fotos">${e.fotos.map(f => `<a data-foto="${esc(f.path)}" target="_blank" rel="noopener" title="Abrir a foto"><img alt="Foto do registro de ${fmtData(e.data)}" data-img="${esc(f.path)}"></a>`).join("")}</div>` : ""}</div>`).join("")
+      : `<div class="dica" style="padding:4px 0">Nenhum registro ainda.${acaoPendente(r) ? ` <b style="color:#b3261e">O período desta ação já terminou: registre a execução ou informe o motivo.</b>` : ""}</div>`}`;
+  const paths = L.flatMap(e => (e.fotos || []).map(f => f.path));
+  if (paths.length) urlsFotos(paths).then(U => {
+    $$("[data-img]", box).forEach(i => { if (U[i.dataset.img]) i.src = U[i.dataset.img]; });
+    $$("[data-foto]", box).forEach(a => { if (U[a.dataset.foto]) a.href = U[a.dataset.foto]; });
+  });
+  $("[data-ex-novo]", box)?.addEventListener("click", () => formExec(b, r, null));
+  $$("[data-ex-ed]", box).forEach(x => x.onclick = () => formExec(b, r, L.find(e => e.id === +x.dataset.exEd)));
+}
+function formExec(b, r, e){
+  const el = $("#exForm"), fotos = (e?.fotos || []).map(f => ({...f})), novas = [], removidas = [];
+  let dataMexida = !!e;
+  el.innerHTML = `<div class="ex-form">
+    <b>${e ? "Editar registro" : "Novo registro de execução"}</b>
+    <div class="grade" style="margin-top:8px">
+      <div><label>Data *</label><input type="date" data-x="data" value="${e?.data || hojeISO()}" max="${hojeISO()}"></div>
+      <div><label>Pessoas alcançadas</label><input type="number" min="0" data-x="participantes" value="${e?.participantes ?? ""}" placeholder="participantes, público"></div>
+      <div class="duplo"><label>Local</label><input data-x="local" value="${esc(e?.local ?? r.local ?? "")}"></div>
+      <div class="largo"><label>Relato</label><textarea data-x="relato" style="min-height:60px" placeholder="O que foi feito, com quem, resultados">${esc(e?.relato || "")}</textarea></div>
+      <div><label>Latitude (opcional)</label><input data-x="lat" value="${e?.lat ?? ""}" placeholder="-17.97 ou 17°58'S"></div>
+      <div><label>Longitude (opcional)</label><input data-x="lon" value="${e?.lon ?? ""}" placeholder="-43.16 ou 43°09'O"></div>
+    </div>
+    <label style="margin-top:10px">Fotos (até ${MAX_FOTOS})</label>
+    <div class="ex-fotos" id="exFotos"></div>
+    <p class="dica" style="margin:6px 0 0">As fotos são reduzidas antes do envio e só usuários com login as veem. Se a foto tiver data e GPS, o registro é preenchido com eles.
+      Em escolas, prefira fotos sem rosto identificável de crianças, ou só com autorização da escola.</p>
+    <input type="file" id="exArq" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple hidden>
+    <div class="mu-acoes"><button class="btn primario peq" type="button" id="exSalvar">Salvar registro</button><button class="btn peq" type="button" id="exCancelar">Cancelar</button>
+      ${e ? `<button class="btn peq perigo" type="button" id="exExcluir">Excluir registro</button>` : ""}<span class="dica" id="exEstado"></span></div></div>`;
+  const desenharFotos = () => {
+    const tot = fotos.length + novas.length;
+    $("#exFotos").innerHTML = fotos.map((f, i) => `<span class="ex-mini"><img data-img="${esc(f.path)}" alt="Foto"><button type="button" data-rmf="${i}" title="Remover">×</button></span>`).join("")
+      + novas.map((f, i) => `<span class="ex-mini"><img src="${f.url}" alt="Foto nova"><button type="button" data-rmn="${i}" title="Remover">×</button></span>`).join("")
+      + (tot < MAX_FOTOS ? `<button type="button" class="ex-add" id="exAdd">+ foto</button>` : "");
+    if (fotos.length) urlsFotos(fotos.map(f => f.path)).then(U => $$("#exFotos [data-img]").forEach(i => { if (U[i.dataset.img]) i.src = U[i.dataset.img]; }));
+    $("#exAdd")?.addEventListener("click", () => $("#exArq").click());
+    $$("[data-rmf]", el).forEach(x => x.onclick = () => { removidas.push(fotos.splice(+x.dataset.rmf, 1)[0].path); marcarSujo(); desenharFotos(); });
+    $$("[data-rmn]", el).forEach(x => x.onclick = () => { URL.revokeObjectURL(novas.splice(+x.dataset.rmn, 1)[0].url); desenharFotos(); });
+  };
+  desenharFotos();
+  const campo = k => $(`#exForm [data-x="${k}"]`);
+  $$("#exForm [data-x]").forEach(x => x.addEventListener("input", () => { marcarSujo(); if (x.dataset.x === "data") dataMexida = true; }));
+  $("#exArq").onchange = async ev => {
+    const arqs = [...ev.target.files].slice(0, MAX_FOTOS - fotos.length - novas.length); ev.target.value = "";
+    $("#exEstado").textContent = "Preparando fotos…";
+    let preencheu = false;
+    for (const f of arqs){
+      try{
+        const ex = /jpe?g$/i.test(f.type) || /\.jpe?g$/i.test(f.name) ? lerExif(await f.slice(0, 256 * 1024).arrayBuffer()) : {};
+        const blob = await reduzirFoto(f);
+        novas.push({blob, url: URL.createObjectURL(blob), data: ex.data || null, lat: ex.lat ?? null, lon: ex.lon ?? null});
+        if (ex.data && !dataMexida && ex.data <= hojeISO()){ campo("data").value = ex.data; dataMexida = true; preencheu = true; }
+        if (ex.lat != null && !campo("lat").value && dentroMG(ex.lat, ex.lon)){ campo("lat").value = ex.lat; campo("lon").value = ex.lon; preencheu = true; }
+      }catch(err){ msg(err.message, "erro"); }
+    }
+    $("#exEstado").textContent = preencheu ? "Data e/ou local preenchidos a partir da foto — confira." : "";
+    marcarSujo(); desenharFotos();
+  };
+  $("#exCancelar").onclick = () => { novas.forEach(f => URL.revokeObjectURL(f.url)); el.innerHTML = ""; sujo = false; };
+  $("#exSalvar").onclick = async () => {
+    const data = campo("data").value, pt = campo("participantes").value.trim();
+    if (!data) return msg("Informe a data.", "erro");
+    if (data > hojeISO()) return msg("A data não pode ser futura: registre a execução depois que ela acontecer.", "erro");
+    const part = pt === "" ? null : Math.round(+pt.replace(",", "."));
+    if (part != null && (isNaN(part) || part < 0)) return msg("Confira o número de pessoas.", "erro");
+    const la = lerCoord(campo("lat").value), lo = lerCoord(campo("lon").value);
+    if (Number.isNaN(la) || Number.isNaN(lo) || ((la === null) !== (lo === null))) return msg("Coordenada incompleta ou não reconhecida.", "erro");
+    if (la !== null && !dentroMG(la, lo)) return msg("Coordenada fora de Minas Gerais.", "erro");
+    $("#exSalvar").disabled = true; $("#exEstado").textContent = novas.length ? "Enviando fotos…" : "Salvando…";
+    const enviadas = [];
+    for (const f of novas){
+      const path = `${r.id}/${crypto.randomUUID()}.jpg`;
+      const {error} = await sb.storage.from(BUCKET_FOTOS).upload(path, f.blob, {contentType:"image/jpeg", upsert:false});
+      if (error){ if (enviadas.length) await sb.storage.from(BUCKET_FOTOS).remove(enviadas.map(x => x.path));
+        $("#exSalvar").disabled = false; $("#exEstado").textContent = ""; return msg("Não foi possível enviar a foto: " + error.message, "erro"); }
+      enviadas.push({path, data: f.data, lat: f.lat, lon: f.lon});
+    }
+    const o = {acao_id: r.id, nome_uc: MU.nome, data, participantes: part, local: txt(campo("local").value), relato: txt(campo("relato").value),
+               lat: la === null ? null : +la.toFixed(6), lon: lo === null ? null : +lo.toFixed(6), fotos: [...fotos, ...enviadas]};
+    const {error} = e ? await sb.from("uc_acao_execucao").update(o).eq("id", e.id) : await sb.from("uc_acao_execucao").insert(o);
+    if (error){ if (enviadas.length) await sb.storage.from(BUCKET_FOTOS).remove(enviadas.map(x => x.path));
+      $("#exSalvar").disabled = false; $("#exEstado").textContent = ""; return msg("Não foi possível salvar: " + error.message, "erro"); }
+    if (removidas.length) await sb.storage.from(BUCKET_FOTOS).remove(removidas);
+    novas.forEach(f => URL.revokeObjectURL(f.url));
+    sujo = false; msg(e ? "Registro atualizado." : r.situacao === "realizada" ? "Execução registrada." : "Execução registrada — a ação passou a “realizada”.");
+    reabrirAcao(b.id, r.id);
+  };
+  $("#exExcluir")?.addEventListener("click", async () => {
+    if (!confirm(`Excluir o registro de ${fmtData(e.data)}${(e.fotos || []).length ? " e as fotos" : ""}?`)) return;
+    const {error} = await sb.from("uc_acao_execucao").delete().eq("id", e.id);
+    if (error) return msg(error.message, "erro");
+    if ((e.fotos || []).length) await sb.storage.from(BUCKET_FOTOS).remove(e.fotos.map(f => f.path));
+    sujo = false; msg("Registro excluído."); reabrirAcao(b.id, r.id);
+  });
+  el.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+async function reabrirAcao(bid, id){
+  const urls = MU.urls; MU.edit = null;
+  await abrirModuloUC(MU.id, MU.nome); MU.urls = urls;
+  const b = MU.blocos.find(x => x.id === bid), r = (MU.dados[b.tab] || []).find(x => x.id === id);
+  if (r){ editarFicha(b, r); $("#muExec")?.scrollIntoView({behavior:"smooth", block:"center"}); }
+}
+async function reduzirFoto(file){
+  let bmp;
+  try{ bmp = await createImageBitmap(file, {imageOrientation:"from-image"}); }
+  catch(e){ throw new Error(`Não foi possível abrir “${file.name}” neste navegador. Envie a foto em JPG.`); }
+  const k = Math.min(1, 1280 / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+  const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(bmp, 0, 0, w, h); bmp.close?.();
+  return await new Promise((ok, nao) => c.toBlob(bl => bl ? ok(bl) : nao(new Error("Falha ao reduzir a foto.")), "image/jpeg", 0.8));
+}
+// data e GPS do EXIF (JPEG); a foto enviada sai sem EXIF (o canvas descarta)
+function lerExif(buf){
+  try{
+    const dv = new DataView(buf); if (dv.getUint16(0) !== 0xFFD8) return {};
+    let p = 2;
+    while (p + 10 < dv.byteLength){
+      const mk = dv.getUint16(p), len = dv.getUint16(p + 2);
+      if (mk === 0xFFE1 && dv.getUint32(p + 4) === 0x45786966) return exifTiff(dv, p + 10);
+      if ((mk & 0xFF00) !== 0xFF00 || mk === 0xFFDA) break;
+      p += 2 + len;
+    }
+  }catch(e){}
+  return {};
+}
+function exifTiff(dv, t){
+  const le = dv.getUint16(t) === 0x4949, u16 = o => dv.getUint16(t + o, le), u32 = o => dv.getUint32(t + o, le);
+  const ifd = o => { const n = u16(o), r = {}; for (let i = 0; i < n; i++){ const e = o + 2 + i * 12; r[u16(e)] = {n: u32(e + 4), off: e + 8}; } return r; };
+  const str = en => { const o = en.n > 4 ? u32(en.off) : en.off; let s = ""; for (let i = 0; i < en.n; i++){ const c = dv.getUint8(t + o + i); if (!c) break; s += String.fromCharCode(c); } return s; };
+  const dms = en => { const o = u32(en.off), q = k => u32(o + 8 * k) / u32(o + 8 * k + 4); return q(0) + q(1) / 60 + q(2) / 3600; };
+  const out = {}, i0 = ifd(u32(4));
+  const dataDe = en => { const m = en && str(en).match(/^(\d{4}):(\d\d):(\d\d)/); return m ? `${m[1]}-${m[2]}-${m[3]}` : null; };
+  if (i0[0x8769]){ const ex = ifd(u32(i0[0x8769].off)); out.data = dataDe(ex[0x9003]) || dataDe(ex[0x9004]); }
+  if (!out.data) out.data = dataDe(i0[0x0132]);
+  if (i0[0x8825]){
+    const g = ifd(u32(i0[0x8825].off));
+    if (g[2] && g[4]){ let la = dms(g[2]), lo = dms(g[4]);
+      if (g[1] && str(g[1]) === "S") la = -la; if (g[3] && str(g[3]) === "W") lo = -lo;
+      if (isFinite(la) && isFinite(lo) && (la || lo)){ out.lat = +la.toFixed(6); out.lon = +lo.toFixed(6); } }
+  }
+  return out;
+}
+document.head.insertAdjacentHTML("beforeend", `<style>
+  .mu-exec{margin-top:12px;padding:10px 12px;border:1px solid #dfe5cf;border-radius:8px;background:#fbfcf7}
+  .mu-exec-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .ex-item{border-top:1px solid #e8ebdf;padding:8px 0}
+  .ex-cab{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+  .ex-rel{font-size:13px;color:#3c4043;margin-top:3px;white-space:pre-line}
+  .ex-fotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .ex-fotos img{width:110px;height:82px;object-fit:cover;border-radius:6px;background:#e9ece2;display:block}
+  .ex-form{margin:8px 0 10px;padding:10px;border:1px dashed #b9c49c;border-radius:8px;background:#fff}
+  .ex-mini{position:relative;display:inline-block} .ex-mini button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#b3261e;color:#fff;font-weight:700;cursor:pointer;line-height:22px;padding:0}
+  .ex-add{width:110px;height:82px;border:2px dashed #b9c49c;border-radius:6px;background:#f6f8ef;color:#3f6b12;font-weight:700;cursor:pointer}
+  .g-ex{position:absolute;left:50%;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#fff;border:2px solid #1d1d1f;z-index:1}
+  .g-pend{color:#b3261e;font-weight:650}
 </style>`);
 })();

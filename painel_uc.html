@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="icones_mapa.js?v=20261001c"></script>
+<script src="icones_mapa.js?v=20261001d"></script>
 <style>
   :root{
     color-scheme: light;
@@ -310,7 +310,8 @@ function htmlPrevencao(p){
   const it = (n, t, extra) => n ? `<b>${fmtN(n)}</b> ${t}${extra ? ` <span style="color:var(--suave)">(${extra})</span>` : ""}` : null;
   const linhas = [
     ...Object.entries(v).map(([t, x]) => it(x.n, ROT_VIA[t] || t, [x.km && fmtN(x.km, 1) + " km", x.ruins && x.ruins + " a refazer"].filter(Boolean).join(" · "))),
-    it(p.acoes, `ações preventivas em ${p.acoes_ano}`, p.acoes_feitas ? `${p.acoes_feitas} realizadas` : null),
+    it(p.acoes, `ações preventivas em ${p.acoes_ano}`, [p.acoes_feitas && `${p.acoes_feitas} realizadas`, p.acoes_pendentes && `<b style="color:var(--and)">${p.acoes_pendentes} pendente${p.acoes_pendentes > 1 ? "s" : ""}</b>`,
+      p.participantes && `${fmtN(p.participantes)} pessoas alcançadas`].filter(Boolean).join(" · ")),
     it(p.projetos, "projetos de sustentabilidade"),
     p.brigada?.quantidade ? it(p.brigada.quantidade, `brigadistas contratados em ${p.brigada.ano}`) : null,
     p.favoraveis + p.adversos ? `<b>${p.favoraveis}</b> elementos favoráveis e <b>${p.adversos}</b> adversos` : null].filter(Boolean);

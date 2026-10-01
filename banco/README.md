@@ -43,6 +43,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 20_ri_campos.sql              RI: forma de detecção, início do combate, responsáveis, fechamento, contatos e PM Ambiental
 21_sala_tecnica.sql           Sala Técnica: trâmite por cod_bdp (ROI, REDS/AI, processo SEI, DPC, CAINF), prazos e importação da planilha
 22_atividades_preventivas.sql Módulo 5 · Atividades Preventivas: aceiros, estradas e trilhas (traçado PostGIS), elementos favoráveis/adversos, cronograma de ações, projetos e brigadistas contratados
+23_execucao_acoes.sql        Registros de execução das ações preventivas (vários por ação, até 3 fotos no bucket privado acoes-fotos), motivo, pendências
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
