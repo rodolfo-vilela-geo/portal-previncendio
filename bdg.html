@@ -172,10 +172,11 @@ $$(".abas button").forEach(b => b.onclick = () => {
 /* ======================= RESUMO ======================= */
 async function carregar(){
   todos = [];
-  for (let i = 0; ; i += 5000){
-    const {data, error} = await sb.from("vw_bdg_poligonos").select("cod_bdp,ano,ri,roi,categoria,nome_uc,ufbio,municipio,local,dat_detec,area_declarada,n_pol,area_pol,fonte").order("cod_bdp").range(i, i + 4999);
+  // o Supabase devolve no máximo 1000 linhas por consulta: busca em páginas
+  for (let i = 0; ; i += 1000){
+    const {data, error} = await sb.from("vw_bdg_poligonos").select("cod_bdp,ano,ri,roi,categoria,nome_uc,ufbio,municipio,local,dat_detec,area_declarada,n_pol,area_pol,fonte").order("cod_bdp").range(i, i + 999);
     if (error) return msg("Erro ao carregar: " + error.message, "erro");
-    todos.push(...data); if (data.length < 5000) break;
+    todos.push(...data); if (data.length < 1000) break;
   }
   const r2 = await sb.from("vw_area_sem_roi").select("*").order("cod_bdp");
   semRoi = r2.data || [];

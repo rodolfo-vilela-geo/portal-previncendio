@@ -192,11 +192,15 @@ $$(".abas button").forEach(b => b.onclick = () => {
 
 /* ======================= DADOS ======================= */
 async function carregar(){
-  let q = sb.from("vw_tramite").select("*").eq("ano", +$("#fAno").value).order("ri").order("cod_bdp");
-  if ($("#fSala").value) q = q.eq("sala_tecnica", $("#fSala").value);
-  const {data, error} = await q.range(0, 4999);
-  if (error) return msg("Erro ao carregar: " + error.message, "erro");
-  dados = data || [];
+  // o Supabase devolve no máximo 1000 linhas por consulta: busca em páginas
+  dados = [];
+  for (let i = 0; ; i += 1000){
+    let q = sb.from("vw_tramite").select("*").eq("ano", +$("#fAno").value).order("ri").order("cod_bdp");
+    if ($("#fSala").value) q = q.eq("sala_tecnica", $("#fSala").value);
+    const {data, error} = await q.range(i, i + 999);
+    if (error) return msg("Erro ao carregar: " + error.message, "erro");
+    dados.push(...data); if (data.length < 1000) break;
+  }
   const n = dados.length, enc = dados.filter(r => ["Encaminhado à DPC","Encaminhado à CAINF/NAI","Inquérito instaurado"].includes(r.etapa)).length;
   const comReds = dados.filter(r => r.tem_reds).length, dias = dados.map(r => r.dias_tramite).filter(x => x != null).sort((a,b)=>a-b);
   $("#resumoAno").innerHTML = n ? `${n} ocorrências · ${Math.round(100*comReds/n)}% com REDS · ${Math.round(100*enc/n)}% encaminhadas${dias.length ? ` · trâmite mediano: ${dias[Math.floor(dias.length/2)]} dias` : ""}` : "Nenhuma ocorrência no ano.";

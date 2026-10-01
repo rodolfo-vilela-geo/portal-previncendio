@@ -740,9 +740,13 @@ async function carregarAtuacoes(r){
 /* ======================= APOIOS (visão geral e catálogo) ======================= */
 let apoios = [];
 async function carregarApoios(){
-  let q = sb.from("atuacao").select("*, rif:ri(nome_uc, municipio)").gte("data", $("#aDe").value).lte("data", $("#aAte").value).order("data", {ascending:false}).order("ri");
-  if ($("#aInst").value) q = q.eq("instituicao_id", +$("#aInst").value);
-  const {data, error} = await q; if (error){ msg(error.message, "erro"); return; }
+  const data = [];
+  for (let i = 0; ; i += 1000){   // no máximo 1000 linhas por consulta no Supabase
+    let q = sb.from("atuacao").select("*, rif:ri(nome_uc, municipio)").gte("data", $("#aDe").value).lte("data", $("#aAte").value).order("data", {ascending:false}).order("ri").order("id");
+    if ($("#aInst").value) q = q.eq("instituicao_id", +$("#aInst").value);
+    const r = await q.range(i, i + 999); if (r.error){ msg(r.error.message, "erro"); return; }
+    data.push(...r.data); if (r.data.length < 1000) break;
+  }
   const cat = $("#aCat").value;
   apoios = (data||[]).map(a => ({...a, inst: instPorId(a.instituicao_id) || {}})).filter(a => !cat || a.inst.categoria === cat);
   const hh = a => (a.hr_inicio && a.hr_fim) ? a.pessoas * (((+a.hr_fim.slice(0,2)*60 + +a.hr_fim.slice(3,5)) - (+a.hr_inicio.slice(0,2)*60 + +a.hr_inicio.slice(3,5)) + 1440) % 1440 || 1440) / 60 : 0;
@@ -808,11 +812,15 @@ function resumoRecursos(e){
 /* ======================= BOLETIM ======================= */
 let boletim = [];
 async function carregarBoletim(){
-  let q = sb.from("vw_boletim").select("*").gte("dat_detec", $("#bDe").value).lte("dat_detec", $("#bAte").value).order("dat_detec").order("ri");
-  if ($("#bStatus").value) q = q.eq("status", $("#bStatus").value);
-  if ($("#bBase").value) q = q.eq("base_op", $("#bBase").value);
-  const {data, error} = await q; if (error){ msg(error.message, "erro"); return; }
-  boletim = data || [];
+  // o Supabase devolve no máximo 1000 linhas por consulta: busca em páginas
+  boletim = [];
+  for (let i = 0; ; i += 1000){
+    let q = sb.from("vw_boletim").select("*").gte("dat_detec", $("#bDe").value).lte("dat_detec", $("#bAte").value).order("dat_detec").order("ri");
+    if ($("#bStatus").value) q = q.eq("status", $("#bStatus").value);
+    if ($("#bBase").value) q = q.eq("base_op", $("#bBase").value);
+    const {data, error} = await q.range(i, i + 999); if (error){ msg(error.message, "erro"); return; }
+    boletim.push(...data); if (data.length < 1000) break;
+  }
   const tot = boletim.reduce((s,r)=>s+(r.total_pessoas||0),0), and = boletim.filter(r=>r.status==="andamento").length;
   $("#bResumo").textContent = `${boletim.length} RIs · ${and} em andamento · ${tot} pessoas empenhadas (última atualização de cada RI).`;
   const col = [["RI",r=>r.ri],["Status",r=>`<span class="selo ${r.status}">${r.status}</span>`],["UC",r=>esc(rotuloUC(r.nome_uc))],["Município",r=>esc(r.municipio||"")],
