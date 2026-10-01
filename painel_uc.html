@@ -353,7 +353,9 @@ function montarMapa(){
   if (!cic.length && hist.length) pontos.addTo(mapa);
   const sel = new Set([D.ano_atual]);
   const aplicarAnos = () => {
-    anosMapa.forEach(a => { const c = camCic[a]; if (!c) return; sel.has(a) ? c.addTo(mapa) : mapa.removeLayer(c); });
+    // do mais antigo ao mais recente: o ano mais recente fica por cima
+    Object.values(camCic).forEach(c => mapa.removeLayer(c));
+    [...anosMapa].reverse().forEach(a => { if (camCic[a] && sel.has(a)) camCic[a].addTo(mapa); });
     pontos.clearLayers();
     hist.filter(o => sel.has(o.ano)).forEach(o => pontos.addLayer(L.circleMarker([o.lat, o.lon], {radius:4, color:"#fff", weight:1, fillColor: corAno(o.ano), fillOpacity:.95})
       .bindTooltip(`${esc(o.cod)} · ${fmtD(o.data)}${o.area ? " · " + fmtN(o.area,1) + " ha" : ""}${o.do_poligono ? " · ponto no polígono" : ""}`)));
