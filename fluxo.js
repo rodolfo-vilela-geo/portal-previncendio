@@ -3,7 +3,7 @@
 // Uso: <script src="fluxo.js" data-passo="ri|smc|roi"></script>
 (function(){
   const eu = document.currentScript, passo = eu?.dataset.passo || "";
-  const CHAVE = "sigfogo_ri_atual";
+  const CHAVE = "colibri_ri_atual";
   const ler = () => {
     const q = new URLSearchParams(location.search);
     if (q.get("ri")) return {ano: q.get("ano") || String(new Date().getFullYear()), ri: q.get("ri").padStart(4, "0")};
