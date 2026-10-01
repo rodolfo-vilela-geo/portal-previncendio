@@ -387,7 +387,8 @@ function lerAba(ws, ano){
   const H = M[h].map(c => (c||"").toString().toLowerCase()), S = (M[h+1]||[]).map(c => (c||"").toString().toLowerCase().replace(/\s+/g," "));
   const iH = re => H.findIndex(c => re.test(c)), iS = re => S.findIndex(c => re.test(c));
   let iReg = iH(/n[ºo°] de registro/); const iLanc = iH(/data de (lan[çc]amento|envio)/); if (iReg < 0 && iLanc > 0) iReg = iLanc - 1;
-  const iSei = iH(/sei|^processo|protocolo/), iSt = iH(/^sala t[ée]cnica/), iObs = iH(/observa/);
+  let iSei = iH(/sei|^processo|protocolo/); const iSt = iH(/^sala t[ée]cnica/), iObs = iH(/observa/);
+  if (iSei < 0){ const amostra = M.slice(h + 2, h + 40); iSei = (M[h]||[]).findIndex((_, k) => amostra.some(r => r && /\d{4}\.\d{2}\.\d+\/\d{4}/.test(String(r[k] ?? "")))); }
   const C = {roi: iS(/n[úu]mero ?do roi/), email: iS(/vers[ãa]o digital|via e-?mail/), sei: iS(/vers[ãa]o impressa|via sei|recebido via sei/), impressa: iS(/vers[ãa]o impressa/),
     pol: iS(/recebimento do pol/), mun: iS(/munic[ií]pio de acionamento/), cont: iS(/^contato/), acion: iS(/data do acionamento/), redsData: iS(/recebimento ?do reds/),
     redsNum: iS(/n[ºo°] do reds/), form: iS(/formaliza/), oficio: iS(/of[ií]cio de encaminhamento/), envio: iS(/envio da documenta/), jur: iS(/jurisdi/), inq: iS(/inqu[ée]rito/)};
