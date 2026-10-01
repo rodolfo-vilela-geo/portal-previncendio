@@ -201,6 +201,7 @@
       <li><a href="#roi">3. ROI — relatório</a></li>
       <li><a href="#prazos">Prazos dos ROIs</a></li>
       <li><a href="#tecnica">Sala Técnica</a></li>
+      <li><a href="#importar-roi">Importar ROIs em PDF</a></li>
       <li><a href="#bdg">Polígonos do BDG</a></li>
       <li><a href="#boletim">Boletim e painel</a></li>
       <li><a href="#painel_uc">Painel da UC</a></li>
@@ -317,6 +318,21 @@
       <h2>Prazos dos ROIs</h2>
       <p class="quem">Quem usa: Sala de Situação, Previncêndio · <a href="sala.html?aba=prazos">abrir os prazos</a></p>
       <p>Lista cada RI encerrado com a data limite do ROI e a situação: <b>no prazo</b>, <b>vence em até 2 dias</b>, <b>atrasado</b> ou <b>entregue</b>. O ROI conta como entregue quando é enviado com o mesmo ano e nº de RI.</p>
+    </section>
+
+    <section id="importar-roi">
+      <h2>Importar ROIs em PDF</h2>
+      <p class="quem">Quem usa: Previncêndio e Sala Técnica · <a href="roi_importar.html">Gestão do sistema → Importar ROIs</a></p>
+      <p>Para passar ao Colibri os ROIs que chegaram em PDF (modelo DIUC gerado no Word). Arraste vários PDFs de uma vez: cada um é lido <b>no seu computador</b> e vira um formulário de ROI preenchido, que você confere ao lado do PDF e grava.</p>
+      <ul>
+        <li><b>O que é lido:</b> cabeçalho (nº do ROI e do RI, REDS, base, municípios, gerente, responsável, local), forma de detecção, coordenadas, evolução do combate (coluna a coluna), veículos, vegetação e áreas, fonte e zonas, causas e agente causal, fauna, descrição, proprietário, dificuldades, alimentação e as fotos da seção 11 (até 4).</li>
+        <li><b>Caixas marcadas:</b> o sistema reconhece o “X” dentro da caixa e também o “x” digitado no lugar dela. A lista do que ele viu aparece no alto da conferência.</li>
+        <li><b>Pontos a conferir</b> ficam em amarelo no formulário e listados no alto; clique no aviso para ir ao campo. Exemplos: data fora do ano do ROI, veículo marcado com “x” em vez da quantidade, soma das colunas diferente do TOTAL, seção ausente.</li>
+        <li><b>UC:</b> vem do RI na Sala de Situação; se o RI não existir, do título do PDF.</li>
+        <li><b>Fim da ocorrência:</b> o modelo não tem esse campo — usa-se o fim do último turno da evolução do combate.</li>
+        <li><b>Sala × UC:</b> os dados da Sala aparecem só para comparação; <b>vale o que a UC escreveu</b> no ROI.</li>
+        <li>O polígono (seção 12) é figura no PDF e não é lido: a área queimada vem do BDG/SMC (<a href="#bdg">Polígonos do BDG</a>). ROIs já gravados aparecem como “Já está no banco”.</li>
+      </ul>
     </section>
 
     <section id="bdg">

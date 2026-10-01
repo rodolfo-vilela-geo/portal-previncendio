@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Importar ROIs — Colibri</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="roi_pdf.js?v=20261001a"></script>
+<style>
+  :root{
+    --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --linha:#dcd8d0;
+    --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --alerta:#9a5b00; --erro:#b3261e;
+  }
+  *{box-sizing:border-box} [hidden]{display:none!important}
+  html,body{margin:0}
+  body{background:var(--fundo);color:var(--tinta);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header.topo{background:var(--verde);color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  header.topo .inst{font-size:12px;opacity:.9} header.topo .inst a{color:#fff;text-decoration:none}
+  header.topo h1{margin:0;font-size:18px}
+  .marca{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+  .usuario{font-size:13px;display:flex;gap:10px;align-items:center}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--verde);background:#fff;color:var(--verde);padding:7px 12px;cursor:pointer;white-space:nowrap}
+  .btn:hover{background:#eef3e2} .btn.primario{background:var(--verde);color:#fff} .btn.primario:hover{background:var(--verde-esc)}
+  .btn.peq{padding:3px 9px;font-size:12.5px} .btn[disabled]{opacity:.5;cursor:not-allowed}
+  header .btn{border-color:#fff;background:transparent;color:#fff}
+  input{width:100%;font:inherit;color:inherit;background:#fff;border:1px solid #c9c5bd;border-radius:7px;padding:6px 8px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--suave);margin-bottom:3px}
+  .dica{font-size:12.5px;color:var(--suave)}
+  #telaLogin{max-width:380px;margin:40px auto;background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:22px}
+  main{max-width:1300px;margin:0 auto;padding:12px 16px 40px}
+  .bloco{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin-top:14px}
+  .bloco h2{font-size:16px;margin:0 0 8px}
+  #solta{border:2px dashed #b9c4a3;border-radius:12px;padding:22px;text-align:center;background:#fbfcf7;cursor:pointer}
+  #solta.sobre{background:#eef5e0;border-color:var(--verde)}
+  .prog{height:8px;background:#e7eadf;border-radius:6px;overflow:hidden;margin:8px 0} .prog i{display:block;height:100%;background:var(--verde);width:0;transition:width .2s}
+  table.tab{border-collapse:collapse;width:100%;font-size:13px}
+  table.tab th{background:#e9eddf;text-align:left;padding:6px;white-space:nowrap}
+  table.tab td{padding:6px;border-bottom:1px solid #eee;vertical-align:middle}
+  .tab-wrap{overflow:auto;border:1px solid var(--linha);border-radius:8px}
+  .sit{font-weight:700;font-size:12.5px;white-space:nowrap} .sit.ok{color:var(--ok)} .sit.al{color:var(--alerta)} .sit.er{color:var(--erro)} .sit.cz{color:var(--suave)}
+  .resumo{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:8px 0}
+  /* revisão: PDF à esquerda, formulário à direita */
+  #revisao{position:fixed;inset:0;background:var(--fundo);z-index:50;display:flex;flex-direction:column}
+  .rev-cab{background:var(--verde);color:#fff;padding:8px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .rev-cab h2{margin:0;font-size:15px} .rev-cab .btn{border-color:#fff;background:transparent;color:#fff}
+  .rev-corpo{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0}
+  #pdfPainel{overflow:auto;background:#5f6368;padding:10px;min-height:0}
+  #pdfPainel canvas{display:block;margin:0 auto 10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35);max-width:100%}
+  .lado{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--linha)}
+  #avisos{background:#fff8e6;border-bottom:1px solid #ecd9a8;padding:8px 12px;font-size:13px;max-height:30vh;overflow:auto}
+  #avisos:empty{display:none}
+  #avisos ul{margin:4px 0 0;padding-left:18px} #avisos li{margin:2px 0} #avisos a{color:var(--alerta);cursor:pointer;text-decoration:underline}
+  #quadro{flex:1;border:0;width:100%;min-height:0;background:#fff}
+  @media (max-width: 900px){
+    .rev-corpo{grid-template-columns:1fr;grid-template-rows:38vh 1fr}
+    .lado{border-left:0;border-top:1px solid var(--linha)}
+  }
+  #msg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:9px;font-size:14px;z-index:9999;max-width:90vw}
+  #msg:empty{display:none} #msg.erro{background:var(--erro)} #msg.ok{background:var(--ok)}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="marca"><a href="index.html" class="logo" title="Colibri"><img src="img/logo_portal_selo.png" alt="Colibri"></a>
+    <div><div class="inst"><a href="index.html">← Colibri</a> · Previncêndio · IEF-MG</div><h1>Importar ROIs em PDF</h1></div></div>
+  <div class="usuario" id="usuario" hidden><span id="quem"></span><button class="btn peq" id="sair">Sair</button></div>
+</header>
+<section id="telaLogin" hidden>
+  <h2 style="margin-top:0">Entrar</h2>
+  <p class="dica" style="margin:0 0 14px">Acesso do Previncêndio e da Sala Técnica.</p>
+  <form id="formLogin">
+    <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+    <div style="height:10px"></div>
+    <label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required>
+    <div style="height:14px"></div>
+    <button class="btn primario" style="width:100%">Entrar</button>
+    <p id="erroLogin" class="dica" style="color:var(--erro);min-height:18px"></p>
+  </form>
+</section>
+
+<main id="app" hidden>
+  <div class="bloco">
+    <h2>ROIs recebidos em PDF</h2>
+    <p class="dica" style="margin:0 0 10px">Arraste os PDFs dos ROIs (modelo DIUC, gerado no Word). O sistema lê cada um <b>neste computador</b> — os arquivos só saem daqui quando você grava — e preenche o formulário do ROI com o que encontrou, inclusive as caixas marcadas e as fotos da seção 11. Você confere ao lado do PDF e grava. O que não foi lido ou parece errado aparece em destaque.</p>
+    <div id="solta" tabindex="0">
+      <b>Solte os PDFs aqui</b> ou clique para escolher<br><span class="dica">vários de uma vez</span>
+      <input type="file" id="arquivos" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+    <div class="prog" id="prog" hidden><i></i></div>
+    <div class="resumo" id="resumo"></div>
+    <div class="tab-wrap" id="listaWrap" hidden>
+      <table class="tab"><thead><tr><th>Arquivo</th><th>Código</th><th>UC</th><th>Detecção</th><th>Área (ha)</th><th>Situação</th><th></th></tr></thead><tbody id="lista"></tbody></table>
+    </div>
+  </div>
+  <div class="bloco dica" style="font-size:13px">
+    <b>Como o sistema lê o PDF.</b> Os campos do cabeçalho e os textos vêm pela posição no modelo; as caixas marcadas, pelo “X” desenhado dentro delas (ou por um “x” digitado no lugar). A tabela de evolução do combate é lida coluna a coluna. O fim da ocorrência, que o modelo não tem, é o fim do último turno da evolução. O polígono da seção 12 não é lido (no PDF é uma figura): a área queimada vem do BDG/SMC. Os números da Sala de Situação aparecem só para comparação — <b>vale o que a UC escreveu</b>.
+  </div>
+</main>
+
+<div id="revisao" hidden>
+  <div class="rev-cab">
+    <h2 id="revTitulo"></h2>
+    <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn peq" id="revAnt">← Anterior</button>
+      <button class="btn peq" id="revProx">Próximo →</button>
+      <button class="btn peq" id="revFechar">Voltar à lista</button>
+    </span>
+  </div>
+  <div class="rev-corpo">
+    <div id="pdfPainel"></div>
+    <div class="lado">
+      <div id="avisos"></div>
+      <iframe id="quadro" title="Formulário do ROI"></iframe>
+    </div>
+  </div>
+</div>
+<div id="msg"></div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+const $ = (s, el=document) => el.querySelector(s), $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+const fmtD = d => d ? d.slice(0,10).split("-").reverse().join("/") : "";
+let tMsg; function msg(t, tipo=""){ const m=$("#msg"); m.textContent=t; m.className=tipo; clearTimeout(tMsg); tMsg=setTimeout(()=>{ if (m.textContent===t) m.textContent=""; }, 6000); }
+
+let ITENS = [], UCS = [], atual = -1;
+
+/* ---------------- acesso ---------------- */
+async function entrar(){
+  const {data:{session}} = await sb.auth.getSession();
+  if (!session){ $("#telaLogin").hidden = false; $("#app").hidden = true; return; }
+  const {data} = await sb.rpc("meu_perfil");
+  if (!data || !["tecnica","gpcif","admin"].includes(data.papel)){
+    $("#telaLogin").hidden = false; $("#app").hidden = true;
+    $("#erroLogin").textContent = data ? "Somente o Previncêndio e a Sala Técnica importam ROIs." : "E-mail não cadastrado na equipe."; return;
+  }
+  $("#quem").textContent = data.nome; $("#usuario").hidden = false; $("#telaLogin").hidden = true; $("#app").hidden = false;
+  const {data: u} = await sb.from("uc").select("nome_uc,categoria");
+  UCS = u || [];
+}
+$("#formLogin").onsubmit = async e => { e.preventDefault(); $("#erroLogin").textContent = "";
+  const {error} = await sb.auth.signInWithPassword({email: $("#email").value.trim(), password: $("#senha").value});
+  if (error) return $("#erroLogin").textContent = /invalid/i.test(error.message) ? "E-mail ou senha incorretos." : error.message;
+  entrar(); };
+$("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+/* ---------------- UC pelo título do PDF ---------------- */
+const CATS = [["parque estadual","PAR"],["area de protecao ambiental","APA"],["apa","APA"],["estacao ecologica","ESEC"],["monumento natural","MONA"],
+  ["refugio estadual de vida silvestre","RVS"],["refugio de vida silvestre","RVS"],["rvs","RVS"],["reserva biologica","REBIO"],["floresta estadual","FLOE"],
+  ["reserva de desenvolvimento sustentavel","RDS"],["area de protecao especial","APE"],["pe","PAR"],["ee","ESEC"],["mn","MONA"]];
+const PEQ = new Set(["da","do","de","dos","das","e"]);
+const chave = s => norm(s).split(" ").filter(w => w && !PEQ.has(w)).join(" ");
+function ucDoTitulo(t){
+  let n = norm(t), cat = null;
+  for (const [c, s] of CATS){ if (n.startsWith(c + " ")){ cat = s; n = n.slice(c.length).trim(); break; } }
+  const k = chave(n); if (!k) return null;
+  const cand = UCS.filter(u => chave(u.nome_uc) === k);
+  const pref = cand.filter(u => !cat || u.categoria === cat);
+  if (pref.length === 1) return pref[0].nome_uc;
+  if (cand.length === 1) return cand[0].nome_uc;
+  const contem = UCS.filter(u => (k.includes(chave(u.nome_uc)) || chave(u.nome_uc).includes(k)) && (!cat || u.categoria === cat));
+  return contem.length === 1 ? contem[0].nome_uc : null;
+}
+
+/* ---------------- leitura dos PDFs ---------------- */
+const solta = $("#solta");
+solta.onclick = () => $("#arquivos").click();
+solta.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#arquivos").click(); } };
+solta.ondragover = e => { e.preventDefault(); solta.classList.add("sobre"); };
+solta.ondragleave = () => solta.classList.remove("sobre");
+solta.ondrop = e => { e.preventDefault(); solta.classList.remove("sobre"); lerArquivos([...e.dataTransfer.files]); };
+$("#arquivos").onchange = e => { lerArquivos([...e.target.files]); e.target.value = ""; };
+
+async function lerArquivos(arqs){
+  arqs = arqs.filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+  if (!arqs.length) return msg("Escolha arquivos PDF.", "erro");
+  const prog = $("#prog"); prog.hidden = false;
+  const novos = [];
+  for (let i = 0; i < arqs.length; i++){
+    const f = arqs[i];
+    prog.firstElementChild.style.width = Math.round(100 * i / arqs.length) + "%";
+    if (ITENS.some(x => x.nome === f.name && x.tam === f.size)) continue;
+    const it = {nome: f.name, tam: f.size, situacao: "lendo"};
+    try{
+      const buf = new Uint8Array(await f.arrayBuffer());
+      it.doc = await pdfjsLib.getDocument({data: buf}).promise;
+      const r = await lerROIpdf(pdfjsLib, it.doc);
+      it.estado = r.estado; it.avisos = r.avisos; it.marcadas = r.marcadas; it.fotosPdf = r.fotos;
+      it.situacao = "lido";
+    }catch(e){ it.situacao = "erro"; it.erro = e.message || String(e); }
+    ITENS.push(it); novos.push(it);
+  }
+  prog.firstElementChild.style.width = "100%";
+  await conferirNoBanco(novos);
+  setTimeout(() => prog.hidden = true, 600);
+  desenharLista();
+}
+
+function cod(e){ if (!e || !e.ano || !e.ri || !e.roi_num) return null; return `${e.ano}-${String(e.ri).padStart(4,"0")}-${String(e.roi_num).padStart(3,"0")}`; }
+async function conferirNoBanco(itens){
+  const ok = itens.filter(i => i.estado);
+  ok.forEach(i => i.cod = cod(i.estado));
+  const cods = ok.map(i => i.cod).filter(Boolean);
+  const existentes = new Set();
+  for (let k = 0; k < cods.length; k += 200){
+    const {data} = await sb.from("roi").select("cod_bdp").in("cod_bdp", cods.slice(k, k + 200));
+    (data || []).forEach(r => existentes.add(r.cod_bdp));
+  }
+  // UC: a do RI na Sala de Situação; senão, pelo título do PDF
+  const anos = [...new Set(ok.map(i => +i.estado.ano).filter(Boolean))];
+  const ris = {};
+  for (const a of anos){
+    const lista = ok.filter(i => +i.estado.ano === a && i.estado.ri).map(i => String(i.estado.ri).padStart(4, "0"));
+    for (let k = 0; k < lista.length; k += 200){
+      const {data} = await sb.from("ri").select("ano,ri,nome_uc").eq("ano", a).in("ri", lista.slice(k, k + 200));
+      (data || []).forEach(r => ris[`${r.ano}-${r.ri}`] = r.nome_uc);
+    }
+  }
+  ok.forEach(i => {
+    const e = i.estado;
+    const doRI = e.ri ? ris[`${e.ano}-${String(e.ri).padStart(4,"0")}`] : null;
+    const doTit = ucDoTitulo(e._titulo_uc || "");
+    e.nome_uc = doRI || doTit || "";
+    if (!e.nome_uc) i.avisos.push({campo: "nome_uc", msg: `UC não identificada pelo título (“${e._titulo_uc || "?"}”) nem pelo RI. Escolha a UC.`});
+    else if (doRI && doTit && doRI !== doTit) i.avisos.push({campo: "nome_uc", msg: `O título do PDF indica ${doTit}, mas o RI ${e.ri}/${e.ano} da Sala é de ${doRI}. Usei a UC do RI; confira.`});
+    if (e.ri && !doRI) i.avisos.push({campo: "ri", msg: `RI ${e.ri}/${e.ano} não encontrado na Sala de Situação. Confira o número.`});
+    if (i.cod && existentes.has(i.cod)) i.situacao = "existe";
+  });
+}
+
+function rotSit(i){
+  const nA = (i.avisos || []).filter(a => !/^O modelo do ROI não tem campo/.test(a.msg)).length;
+  if (i.situacao === "erro") return `<span class="sit er">Não foi possível ler: ${esc(i.erro)}</span>`;
+  if (i.situacao === "existe") return `<span class="sit cz">Já está no banco</span>`;
+  if (i.situacao === "gravado") return `<span class="sit ok">✓ Gravado</span>`;
+  return nA ? `<span class="sit al">${nA} ${nA === 1 ? "ponto" : "pontos"} a conferir</span>` : `<span class="sit ok">Lido · pronto para conferir</span>`;
+}
+function desenharLista(){
+  $("#listaWrap").hidden = !ITENS.length;
+  const c = s => ITENS.filter(i => i.situacao === s).length;
+  $("#resumo").innerHTML = ITENS.length ? `<span><b>${ITENS.length}</b> arquivo(s)</span><span>${c("lido")} a conferir</span><span>${c("gravado")} gravado(s)</span>`
+    + (c("existe") ? `<span>${c("existe")} já no banco</span>` : "") + (c("erro") ? `<span style="color:var(--erro)">${c("erro")} com erro</span>` : "") : "";
+  $("#lista").innerHTML = ITENS.map((i, k) => {
+    const e = i.estado || {};
+    const area = e.area_int != null ? (+e.area_int + (+e.area_ent || 0)).toLocaleString("pt-BR", {maximumFractionDigits: 2}) : "";
+    return `<tr><td>${esc(i.nome)}</td><td>${esc(i.cod || "—")}</td><td>${esc(e.nome_uc || e._titulo_uc || "")}</td><td>${fmtD(e.dat_detec)}</td><td>${area}</td><td>${rotSit(i)}</td>
+      <td>${i.doc ? `<button class="btn peq${i.situacao === "lido" ? " primario" : ""}" data-rev="${k}">${i.situacao === "lido" ? "Conferir e gravar" : "Ver"}</button>` : ""}</td></tr>`;
+  }).join("");
+  $$("[data-rev]").forEach(b => b.onclick = () => abrir(+b.dataset.rev));
+}
+
+/* ---------------- revisão ---------------- */
+const quadro = $("#quadro");
+let quadroPronto = null, esperaEstado = null;
+window.addEventListener("message", ev => {
+  if (ev.origin !== location.origin || !ev.data) return;
+  if (ev.data.tipo === "roi-pronto" && quadroPronto){ quadroPronto(); quadroPronto = null; }
+  if (ev.data.tipo === "roi-estado" && esperaEstado){ esperaEstado(ev.data); esperaEstado = null; }
+  if (ev.data.tipo === "roi-gravado" && atual >= 0){
+    const it = ITENS[atual]; it.situacao = "gravado"; it.cod = ev.data.cod; delete it.editado;
+    msg(`ROI ${ev.data.cod} gravado.`, "ok"); desenharLista(); botoesNav();
+  }
+});
+function abrirQuadro(){
+  return new Promise(ok => {
+    if (quadro.dataset.carregado){ ok(); return; }
+    quadroPronto = () => { quadro.dataset.carregado = "1"; ok(); };
+    quadro.src = "roi.html?importar=1";
+  });
+}
+function pedirEstado(){
+  return new Promise(ok => {
+    if (!quadro.dataset.carregado) return ok(null);
+    const t = setTimeout(() => { esperaEstado = null; ok(null); }, 1500);
+    esperaEstado = d => { clearTimeout(t); ok(d); };
+    quadro.contentWindow.postMessage({tipo: "roi-pedir-estado"}, location.origin);
+  });
+}
+async function guardarEdicao(){
+  if (atual < 0) return;
+  const it = ITENS[atual];
+  if (it.situacao !== "lido") return;
+  const d = await pedirEstado();
+  if (d) it.editado = {estado: d.estado, fotos: d.fotos};
+}
+
+const paginas = new Map();      // doc -> canvases renderizados (cache p/ recortar fotos)
+async function renderizar(it, largura){
+  const lst = [];
+  for (let p = 1; p <= it.doc.numPages; p++){
+    const pg = await it.doc.getPage(p);
+    const base = pg.getViewport({scale: 1});
+    const escala = Math.min(2.5, Math.max(1.2, (largura / base.width) * (window.devicePixelRatio || 1)));
+    const vp = pg.getViewport({scale: escala});
+    const c = document.createElement("canvas"); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    c.style.width = Math.min(largura, base.width * 1.6) + "px";
+    await pg.render({canvasContext: c.getContext("2d"), viewport: vp}).promise;
+    lst.push({c, vp});
+  }
+  return lst;
+}
+async function recortarFotos(it, pags){
+  const out = [];
+  for (const f of (it.fotosPdf || []).slice(0, 4)){
+    const {c, vp} = pags[f.pagina - 1];
+    const [xa, ya, xb, yb] = vp.convertToViewportRectangle([f.x0, f.y0, f.x1, f.y1]);
+    const x = Math.max(0, Math.min(xa, xb)), y = Math.max(0, Math.min(ya, yb)), w = Math.abs(xb - xa), h = Math.abs(yb - ya);
+    const k = Math.min(1, 1600 / Math.max(w, h));
+    const o = document.createElement("canvas"); o.width = Math.round(w * k); o.height = Math.round(h * k);
+    o.getContext("2d").drawImage(c, x, y, w, h, 0, 0, o.width, o.height);
+    const blob = await new Promise(r => o.toBlob(r, "image/jpeg", 0.82));
+    if (blob) out.push({blob, legenda: ""});
+  }
+  return out;
+}
+
+async function abrir(k){
+  await guardarEdicao();
+  atual = k; const it = ITENS[k];
+  $("#revisao").hidden = false; document.body.style.overflow = "hidden";
+  $("#revTitulo").textContent = `${it.cod || it.nome} · ${it.estado?.nome_uc || it.estado?._titulo_uc || ""}`;
+  botoesNav();
+  const painel = $("#pdfPainel"); painel.innerHTML = `<div class="dica" style="color:#fff">Abrindo o PDF…</div>`;
+  const avisos = (it.avisos || []);
+  const nFotos = (it.fotosPdf || []).length;
+  $("#avisos").innerHTML = it.situacao === "existe"
+    ? `<b>Este ROI (${esc(it.cod)}) já está no banco.</b> Para corrigir, use a Sala Técnica.`
+    : `<b>Confira antes de gravar</b>${avisos.length ? ":" : " — nada fora do comum na leitura."}<ul>${avisos.map(a =>
+        `<li>${a.campo ? `<a data-foco="${esc(a.campo)}">${esc(a.msg)}</a>` : esc(a.msg)}</li>`).join("")}`
+      + (nFotos > 4 ? `<li>O PDF tem ${nFotos} imagens na seção de fotos; vieram as 4 primeiras (o limite do ROI). Troque no formulário, se preferir outras.</li>` : "")
+      + `</ul><div class="dica">Caixas marcadas que o sistema viu: ${esc((it.marcadas || []).join(" · ") || "nenhuma")}</div>`;
+  $$("[data-foco]").forEach(a => a.onclick = () => quadro.contentWindow.postMessage({tipo: "roi-foco", campo: a.dataset.foco}, location.origin));
+  const larg = Math.max(300, painel.clientWidth - 24);
+  if (!paginas.has(it)) paginas.set(it, await renderizar(it, larg));
+  if (atual !== k) return;
+  const pags = paginas.get(it);
+  painel.innerHTML = ""; pags.forEach(p => painel.appendChild(p.c));
+  quadro.hidden = it.situacao === "existe";
+  if (it.situacao === "existe") return;
+  await abrirQuadro();
+  if (atual !== k) return;
+  let dados;
+  if (it.editado) dados = {estado: it.editado.estado, fotos: it.editado.fotos, avisos};
+  else { const fotos = it.situacao === "lido" ? await recortarFotos(it, pags) : []; dados = {estado: it.estado, fotos, avisos}; }
+  quadro.contentWindow.postMessage({tipo: "roi-carregar", ...dados}, location.origin);
+}
+function botoesNav(){
+  const ab = ITENS.map((i, k) => k).filter(k => ITENS[k].doc);
+  const p = ab.indexOf(atual);
+  $("#revAnt").disabled = p <= 0; $("#revProx").disabled = p < 0 || p >= ab.length - 1;
+  $("#revAnt").onclick = () => abrir(ab[p - 1]);
+  $("#revProx").onclick = () => abrir(ab[p + 1]);
+}
+$("#revFechar").onclick = async () => { await guardarEdicao(); $("#revisao").hidden = true; document.body.style.overflow = ""; atual = -1; desenharLista(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#revisao").hidden) $("#revFechar").click(); });
+
+entrar();
+</script>
+</body>
+</html>
