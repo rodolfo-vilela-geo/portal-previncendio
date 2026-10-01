@@ -121,6 +121,25 @@
   .mod.breve[class*="t-"]{border-top-style:dashed} .mod.breve[class*="t-"] .num{opacity:.8}
   :root:not([data-theme="light"]) a.passo[class*="t-"] .n{color:#fff}
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) a.passo[class*="t-"] .n{color:#161614} }
+
+  /* manejo do fogo */
+  .t-fogo2{--c:var(--laranja);--c-bg:var(--ambar-bg)}
+  .fluxo.q4{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr) 24px minmax(0,1fr) 24px minmax(0,1fr)}
+  div.passo .topo{flex-wrap:wrap;row-gap:4px} div.passo{min-width:0}
+  div.passo{position:relative;display:flex;flex-direction:column;gap:6px;background:var(--papel);border:1px solid var(--linha);border-top:3px solid var(--c);border-radius:12px;padding:16px 16px 14px}
+  div.passo.breve,.card.breve{border-style:dashed;border-top-style:solid}
+  div.passo .n{width:30px;height:30px;font-size:14px;background:var(--c)}
+  div.passo .quem{color:var(--c)}
+  div.passo .ic-m{width:38px;height:38px;border-radius:10px;background:var(--c-bg);color:var(--c);display:grid;place-items:center}
+  div.passo .ic-m svg{width:22px;height:22px}
+  div.passo h3{font-size:16px}
+  div.passo .lin2{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .em-breve{margin-left:auto;font-size:11px;font-weight:700;color:var(--suave);border:1px solid var(--linha);border-radius:99px;padding:1px 8px;white-space:nowrap;font-style:normal;letter-spacing:0;text-transform:none}
+  .card.breve h3 .em-breve{margin-left:8px;vertical-align:2px}
+  .card.largo.breve{display:flex;flex-direction:row;align-items:center;gap:14px;background:var(--papel);border:1px solid var(--linha);border-top:3px solid var(--c);border-radius:12px;padding:14px 18px}
+  .card.largo.breve .ic{background:var(--c-bg);color:var(--c)} .card.largo.breve h3{margin:0;font-size:17px} .card.largo.breve p{margin:2px 0 0;color:var(--suave);font-size:14px}
+  @media (max-width:900px){ .fluxo.q4{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px} .fluxo.q4 .seta{display:none} }
+  @media (max-width:560px){ .fluxo.q4{grid-template-columns:1fr} }
   .modulos{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1.4fr);gap:14px;align-items:stretch}
 
   .gestao{display:flex;flex-wrap:wrap;gap:8px}
@@ -280,6 +299,46 @@
   </section>
 
   <!-- AJUDA -->
+  <!-- MANEJO DO FOGO (queima prescrita) -->
+  <section class="t-fogo2" id="manejo">
+    <div class="tit"><h2>Manejo do Fogo</h2></div>
+    <p class="sub">Queima prescrita nas UCs, do planejamento ao relatório. Cada queima precisa da aprovação do Previncêndio e da análise de documentos, como a comprovação de posse da área.</p>
+    <div class="fluxo q4">
+      <div class="passo breve t-verde">
+        <div class="topo"><span class="n">1</span><span class="quem">Gerente da UC</span></div>
+        <div class="lin2"><div class="ic-m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.5c.5 1.2 2 1.9 2 3.4a2 2 0 0 1-4 0c0-.8.4-1.2.5-1.9.4.3.7.7.9.8.1-.8 0-1.6.6-2.3z"/></svg></div><span class="em-breve">em breve</span></div>
+        <h3>Planejamento</h3>
+        <p>Unidades de queima, janelas e calendário anual da UC, com o mapa das áreas.</p>
+      </div>
+      <div class="seta" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="passo breve t-azul">
+        <div class="topo"><span class="n">2</span><span class="quem">Proponente</span></div>
+        <div class="lin2"><div class="ic-m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 12v6M9 15h6"/></svg></div><span class="em-breve">em breve</span></div>
+        <h3>Requisição de queima prescrita</h3>
+        <p>Formulário com área, objetivo, prescrição (tempo e combustível), equipe e documentos.</p>
+      </div>
+      <div class="seta" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="passo breve t-roxo">
+        <div class="topo"><span class="n">3</span><span class="quem">Previncêndio</span></div>
+        <div class="lin2"><div class="ic-m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 13l2 2 4-4"/></svg></div><span class="em-breve">em breve</span></div>
+        <h3>Análise da requisição</h3>
+        <p>Conferência de documentos e parecer: aprovar, pedir ajustes ou indeferir.</p>
+      </div>
+      <div class="seta" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="passo breve t-fogo">
+        <div class="topo"><span class="n">4</span><span class="quem">Executor</span></div>
+        <div class="lin2"><div class="ic-m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.3-3.7 1.5-5.5 1.2 1 2 2.2 2.5 2.5.2-2.4-.3-4.6 1-7z"/></svg></div><span class="em-breve">em breve</span></div>
+        <h3>Relatório de execução</h3>
+        <p>Condições no dia, área efetivamente queimada, polígono e ocorrências.</p>
+      </div>
+    </div>
+    <div class="card largo t-teal breve" style="margin-top:12px">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 4 3 5-7"/></svg></div>
+      <div><h3>5 · Painel de queima prescrita <span class="em-breve">em breve</span></h3>
+      <p>Requisições, aprovações e área queimada por UC e por ano, no mapa.</p></div>
+    </div>
+  </section>
+
   <section class="t-terra">
     <div class="tit"><h2>Ajuda</h2></div>
     <a class="card t-terra" href="manual.html" style="min-height:0;flex-direction:row;align-items:center;gap:14px">
@@ -298,7 +357,7 @@
     <div><a href="sala.html" style="color:inherit">Acesso da equipe</a> · <a href="manual.html" style="color:inherit">Manual</a> · <a href="https://www.ief.mg.gov.br/acessibilidade" target="_blank" rel="noopener" style="color:inherit">Acessibilidade</a></div>
   </div>
 </footer>
-<script src="pipcif_modulos.js?v=20260930d"></script>
+<script src="pipcif_modulos.js?v=20261001b"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));

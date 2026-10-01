@@ -22,7 +22,7 @@ window.PIPCIF_MODULOS = [
     {s:"7", t:"Prestadores de serviço", d:"alimentação, unidades de saúde, abastecimento e outros", mapa:true},
     {s:"8", t:"Colaboradores e moradores", d:"propriedades, atividade e tipo de apoio", mapa:true},
     {s:"9", t:"Brigadistas voluntários", d:"nome, município e contato"}]},
-  {n:5, ic:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>', id:"prevencao", tom:"ambar", sintese:"Aceiros, estradas e trilhas no mapa, cronograma de ações preventivas, projetos no entorno e atuação dos brigadistas.", nome:"Prevenção e plano anual", blocos:[
+  {n:5, ic:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4"/>', id:"prevencao", tom:"ambar", sintese:"Aceiros, estradas e trilhas no mapa, cronograma de ações preventivas, projetos no entorno e atuação dos brigadistas.", nome:"Atividades Preventivas", blocos:[
     {s:"10", t:"Aceiros, estradas e trilhas", d:"construção e manutenção, com traçado no mapa", mapa:true},
     {s:"11", t:"Elementos favoráveis e adversos", d:"à prevenção e ao combate"},
     {s:"12", t:"Cronograma de ações preventivas", d:"capacitação e sensibilização — período, local e público"},
