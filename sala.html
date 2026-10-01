@@ -61,6 +61,15 @@
   .detalhe{background:var(--papel);border:1px solid var(--linha);border-radius:var(--raio);padding:14px;min-height:300px}
   .detalhe h2{margin:0;font-size:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .bloco{border-top:1px solid var(--linha);margin-top:14px;padding-top:12px}
+  .marcos{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin:10px 0}
+  .marcos fieldset{border:1px solid var(--linha);border-radius:8px;padding:6px 10px 10px;margin:0;min-width:0}
+  .marcos legend{font-weight:700;font-size:13px;padding:0 4px}
+  .marcos-res{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:12px}
+  .marco{border:1px solid var(--linha);border-left:4px solid var(--vinho);border-radius:8px;padding:7px 10px;font-size:13px}
+  .marco.vazio{border-left-color:var(--linha);color:var(--suave)}
+  .marco .t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--suave)} .marco .v{font-weight:700;font-size:14px}
+  .marco .q{font-size:12px;color:var(--suave)}
+  .acoes-ri{display:flex;gap:8px;flex-wrap:wrap;border-top:0;margin-top:8px;padding-top:0}
   .bloco>h3{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--suave)}
   .linha-tempo{list-style:none;margin:0;padding:0}
   .linha-tempo li{border-left:3px solid var(--linha);padding:4px 0 12px 14px;position:relative}
@@ -225,7 +234,7 @@ function msg(t, tipo=""){ const m=$("#msg"); m.textContent=t; m.className=tipo; 
 
 const BASES = ["Base Operacional de Curvelo","Sub Base de Januária","Sub Base Belo Horizonte"];
 const LOCAIS = ["Interno","Entorno","Interno/Entorno","Não Informado"];
-const TIPOS = {acionamento:"Acionamento", atualizacao:"Atualização", retificacao:"Retificação", apoio_aereo:"Apoio aéreo", debelado:"Debelado", outro:"Outro"};
+const TIPOS = {acionamento:"Acionamento", atualizacao:"Atualização", inicio_combate:"Início do combate", retificacao:"Retificação", apoio_aereo:"Apoio aéreo", debelado:"Debelado", outro:"Outro"};
 const PESSOAS = [["comb_uc","Funcionários da UC"],["comb_ftp","Brigadistas Previncêndio"],["comb_sm","Brigadistas CFM"],["comb_par","Parceiros / Municipais"],
                  ["comb_vol","Voluntários"],["comb_bm","Bombeiros Militares"],["comb_pm","Polícia Militar"],["comb_out","Outros"]];
 const VEICULOS = [["vc_4x4","Veículo 4x4"],["vc_4x2","Veículo 4x2"],["vc_pipa","Caminhão pipa / ABT"],["vc_moto","Motocicleta"],["vc_trator","Trator"],["vc_out","Outros veículos"],
@@ -235,7 +244,7 @@ const CATEG = {uc:"Funcionários da UC", ftp:"Brigada Previncêndio", sm:"Brigad
 const TURNOS = {integral:"Integral", manha:"Manhã", tarde:"Tarde", noite:"Noite"};
 const CATS = {PAR:"PE", APA:"APA", MONA:"MN", ESEC:"EE", REBIO:"REBIO", RVS:"RVS", FLOE:"FE", RDS:"RDS", APE:"APE"};
 
-let perfil = null, UCS = {}, INST = [], lista = [], atual = null;
+let perfil = null, UCS = {}, INST = [], lista = [], atual = null, F_DETEC = [];
 
 /* ======================= LOGIN ======================= */
 async function entrar(){
@@ -251,7 +260,7 @@ async function entrar(){
   $("#quem").textContent = `${perfil.nome} · ${perfil.papel}`; $("#usuario").hidden=false;
   $("#telaLogin").style.display="none"; $("#app").style.display="block";
   $("#abaListas").hidden = perfil.papel !== "admin";
-  await Promise.all([carregarUCs(), carregarInst()]); montarFiltros(); await carregarLista();
+  await Promise.all([carregarUCs(), carregarInst(), carregarFDetec()]); montarFiltros(); await carregarLista();
   const q = new URLSearchParams(location.search);
   if (q.get("ri")) abrirRI(+q.get("ano")||new Date().getFullYear(), q.get("ri").padStart(4,"0"));
   const aba = q.get("aba") && $(`.abas button[data-aba="${q.get("aba")}"]`);
@@ -269,6 +278,10 @@ $("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); }
 async function carregarUCs(){
   const {data} = await sb.from("uc").select("nome_uc,categoria,municipios,base_op").eq("ativo", true);
   UCS = {}; (data||[]).forEach(u => UCS[u.nome_uc] = u);
+}
+async function carregarFDetec(){
+  const {data} = await sb.from("dominio").select("valor").eq("campo", "f_detec").eq("ativo", true).order("ordem").order("valor");
+  F_DETEC = (data||[]).map(x => x.valor);
 }
 async function carregarInst(){
   const {data} = await sb.from("instituicao").select("*").order("nome");
@@ -326,20 +339,36 @@ function lerCoord(v, lim){                     // aceita -17.98 ou 17°58'32,3"S
   return -Math.abs(+n[0] + (+(n[1]||0))/60 + (+(n[2]||0))/3600);
 }
 function htmlCabecalho(r){
+  const fdet = F_DETEC.includes(r.f_detec) || !r.f_detec ? F_DETEC : [r.f_detec, ...F_DETEC];
   return `<div class="grade">
-    <div><label>Base</label><select name="base_op">${BASES.map(b=>`<option ${b===r.base_op?"selected":""}>${esc(b)}</option>`).join("")}</select></div>
+    <div><label>Sala de operações (base)</label><select name="base_op">${BASES.map(b=>`<option ${b===r.base_op?"selected":""}>${esc(b)}</option>`).join("")}</select></div>
     <div class="largo" style="grid-column:span 2"><label>Unidade de Conservação *</label><select name="nome_uc" required>${opcoesUC(r.nome_uc)}</select></div>
     <div><label>Local</label><select name="local"><option value=""></option>${LOCAIS.map(l=>`<option ${l===r.local?"selected":""}>${l}</option>`).join("")}</select></div>
     <div><label>Município</label><input name="municipio" value="${esc(r.municipio||"")}" list="munsUC"><datalist id="munsUC"></datalist></div>
-    <div><label>Detecção — data *</label><input type="date" name="dat_detec" value="${r.dat_detec||""}" required></div>
-    <div><label>Detecção — hora</label><input type="time" name="hr_detec" value="${fmtH(r.hr_detec)}"></div>
-    <div><label>Fim — data</label><input type="date" name="dat_final" value="${r.dat_final||""}"></div>
-    <div><label>Fim — hora</label><input type="time" name="hr_final" value="${fmtH(r.hr_final)}"></div>
     <div><label>Latitude</label><input name="lat" value="${r.lat??""}" placeholder="-17.9756 ou 17°58'32&quot;S"></div>
     <div><label>Longitude</label><input name="lon" value="${r.lon??""}" placeholder="-44.2845 ou 44°17'04&quot;O"></div>
     ${r.ri ? `<div><label>Status</label><select name="status">${["andamento","debelado","cancelado"].map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}</select></div>` : ""}
-    <div class="largo"><label>Observações</label><input name="obs" value="${esc(r.obs||"")}"></div>
-  </div>`;
+  </div>
+  <div class="marcos">
+    <fieldset><legend>Detecção</legend><div class="grade">
+      <div><label>Data *</label><input type="date" name="dat_detec" value="${r.dat_detec||""}" required></div>
+      <div><label>Hora</label><input type="time" name="hr_detec" value="${fmtH(r.hr_detec)}"></div>
+      <div class="largo"><label>Forma de detecção</label><select name="f_detec"><option value=""></option>${fdet.map(v=>`<option ${v===r.f_detec?"selected":""}>${esc(v)}</option>`).join("")}</select></div>
+      <div class="largo"><label>Responsável pela informação</label><input name="informante_detec" value="${esc(r.informante_detec||"")}" placeholder="nome de quem informou a detecção"></div>
+    </div></fieldset>
+    <fieldset><legend>Início do combate</legend><div class="grade">
+      <div><label>Data</label><input type="date" name="dat_ini_comb" value="${r.dat_ini_comb||""}"></div>
+      <div><label>Hora</label><input type="time" name="hr_ini_comb" value="${fmtH(r.hr_ini_comb)}"></div>
+      <div class="largo"><label>Responsável pela informação</label><input name="informante_ini_comb" value="${esc(r.informante_ini_comb||"")}"></div>
+    </div></fieldset>
+    <fieldset><legend>Incêndio debelado</legend><div class="grade">
+      <div><label>Data</label><input type="date" name="dat_final" value="${r.dat_final||""}"></div>
+      <div><label>Hora</label><input type="time" name="hr_final" value="${fmtH(r.hr_final)}"></div>
+      <div class="largo"><label>Responsável pela informação</label><input name="informante_final" value="${esc(r.informante_final||"")}"></div>
+      ${r.ri ? `<div class="largo"><label>Responsável pelo fechamento do RI</label><input name="fechado_por" value="${esc(r.fechado_por||"")}"></div>` : ""}
+    </div></fieldset>
+  </div>
+  <div class="grade"><div class="largo"><label>Observações</label><input name="obs" value="${esc(r.obs||"")}"></div></div>`;
 }
 function lerCabecalho(el){
   const g = n => el.querySelector(`[name="${n}"]`);
@@ -350,10 +379,17 @@ function lerCabecalho(el){
   if (!g("nome_uc").value) throw new Error("Escolha a Unidade de Conservação.");
   if (!g("dat_detec").value) throw new Error("Informe a data da detecção.");
   const o = {base_op: g("base_op").value, nome_uc: g("nome_uc").value, local: txt(g("local").value), municipio: txt(g("municipio").value),
-    dat_detec: g("dat_detec").value, hr_detec: txt(g("hr_detec").value), dat_final: txt(g("dat_final").value), hr_final: txt(g("hr_final").value),
+    dat_detec: g("dat_detec").value, hr_detec: txt(g("hr_detec").value), f_detec: txt(g("f_detec").value), informante_detec: txt(g("informante_detec").value),
+    dat_ini_comb: txt(g("dat_ini_comb").value), hr_ini_comb: txt(g("hr_ini_comb").value), informante_ini_comb: txt(g("informante_ini_comb").value),
+    dat_final: txt(g("dat_final").value), hr_final: txt(g("hr_final").value), informante_final: txt(g("informante_final").value),
     lat: lat!==null ? +lat.toFixed(6) : null, lon: lon!==null ? +lon.toFixed(6) : null, obs: txt(g("obs").value)};
   if (g("status")) o.status = g("status").value;
-  if (o.dat_final && o.dat_final < o.dat_detec) throw new Error("O fim está antes da detecção.");
+  if (g("fechado_por")){ o.fechado_por = txt(g("fechado_por").value); if (!o.fechado_por) o.fechado_em = null; }
+  const dh = (d, h) => d ? d + "T" + (h || "00:00") : null;
+  const det = dh(o.dat_detec, o.hr_detec), ini = dh(o.dat_ini_comb, o.hr_ini_comb), fim = dh(o.dat_final, o.hr_final);
+  if (ini && ini < det) throw new Error("O início do combate está antes da detecção.");
+  if (fim && fim < det) throw new Error("O fim está antes da detecção.");
+  if (fim && ini && fim < ini) throw new Error("O fim está antes do início do combate.");
   return o;
 }
 function ligarUC(el){
@@ -376,17 +412,23 @@ function htmlEvento(ultimo, primeiro=false){
     <fieldset><legend>Veículos e aeronaves</legend><div class="recursos">
       ${VEICULOS.map(([k,t])=>`<div><label>${t}</label><input type="number" min="0" name="${k}" value="${v(k)}"></div>`).join("")}</div></fieldset>
     <label>Detalhamento dos recursos (instituições, outros)</label><textarea name="recursos_txt" style="min-height:60px">${esc(v("recursos_txt"))}</textarea>
-    <div class="grade fimDebelado" style="margin-top:8px" hidden>
-      <div><label>Fim (debelado) — data</label><input type="date" name="ev_dat_final"></div>
-      <div><label>Fim — hora</label><input type="time" name="ev_hr_final"></div>
-      <div class="largo dica">Ao salvar um evento "Debelado", o RI passa a debelado e o fim é gravado no cabeçalho (abre o prazo do ROI).</div>
+    <div class="grade marcoEv" style="margin-top:8px" hidden>
+      <div><label data-rot>Data</label><input type="date" name="ev_dat_marco"></div>
+      <div><label>Hora</label><input type="time" name="ev_hr_marco"></div>
+      <div class="largo dica" data-dica></div>
     </div>`;
 }
 function ligarEvento(el){
   const tot = () => { const t = PESSOAS.reduce((s,[k])=>s+(num(el.querySelector(`[name=${k}]`).value)||0),0); el.querySelector('[data-total="p"]').textContent = t ? `· total ${t}` : ""; };
   el.addEventListener("input", tot); tot();
-  const tipo = el.querySelector('[name="tipo"]'), fim = el.querySelector(".fimDebelado");
-  tipo.addEventListener("change", () => { fim.hidden = tipo.value !== "debelado"; });
+  const tipo = el.querySelector('[name="tipo"]'), m = el.querySelector(".marcoEv");
+  const f = () => { const t = tipo.value; m.hidden = !["debelado","inicio_combate"].includes(t);
+    m.querySelector("[data-rot]").textContent = t === "debelado" ? "Fim (debelado) — data" : "Início do combate — data";
+    m.querySelector("[data-dica]").textContent = t === "debelado"
+      ? "Ao salvar, o RI passa a debelado e o fim (com quem informou) vai para o cabeçalho — abre o prazo do ROI."
+      : "Ao salvar, a data e a hora do início do combate (com quem informou) vão para o cabeçalho — é o que mede o tempo de resposta.";
+    const d = el.querySelector('[name="data_hora"]').value; if (d && !m.querySelector('[name="ev_dat_marco"]').value){ m.querySelector('[name="ev_dat_marco"]').value = d.slice(0,10); m.querySelector('[name="ev_hr_marco"]').value = d.slice(11,16); } };
+  tipo.addEventListener("change", f);
 }
 function lerEvento(el){
   const g = n => el.querySelector(`[name="${n}"]`);
@@ -437,7 +479,13 @@ async function abrirRI(ano, ri){
     <div class="dica">${esc(r.base_op||"")} · ${esc(r.municipio||"")} · criado por ${esc(r.criado_por||"—")}</div>
     <div class="dica" style="margin-top:4px">${prazo ? `Prazo do ROI: <b>${fmtD(prazo)}</b> · ` : "Prazo do ROI começa a contar quando o fim for registrado · "}
       <a href="smc.html">mapear no SMC</a> · <a href="${linkROI}">abrir o ROI deste RI</a></div>
+    ${htmlMarcos(r)}
+    <div class="bloco nao-imprime acoes-ri">
+      ${r.status === "debelado" && !r.fechado_por ? `<button class="btn primario peq" id="fecharRI">Fechar RI</button>` : ""}
+      <button class="btn peq" id="pdfRI">PDF do RI</button></div>
     <div class="bloco" id="atuacoes"><h3>Apoios empenhados (atuações)</h3><div class="dica">Carregando…</div></div>
+    <div class="bloco" id="contatos"><h3>Contatos neste registro</h3><div class="dica">Carregando…</div></div>
+    <div class="bloco" id="pmamb"><h3>Acionamentos da PM Ambiental</h3><div class="dica">Carregando…</div></div>
     <div class="bloco"><h3>Linha do tempo (${(evs||[]).length})</h3>
       <ul class="linha-tempo">${(evs||[]).map(e => `<li>
         <span class="quando">${e.data_hora ? fmtDH(e.data_hora) : esc(e.data_hora_txt||"sem data")}</span><span class="tipo">${TIPOS[e.tipo]||e.tipo}</span>
@@ -453,17 +501,28 @@ async function abrirRI(ano, ri){
       <div id="cabEd" data-editando="1" style="margin-top:10px">${htmlCabecalho(r)}</div>
       <button class="btn" id="salvarCab" style="margin-top:10px">Salvar alterações</button></details></div>`;
   ligarEvento($("#formEvento")); ligarUC($("#cabEd"));
-  carregarAtuacoes(r);
+  carregarAtuacoes(r); carregarListasRI(r);
+  $("#fecharRI")?.addEventListener("click", async () => {
+    if (!confirm(`Fechar o RI ${r.ri}/${r.ano} em nome de ${perfil.nome}?`)) return;
+    const {error} = await sb.from("ri").update({fechado_por: perfil.nome, fechado_em: new Date().toISOString()}).eq("ano", r.ano).eq("ri", r.ri);
+    if (error) return msg(error.message, "erro");
+    msg("RI fechado.", "ok"); abrirRI(r.ano, r.ri);
+  });
+  $("#pdfRI").onclick = () => pdfRI(r, evs || []);
   $("#salvarEvento").onclick = async () => {
     const b = $("#salvarEvento"); b.disabled = true;
     try{
       const ev = lerEvento($("#formEvento"));
       const {error} = await sb.from("ri_evento").insert({ano: r.ano, ri: r.ri, ...ev});
       if (error) throw new Error(error.message);
-      if (ev.tipo === "debelado"){
-        const df = $('[name="ev_dat_final"]').value, hf = $('[name="ev_hr_final"]').value;
-        if (df){ const {error: e2} = await sb.from("ri").update({dat_final: df, hr_final: hf || null, status: "debelado"}).eq("ano", r.ano).eq("ri", r.ri);
-                 if (e2) throw new Error("Evento salvo, mas o fim não: " + e2.message); }
+      const dm = $('#formEvento [name="ev_dat_marco"]').value, hm = $('#formEvento [name="ev_hr_marco"]').value || null;
+      if (ev.tipo === "debelado" && dm){
+        const {error: e2} = await sb.from("ri").update({dat_final: dm, hr_final: hm, status: "debelado", informante_final: ev.informante || r.informante_final}).eq("ano", r.ano).eq("ri", r.ri);
+        if (e2) throw new Error("Evento salvo, mas o fim não: " + e2.message);
+      }
+      if (ev.tipo === "inicio_combate" && dm){
+        const {error: e2} = await sb.from("ri").update({dat_ini_comb: dm, hr_ini_comb: hm, informante_ini_comb: ev.informante || r.informante_ini_comb}).eq("ano", r.ano).eq("ri", r.ri);
+        if (e2) throw new Error("Evento salvo, mas o início do combate não: " + e2.message);
       }
       msg("Evento registrado.", "ok"); await carregarLista(); abrirRI(r.ano, r.ri);
     }catch(err){ msg(err.message, "erro"); b.disabled = false; }
@@ -477,6 +536,116 @@ async function abrirRI(ano, ri){
     }catch(err){ msg(err.message, "erro"); }
   };
 }
+/* ======================= MARCOS, CONTATOS E PM AMBIENTAL ======================= */
+function minutos(d1, h1, d2, h2){ if (!d1 || !h1 || !d2 || !h2) return null; return Math.round((new Date(`${d2}T${h2.slice(0,5)}`) - new Date(`${d1}T${h1.slice(0,5)}`)) / 6e4); }
+const fmtMin = m => m == null ? "" : m < 60 ? `${m} min` : `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")} min`;
+function htmlMarcos(r){
+  const resp = minutos(r.dat_detec, r.hr_detec, r.dat_ini_comb, r.hr_ini_comb), dur = minutos(r.dat_ini_comb, r.hr_ini_comb, r.dat_final, r.hr_final);
+  const m = (t, d, h, quem, extra="") => `<div class="marco ${d ? "" : "vazio"}"><div class="t">${t}</div><div class="v">${d ? `${fmtD(d)} ${fmtH(h)}` : "—"}</div>
+    <div class="q">${quem ? "informou: " + esc(quem) : ""}${extra}</div></div>`;
+  return `<div class="marcos-res">
+    ${m("Detecção", r.dat_detec, r.hr_detec, r.informante_detec, r.f_detec ? `<br>${esc(r.f_detec)}` : "")}
+    ${m("Início do combate", r.dat_ini_comb, r.hr_ini_comb, r.informante_ini_comb, resp != null ? `<br><b>tempo de resposta: ${fmtMin(resp)}</b>` : "")}
+    ${m("Debelado", r.dat_final, r.hr_final, r.informante_final, dur != null ? `<br><b>duração do combate: ${fmtMin(dur)}</b>` : "")}
+    <div class="marco ${r.fechado_por ? "" : "vazio"}"><div class="t">Fechamento do RI</div><div class="v">${r.fechado_por ? esc(r.fechado_por) : "—"}</div>
+      <div class="q">${r.fechado_em ? fmtDH(new Date(new Date(r.fechado_em).getTime() - new Date().getTimezoneOffset()*6e4).toISOString()) : ""}</div></div>
+  </div>`;
+}
+const LISTAS_RI = {
+  contatos: {titulo:"Contatos neste registro", tab:"ri_contato", ordem:"id", vazio:"Nenhum contato registrado.",
+    cols:[["nome","Nome *"],["orgao","Órgão / função"],["municipio","Município"],["telefone","Telefone"]]},
+  pmamb: {titulo:"Acionamentos da PM Ambiental", tab:"ri_pmamb", ordem:"data_hora", vazio:"Nenhum acionamento da PM Ambiental.",
+    cols:[["contato","Contato / nome / e-mail *"],["municipio","Município"],["telefone","Telefone"],["data_hora","Data e hora","datetime-local"],["responsavel","Responsável pelo contato"]]}
+};
+async function carregarListasRI(r){
+  for (const [id, L] of Object.entries(LISTAS_RI)){
+    const box = $("#" + id); if (!box) continue;
+    const {data, error} = await sb.from(L.tab).select("*").eq("ano", r.ano).eq("ri", r.ri).order(L.ordem, {nullsFirst:true});
+    if (error){ box.querySelector(".dica").textContent = error.message; continue; }
+    r["_" + id] = data || [];
+    const val = (c, x) => c[2] === "datetime-local" ? fmtDH(x[c[0]]) : esc(x[c[0]]||"");
+    box.innerHTML = `<h3>${L.titulo} (${(data||[]).length})</h3>
+      ${(data||[]).length ? `<div class="tab-wrap"><table class="tab"><thead><tr>${L.cols.map(c=>`<th>${esc(c[1].replace(" *",""))}</th>`).join("")}<th class="nao-imprime"></th></tr></thead><tbody>
+        ${data.map(x => `<tr>${L.cols.map(c=>`<td>${val(c, x)}</td>`).join("")}<td class="nao-imprime"><button class="btn peq" data-rm="${x.id}" title="Excluir">×</button></td></tr>`).join("")}</tbody></table></div>` : `<div class="dica">${L.vazio}</div>`}
+      <details class="nao-imprime" style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">+ adicionar</summary>
+        <div class="grade" style="margin-top:8px">${L.cols.map(c => `<div><label>${esc(c[1])}</label><input name="${c[0]}" type="${c[2]||"text"}" ${c[0]==="responsavel" ? `value="${esc(perfil.nome)}"` : ""} ${c[0]==="data_hora" ? `value="${agoraLocal()}"` : ""}></div>`).join("")}</div>
+        <button class="btn peq primario" data-add style="margin-top:8px">Salvar</button></details>`;
+    box.querySelector("[data-add]").onclick = async () => {
+      const o = {ano: r.ano, ri: r.ri};
+      L.cols.forEach(c => { const v = box.querySelector(`[name="${c[0]}"]`).value; o[c[0]] = c[2] === "datetime-local" ? (v ? v.replace("T"," ") + ":00" : null) : txt(v); });
+      const obrig = L.cols.find(c => c[1].endsWith("*") && !o[c[0]]); if (obrig) return msg(`Informe “${obrig[1].replace(" *","")}”.`, "erro");
+      const {error} = await sb.from(L.tab).insert(o); if (error) return msg(error.message, "erro");
+      msg("Registrado.", "ok"); carregarListasRI(r);
+    };
+    $$("[data-rm]", box).forEach(b => b.onclick = async () => {
+      if (!confirm("Excluir este registro?")) return;
+      const {error} = await sb.from(L.tab).delete().eq("id", +b.dataset.rm); if (error) return msg(error.message, "erro");
+      carregarListasRI(r);
+    });
+  }
+}
+
+/* ======================= PDF DO RI (modelo da Força-Tarefa) ======================= */
+async function pdfRI(r, evs){
+  const u = UCS[r.nome_uc] || {};
+  const [{data: cont}, {data: pm}, {data: reg}] = await Promise.all([
+    sb.from("ri_contato").select("*").eq("ano", r.ano).eq("ri", r.ri).order("id"),
+    sb.from("ri_pmamb").select("*").eq("ano", r.ano).eq("ri", r.ri).order("data_hora", {nullsFirst:true}),
+    sb.from("uc").select("nome_uc,categoria,grupo,ufbio").eq("nome_uc", r.nome_uc).maybeSingle()]);
+  const PI = reg?.grupo || (["PAR","MONA","ESEC","REBIO","RVS"].includes(u.categoria) ? "Proteção Integral" : u.categoria ? "Uso Sustentável" : "");
+  const dms = (v, h) => { if (v == null) return ""; const a = Math.abs(v), g = Math.floor(a), m = Math.floor((a-g)*60), s = ((a-g)*60-m)*60;
+    return `${g}°${String(m).padStart(2,"0")}'${s.toFixed(1).replace(".",",")}"${h}`; };
+  const hh = h => h ? h.slice(0,5).replace(":", "h") + "min" : "";
+  const marca = (v, alvo) => (v||"").toLowerCase().includes(alvo) ? "X" : "&nbsp;";
+  const fd = r.f_detec || "", fdl = fd.toLowerCase();
+  const formas = [["denúncia pelo 0800","0800"],["satélites","satélite"],["gerente da uc","gerente da uc"],["funcionário da uc","funcionário da uc"],
+    ["brigadista ftp","brigadista previncêndio"],["brigadista cfm amda/previncêndio-ief","cfm"],["monitoramento aéreo","monitoramento aéreo"],
+    ["morador da uc","morador da uc"],["morador do entorno","morador do entorno"]];
+  const algum = formas.some(([,k]) => fdl.includes(k));
+  const base = (r.base_op||"").toLowerCase();
+  const recursosEv = e => [...PESSOAS, ...VEICULOS].filter(([k]) => e[k]).map(([k,t]) => `${String(e[k]).padStart(2,"0")} - ${t}`).join(";<br>") + (e.recursos_txt ? `<br>${esc(e.recursos_txt)}` : "");
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>RI ${r.ri}/${r.ano} — ${esc(rotuloUC(r.nome_uc))}</title>
+  <style>@page{size:A4;margin:14mm 12mm}*{box-sizing:border-box}body{font:10.5pt/1.35 Arial,Helvetica,sans-serif;color:#000;margin:0}
+  .cab{text-align:center;font-weight:700;font-size:9pt;line-height:1.35}.ftp{text-align:center;font-weight:800;font-size:13pt;margin:10px 0 6px;letter-spacing:.04em}
+  h1{text-align:center;font-size:12pt;margin:6px 0 2px}.num{text-align:center;font-size:13pt;font-weight:800}.uc{text-align:center;font-weight:800;font-size:12pt;margin-bottom:8px}
+  table{width:100%;border-collapse:collapse;margin:0 0 8px}td,th{border:1px solid #000;padding:4px 6px;vertical-align:top}th{background:#d9d9d9;font-size:9pt}
+  .sec{background:#bfbfbf;text-align:center;font-weight:800;font-size:10pt}.c{text-align:center}.cx{display:inline-block;margin-right:10px}
+  .rod{font-size:8pt;color:#444;margin-top:8px}</style></head><body>
+  <div class="cab">GOVERNO DO ESTADO DE MINAS GERAIS<br>SISTEMA ESTADUAL DE MEIO AMBIENTE<br>INSTITUTO ESTADUAL DE FLORESTAS<br>PREVINCÊNDIO — PROGRAMA DE PREVENÇÃO E COMBATE A INCÊNDIOS FLORESTAIS</div>
+  <div class="ftp">FORÇA-TAREFA PREVINCÊNDIO</div>
+  <h1>REGISTRO DE INCÊNDIO FLORESTAL EM UNIDADES DE CONSERVAÇÃO DO ESTADO DE MINAS GERAIS</h1>
+  <div class="num">${r.ri}/${r.ano}</div><div class="uc">${esc(rotuloUC(r.nome_uc).toUpperCase())}</div>
+  <table><tr><th>CATEGORIA</th><th>MUNICÍPIO</th><th>UR IEF</th><th>COORDENADAS DO INCÊNDIO</th><th>LOCAL</th></tr>
+    <tr class="c"><td>${PI}</td><td>${esc(r.municipio||"")}</td><td>${esc(reg?.ufbio||"")}</td><td>${r.lat!=null ? `Lat. ${dms(r.lat,"S")}<br>Long. ${dms(r.lon,"W")}` : ""}</td><td>${esc(r.local||"")}</td></tr></table>
+  <table><tr><td colspan="4" class="sec">DETECÇÃO DO INCÊNDIO</td></tr>
+    <tr><th style="width:15%">DATA</th><td>${fmtD(r.dat_detec)}</td><th style="width:15%">HORA</th><td>${hh(r.hr_detec)}</td></tr>
+    <tr><th>FORMA</th><td colspan="3">${formas.map(([t,k]) => `<span class="cx">(${fdl.includes(k) ? "X" : "&nbsp;&nbsp;"}) ${t.toUpperCase()}</span>`).join(" ")}
+      <span class="cx">(${fd && !algum ? "X" : "&nbsp;&nbsp;"}) OUTROS: ${fd && !algum ? esc(fd) : ""}</span></td></tr>
+    <tr><th colspan="2">NOME DO RESPONSÁVEL PELA INFORMAÇÃO</th><td colspan="2">${esc(r.informante_detec||"")}</td></tr></table>
+  <table><tr><td class="sec">SALA DE OPERAÇÕES RESPONSÁVEL</td></tr><tr><td class="c">
+    ${BASES.map(b => `<span class="cx">(${b === r.base_op ? "X" : "&nbsp;&nbsp;"}) ${esc(b.replace(/^(Base Operacional|Sub Base)( de)? /i,"").toUpperCase())}</span>`).join(" ")}</td></tr></table>
+  <table><tr><td colspan="4" class="sec">CONTATOS (NESTE REGISTRO: UC, PREVINCÊNDIO E OUTROS)</td></tr>
+    <tr><th>NOME</th><th>ÓRGÃO/FUNÇÃO</th><th>MUNICÍPIO</th><th>TELEFONE</th></tr>
+    ${(cont||[]).map(c => `<tr><td>${esc(c.nome)}</td><td>${esc(c.orgao||"")}</td><td>${esc(c.municipio||"")}</td><td>${esc(c.telefone||"")}</td></tr>`).join("") || `<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>`}</table>
+  <table><tr><td colspan="4" class="sec">INÍCIO DO COMBATE</td></tr>
+    <tr><th style="width:15%">DATA</th><td>${fmtD(r.dat_ini_comb)}</td><th style="width:15%">HORA</th><td>${hh(r.hr_ini_comb)}</td></tr>
+    <tr><th colspan="2">RESPONSÁVEL PELA INFORMAÇÃO</th><td colspan="2">${esc(r.informante_ini_comb||"")}</td></tr></table>
+  <table><tr><th style="width:14%">DATA / HORA</th><th>DESCRIÇÃO DA OCORRÊNCIA</th><th style="width:28%">RECURSOS MOBILIZADOS NO MOMENTO</th><th style="width:15%">RESPONSÁVEL PELO PREENCHIMENTO</th></tr>
+    ${evs.map(e => `<tr><td>${e.data_hora ? fmtD(e.data_hora) + "<br>" + e.data_hora.slice(11,16).replace(":","h") + "min" : esc(e.data_hora_txt||"")}</td>
+      <td>${esc(e.descricao||"").replace(/\n/g,"<br>")}</td><td>${recursosEv(e)}</td><td>${esc(e.atendente||"")}</td></tr>`).join("") || `<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>`}</table>
+  <table><tr><td colspan="5" class="sec">ACIONAMENTOS PMAMB</td></tr>
+    <tr><th>CONTATO/NOME/E-MAIL</th><th>MUNICÍPIO</th><th>TELEFONE</th><th>DATA/HORA</th><th>RESPONSÁVEL PELO CONTATO</th></tr>
+    ${(pm||[]).map(c => `<tr><td>${esc(c.contato)}</td><td>${esc(c.municipio||"")}</td><td>${esc(c.telefone||"")}</td><td>${fmtDH(c.data_hora||"")}</td><td>${esc(c.responsavel||"")}</td></tr>`).join("") || `<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`}</table>
+  <table><tr><td colspan="4" class="sec">INCÊNDIO DEBELADO</td></tr>
+    <tr><th style="width:15%">DATA</th><td>${fmtD(r.dat_final)}</td><th style="width:15%">HORA</th><td>${hh(r.hr_final)}</td></tr>
+    <tr><th colspan="2">RESPONSÁVEL PELA INFORMAÇÃO</th><td colspan="2">${esc(r.informante_final||"")}</td></tr>
+    <tr><th colspan="2">RESPONSÁVEL PELO FECHAMENTO DO RI</th><td colspan="2">${esc(r.fechado_por||"")}</td></tr></table>
+  <div class="rod">Gerado pelo Colibri — Sistema Integrado de Gestão do Fogo em Unidades de Conservação · IEF-MG · ${new Date().toLocaleString("pt-BR")}</div>
+  <script>onload = () => setTimeout(() => print(), 200);<\/script></body></html>`;
+  const w = open("", "_blank"); if (!w) return msg("Permita janelas pop-up para gerar o PDF.", "erro");
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
 /* ======================= ATUAÇÕES DO RI ======================= */
 const hojeISO = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
 function txtVeic(a){ return VEICULOS.filter(([k])=>a[k]).map(([k,t])=>`${a[k]} ${t}`).join(", "); }

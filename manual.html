@@ -250,14 +250,17 @@
       <ol class="passos">
         <li>Na aba <b>Registros (RI)</b>, clique em <b>+ Novo RI</b>.</li>
         <li>Escolha a UC — a base operacional e o município são sugeridos pelo cadastro.</li>
-        <li>Informe data e hora da detecção, localização (interno/entorno) e, se houver, coordenadas (aceita <code>-17.98</code> ou <code>17°58'32"S</code>).</li>
+        <li>Informe a detecção (data, hora, <b>forma de detecção</b> e quem informou), a localização (interno/entorno) e, se houver, coordenadas (aceita <code>-17.98</code> ou <code>17°58'32"S</code>).</li>
         <li>Descreva a primeira ligação (quem informou e o que foi dito) e clique em <b>Registrar RI</b>. O número é gerado automaticamente e deve ser passado à UC.</li>
       </ol>
       <h3>Acompanhar</h3>
       <ul>
         <li>Cada ligação ou atualização vira um <b>evento</b> na linha do tempo do RI.</li>
-        <li>Para encerrar, registre um evento do tipo <b>Debelado</b> com data e hora do fim: o RI muda de situação e o prazo do ROI começa a contar.</li>
-        <li>O link <b>abrir o formulário do ROI com este RI</b> leva a UC direto ao ROI já preenchido com os dados da sala.</li>
+        <li>Quando o combate começar, registre um evento <b>Início do combate</b> com data e hora: o sistema calcula o <b>tempo de resposta</b>.</li>
+        <li>Para encerrar, registre um evento <b>Debelado</b> com data e hora do fim: o RI muda de situação e o prazo do ROI começa a contar. Depois, clique em <b>Fechar RI</b> (fica registrado quem fechou).</li>
+        <li>Registre também os <b>contatos</b> envolvidos e os <b>acionamentos da PM Ambiental</b> nos blocos próprios do RI.</li>
+        <li><b>PDF do RI</b> gera o documento no modelo da Força-Tarefa para anexar ao SEI.</li>
+        <li>Os atalhos <b>mapear no SMC</b> e <b>abrir o ROI deste RI</b> levam ao próximo passo; o ROI já abre com UC, datas, forma de detecção e início do combate da sala.</li>
       </ul>
     </section>
 

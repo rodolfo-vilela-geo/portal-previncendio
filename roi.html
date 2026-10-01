@@ -527,6 +527,12 @@ async function preencherDoRI(){
   if (data.lat!=null && data.lon!=null && vazio("lat_g")){
     const [g1,m1,s1]=decParaDMS(+data.lat), [g2,m2,s2]=decParaDMS(+data.lon);
     F("lat_g").value=g1; F("lat_m").value=m1; F("lat_s").value=s1; F("lon_g").value=g2; F("lon_m").value=m2; F("lon_s").value=s2; feitos.push("coordenadas"); }
+  // forma de detecção e início do combate registrados pela sala
+  if (data.f_detec && vazio("f_detec")){
+    if (![...F("f_detec").options].some(o => o.value === data.f_detec)) F("f_detec").add(new Option(data.f_detec, data.f_detec));
+    F("f_detec").value = data.f_detec; feitos.push("forma de detecção"); }
+  if (data.f_detec_quem && vazio("f_detec_quem")) F("f_detec_quem").value = data.f_detec_quem;
+  if (data.dat_ini_comb && vazio("dat_comb")){ F("dat_comb").value = data.dat_ini_comb; if (data.hr_ini_comb && vazio("hr_comb")) F("hr_comb").value = data.hr_ini_comb; feitos.push("início do combate"); }
   // apoios registrados pela sala (atuações): evolução diária, início do combate, veículos e instituições
   if (data.evolucao?.length && !F("sem_combate").checked && !lerTabela("tabEvol").some(l => l.data)){
     $("#tabEvol tbody").innerHTML = "";
