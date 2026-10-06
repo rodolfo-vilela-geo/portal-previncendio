@@ -90,9 +90,37 @@
   .sa-atalhos{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap} .sa-atalhos button{background:none;border:0;text-decoration:underline;padding:0 3px;opacity:.9}
   .sa-vazio{margin-top:6px;color:#ffd38a}
   .aviso-mapa{position:absolute;right:10px;top:10px;z-index:500;background:rgba(255,248,225,.95);color:#5a3a00;border:1px solid #f0c64a;border-radius:8px;padding:6px 9px;font-size:12px;max-width:300px}
-  .ficha dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px}
-  .ficha dt{color:var(--suave)} .ficha dd{margin:0;font-weight:600;text-align:right}
-  .ficha h4{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--suave)}
+  .ficha h3{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .ficha h3 a{font-size:12.5px;font-weight:600;color:var(--verde-2);text-decoration:none}
+  .ficha h3 a:hover,.fx-sec>h4 a:hover{text-decoration:underline} .fx-sec>h4 a{text-decoration:none;font-weight:600}
+  .fx-sec{border-top:1px solid var(--linha);padding-top:10px;margin-top:12px}
+  .fx-sec>h4{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--tinta);display:flex;justify-content:space-between;align-items:baseline}
+  .fx-sec>h4 small{font-weight:400;color:var(--suave);font-size:12px}
+  .fx-rot{font-size:12px;color:var(--suave)}
+  .fx-gerente{font-size:15px;font-weight:700;line-height:1.25;margin:1px 0 8px}
+  .fx-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .fx-num{background:var(--grade);border-radius:8px;padding:6px 8px;min-width:0}
+  .fx-num b{display:block;font-size:17px;line-height:1.1;font-variant-numeric:tabular-nums}
+  .fx-num span{display:block;font-size:11.5px;color:var(--suave);line-height:1.25}
+  .fx-num.alerta{background:#fdecea} .fx-num.alerta b{color:var(--and)}
+  .fx-chips{display:flex;flex-wrap:wrap;gap:4px}
+  .fx-chips span{font-size:12px;font-weight:600;border-radius:99px;padding:2px 9px;background:var(--realce);color:var(--verde-2)}
+  .fx-barra{height:7px;background:var(--grade);border-radius:4px;overflow:hidden;margin-top:4px} .fx-barra i{display:block;height:100%;background:var(--verde-2)}
+  .fx-linha{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-top:6px}
+  .fx-linha b{font-variant-numeric:tabular-nums}
+  .fx-icones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px}
+  .fx-ic{display:flex;align-items:center;gap:7px;font-size:12.5px;min-width:0;padding:2px 0}
+  .fx-ic b{font-size:14px;min-width:18px;text-align:right;font-variant-numeric:tabular-nums}
+  .fx-ic .t{min-width:0;line-height:1.2} .fx-ic .t small{display:block;color:var(--suave);font-size:11px}
+  .fx-ic.zero{opacity:.42}
+  .fx-ic .c{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+  .fx-via{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:6px;font-size:13px;margin-top:4px}
+  .fx-via i{height:4px;border-radius:2px}
+  .fx-via small{color:var(--suave)}
+  .fx-alerta{background:#fff4e5;border:1px solid #f3c27a;border-radius:8px;padding:8px 10px;font-size:13px;color:#6b4300;line-height:1.45}
+  .fx-alerta + .fx-alerta{margin-top:6px}
+  .fx-ok{font-size:13px;color:var(--suave)}
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .fx-alerta{background:#3a2a10;border-color:#7a5520;color:#ffd9a3} :root:not([data-theme="light"]) .fx-num.alerta{background:#3a1d1b} }
   .meses{display:flex;flex-wrap:wrap;gap:4px}
   .meses span{font-size:11.5px;font-weight:700;border-radius:99px;padding:2px 7px;border:1px solid var(--linha);color:var(--mudo)}
   .meses span.on{background:var(--atual);border-color:var(--atual);color:#fff}
@@ -232,32 +260,7 @@ function desenhar(){
 
     <div class="linha1">
       <div class="card mapa"><div id="mapa"></div><div class="aviso-mapa" id="avisoMapa" hidden></div></div>
-      <div class="card ficha">
-        <h3>Ficha da UC</h3>
-        <dl style="margin-top:8px">
-          <dt>Gerente</dt><dd>${esc(u.gerente || "—")}</dd>
-          <dt>Funcionários</dt><dd>${u.func_adm != null || u.func_oper != null ? `${fmtN(u.func_adm ?? 0)} adm. · ${fmtN(u.func_oper ?? 0)} oper.` : "—"}</dd>
-          <dt>Responsáveis na ausência</dt><dd>${u.n_responsaveis}${u.n_responsaveis < 2 ? " ⚠" : ""}</dd>
-          <dt>Situação fundiária</dt><dd>${u.fundiaria_pct != null ? fmtN(u.fundiaria_pct) + "% regularizada" : u.fundiaria_ha != null ? fmtN(u.fundiaria_ha) + " ha" : "—"}</dd>
-          <dt>Biomas</dt><dd>${esc((u.biomas||[u.bioma_uc]).filter(Boolean).join(", ") || "—")}</dd>
-          <dt>Área (decreto / limite)</dt><dd>${u.area_decreto_ha ? fmtN(u.area_decreto_ha) : "—"} / ${u.area_limite_ha ? fmtN(u.area_limite_ha) : "—"} ha</dd>
-        </dl>
-        <h4>Infraestrutura cadastrada</h4>
-        ${(D.infra||[]).length ? `<div style="font-size:13px">${Object.entries(INFRA).map(([t,[r]]) => { const n = D.infra.filter(x => x.tipo === t).length; return n ? `${n} ${r.toLowerCase()}${n>1 && !r.endsWith("s") ? "s" : ""}` : null; }).filter(Boolean).join(" · ")}</div>` : `<div class="vazio">Nada cadastrado no módulo Infraestrutura.</div>`}
-        <h4>Recursos e rede de apoio</h4>
-        ${htmlRecursos(D.rec)}
-        <h4>Atividades preventivas</h4>
-        ${htmlPrevencao(D.prev)}
-        <h4>Meses críticos declarados</h4>
-        <div class="meses">${MESES.map((m,i) => `<span class="${(u.meses_criticos||[]).includes(i+1) ? "on" : ""}">${m}</span>`).join("")}</div>
-        ${!(u.meses_criticos||[]).length ? `<div class="vazio">Ainda não informados no cadastro.</div>` : ""}
-        <h4>Cadastro (PIPCIF seção 3)</h4>
-        <div style="font-size:13px">${fmtN(u.completo_pct)}% preenchido<div class="pct"><i style="width:${u.completo_pct||0}%"></i></div></div>
-        <h4>ROIs</h4>
-        <div style="font-size:13px">${a.roi_pendentes ? `<b>${a.roi_pendentes}</b> incêndio(s) encerrado(s) nos últimos 30 dias ainda sem ROI enviado pelo sistema${a.roi_atrasados ? ` · <b style="color:var(--and)">${a.roi_atrasados} atrasado(s)</b>` : ""}` : "Nenhum ROI pendente nos últimos 30 dias."}</div>
-        <h4>Quem mais apoiou em ${ano}</h4>
-        ${(a.apoios||[]).length ? `<div class="hbar">${hbarLinhas(a.apoios.map(x => ({t:x.t, n:x.pd})), " pessoas-dia")}</div>` : `<div class="vazio">Sem atuações registradas pela sala.</div>`}
-      </div>
+      <div class="card ficha">${htmlFicha(u, a, ano)}</div>
     </div>
 
     <div class="grade2">
@@ -320,6 +323,68 @@ function colunas(sel, dados, unidade){
 }
 
 /* ---------------- mapa ---------------- */
+/* ---------------- ficha da UC ---------------- */
+const FX_SVG = {
+  veiculo:'<path d="M5 16V11l2-4h10l2 4v5M5 16h14M5 16v2M19 16v2M8 13h.01M16 13h.01" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
+  abafador:'<path d="M12 3v11M7 14h10l-2 6H9z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>',
+  bomba:'<path d="M8 6h8v13a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1zM10 3h4v3M16 9h3v6" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>'};
+const fxIc = (t, cor) => FX_SVG[t] ? `<span class="c" style="background:${cor}"><svg viewBox="0 0 24 24" width="13" height="13">${FX_SVG[t]}</svg></span>`
+  : iconeLegenda(t, 20).replace(/margin-right:5px/, "margin:0;flex:none");
+function fxItem(ic, n, rot, sub, cor){
+  return `<div class="fx-ic ${n ? "" : "zero"}">${fxIc(ic, cor || "#6b7280")}<b>${fmtN(n || 0)}</b><span class="t">${esc(rot)}${sub ? `<small>${sub}</small>` : ""}</span></div>`;
+}
+function htmlFicha(u, a, ano){
+  const r = D.rec || {}, p = D.prev || {}, inf = D.infra || [], ni = t => inf.filter(x => x.tipo === t).length;
+  const sec = (tit, corpo, extra = "") => `<div class="fx-sec"><h4>${tit}${extra ? `<small>${extra}</small>` : ""}</h4>${corpo}</div>`;
+  const link = mod => `ucs.html?uc=${encodeURIComponent(u.nome_uc)}&mod=${mod}`;
+  // pendências
+  const alertas = [];
+  if (a.roi_atrasados) alertas.push(`<b>${a.roi_atrasados} ROI${a.roi_atrasados > 1 ? "s" : ""} atrasado${a.roi_atrasados > 1 ? "s" : ""}</b> de ${a.roi_pendentes} incêndio${a.roi_pendentes > 1 ? "s" : ""} encerrado${a.roi_pendentes > 1 ? "s" : ""} nos últimos 30 dias sem ROI enviado.`);
+  else if (a.roi_pendentes) alertas.push(`<b>${a.roi_pendentes}</b> incêndio${a.roi_pendentes > 1 ? "s" : ""} encerrado${a.roi_pendentes > 1 ? "s" : ""} nos últimos 30 dias aguardando ROI.`);
+  if (u.n_responsaveis < 2) alertas.push(`Só <b>${u.n_responsaveis}</b> responsável na ausência do gerente (recomendado: 2 ou mais).`);
+  if (p.acoes_pendentes) alertas.push(`<b>${p.acoes_pendentes}</b> ação${p.acoes_pendentes > 1 ? "ões" : ""} preventiva${p.acoes_pendentes > 1 ? "s" : ""} com prazo vencido sem registro de execução.`);
+  if ((u.completo_pct ?? 100) < 100) alertas.push(`Cadastro da seção 3 com <b>${fmtN(u.completo_pct)}%</b> preenchido.`);
+  // vias
+  const v = p.vias || {}, vias = ["aceiro", "estrada", "trilha"].filter(t => v[t]?.n);
+  const fav = p.favoraveis || 0, adv = p.adversos || 0;
+  return `<h3>Ficha da UC <a href="${link("cadastro")}">Abrir cadastro →</a></h3>
+    ${alertas.length ? `<div style="margin-top:8px">${alertas.map(x => `<div class="fx-alerta">${x}</div>`).join("")}</div>` : ""}
+    ${sec("Gestão", `<div class="fx-rot">Gerente</div><div class="fx-gerente">${esc(u.gerente || "não informado")}</div>
+      <div class="fx-nums">
+        <div class="fx-num"><b>${u.func_adm ?? "—"}</b><span>administrativos</span></div>
+        <div class="fx-num"><b>${u.func_oper ?? "—"}</b><span>operacionais</span></div>
+        <div class="fx-num ${u.n_responsaveis < 2 ? "alerta" : ""}"><b>${u.n_responsaveis ?? 0}</b><span>substitutos do gerente</span></div>
+      </div>`)}
+    ${sec("Território", `<div class="fx-nums" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+        <div class="fx-num"><b>${u.area_decreto_ha ? fmtN(u.area_decreto_ha) : "—"}</b><span>ha pelo decreto</span></div>
+        <div class="fx-num"><b>${u.area_limite_ha ? fmtN(u.area_limite_ha) : "—"}</b><span>ha pelo limite oficial</span></div></div>
+      <div class="fx-linha"><span class="fx-rot">Situação fundiária</span><b>${u.fundiaria_pct != null ? fmtN(u.fundiaria_pct) + "% regularizada" : u.fundiaria_ha != null ? fmtN(u.fundiaria_ha) + " ha regularizados" : "não informada"}</b></div>
+      ${u.fundiaria_pct != null ? `<div class="fx-barra"><i style="width:${Math.min(100, u.fundiaria_pct)}%"></i></div>` : ""}
+      <div class="fx-linha" style="align-items:center"><span class="fx-rot">Biomas</span><span class="fx-chips">${(u.biomas || [u.bioma_uc]).filter(Boolean).map(b => `<span>${esc(b)}</span>`).join("") || "—"}</span></div>`)}
+    ${sec("Meses críticos", `<div class="meses">${MESES.map((m, i) => `<span class="${(u.meses_criticos || []).includes(i + 1) ? "on" : ""}">${m}</span>`).join("")}</div>
+      ${!(u.meses_criticos || []).length ? `<div class="vazio" style="padding:6px 0 0">Ainda não informados no cadastro.</div>` : ""}`)}
+    ${sec(`Estrutura e equipamentos`, `<div class="fx-icones">
+      ${fxItem("vigilancia", ni("vigilancia"), "torres e postos")}${fxItem("pista", ni("pista"), "pistas de pouso")}
+      ${fxItem("heliponto", ni("heliponto"), "helipontos")}${fxItem("estacao", ni("estacao"), "estações meteorológicas")}
+      ${fxItem("agua", ni("agua"), "pontos de água")}${fxItem("antena", r.repetidoras, "repetidoras")}
+      ${fxItem("radio", r.ht, "rádios HT", r.ht && r.ht_uso < r.ht ? `${fmtN(r.ht_uso)} em uso` : "")}${fxItem("radio", r.radios_fixos, "rádios fixos e móveis")}
+      ${fxItem("veiculo", r.veiculos, "veículos", r.veiculos && r.veiculos_disp < r.veiculos ? `<span style="color:var(--and)">${fmtN(r.veiculos_disp)} disponíve${r.veiculos_disp === 1 ? "l" : "is"}</span>` : "", "#4b5563")}
+      ${fxItem("abafador", r.abafadores, "abafadores", "", "#9a6b2f")}${fxItem("bomba", r.bombas_costais, "bombas costais", "", "#2f6f9a")}
+      </div>`, `<a href="${link("recursos")}" style="color:var(--verde-2)">ver</a>`)}
+    ${sec("Rede de apoio", `<div class="fx-icones">
+      ${fxItem("parceiro", r.parceiros, "parceiros")}${fxItem("saude", r.prestadores, "prestadores", r.saude ? `${r.saude} de saúde` : "")}
+      ${fxItem("colaborador", r.colaboradores, "colaboradores")}${fxItem("brigadista", r.brigadistas, "brigadistas voluntários")}
+      </div>`, `<a href="${link("apoio")}" style="color:var(--verde-2)">ver</a>`)}
+    ${sec("Prevenção", `${vias.length ? vias.map(t => `<div class="fx-via"><i style="background:${COR_VIA[t]}"></i><span><b>${fmtN(v[t].n)}</b> ${ROT_VIA[t]}${v[t].km ? ` <small>· ${fmtN(v[t].km, 1)} km</small>` : ""}</span>${v[t].ruins ? `<small style="color:var(--and)">${v[t].ruins} a refazer</small>` : "<span></span>"}</div>`).join("") : `<div class="fx-ok">Nenhum aceiro, estrada ou trilha cadastrado.</div>`}
+      ${p.acoes ? `<div class="fx-linha"><span class="fx-rot">Ações de ${p.acoes_ano}</span><b>${fmtN(p.acoes_feitas || 0)} de ${fmtN(p.acoes)} realizadas</b></div><div class="fx-barra"><i style="width:${100 * (p.acoes_feitas || 0) / p.acoes}%"></i></div>
+        ${p.participantes ? `<div class="fx-linha"><span class="fx-rot">Pessoas alcançadas</span><b>${fmtN(p.participantes)}</b></div>` : ""}` : `<div class="fx-linha"><span class="fx-rot">Ações preventivas</span><b>nenhuma no cronograma</b></div>`}
+      ${fav + adv ? `<div class="fx-linha"><span class="fx-rot">Elementos</span><b><span style="color:var(--verde-2)">${fav} favoráveis</span> · <span style="color:var(--and)">${adv} adversos</span></b></div>` : ""}
+      ${p.projetos ? `<div class="fx-linha"><span class="fx-rot">Projetos de sustentabilidade</span><b>${fmtN(p.projetos)}</b></div>` : ""}
+      ${p.brigada?.quantidade ? `<div class="fx-linha"><span class="fx-rot">Brigada contratada (${p.brigada.ano})</span><b>${fmtN(p.brigada.quantidade)} brigadistas</b></div>` : ""}`,
+      `<a href="${link("prevencao")}" style="color:var(--verde-2)">ver</a>`)}
+    ${(a.apoios || []).length ? sec(`Quem mais apoiou em ${ano}`, `<div class="hbar">${hbarLinhas(a.apoios.map(x => ({t: x.t, n: x.pd})), " pessoas-dia")}</div>`) : ""}
+    ${!alertas.length ? `<div class="fx-sec fx-ok">Sem pendências: ROIs em dia e cadastro completo.</div>` : ""}`;
+}
 function htmlRecursos(r){
   if (!r || !(r.veiculos + r.ht + r.radios_fixos + r.repetidoras + r.itens_material + r.parceiros + r.prestadores + r.colaboradores + r.brigadistas))
     return `<div class="vazio">Nada cadastrado nos módulos Recursos e Rede de apoio.</div>`;
