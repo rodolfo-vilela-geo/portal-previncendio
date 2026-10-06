@@ -148,6 +148,15 @@
   .gestao a small{color:var(--suave);font-size:12px}
   .gestao svg{width:16px;height:16px;color:var(--marca-2)}
   .btn-pip{font:inherit;font-weight:700;border:0;border-radius:8px;background:var(--marca);color:#fff;padding:9px 14px;cursor:pointer}
+  .entrar-convite{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--papel);border:1px dashed var(--linha);border-radius:12px;padding:12px 16px;font-size:14px;color:var(--suave)}
+  dialog#dlgEntrar{border:0;border-radius:14px;padding:0;width:min(380px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);background:var(--papel);color:var(--tinta)}
+  dialog#dlgEntrar::backdrop{background:rgba(0,0,0,.4)}
+  #dlgEntrar form{padding:20px 22px;display:flex;flex-direction:column;gap:10px}
+  #dlgEntrar h2{margin:0 0 4px;font-size:18px}
+  #dlgEntrar label{font-size:12px;font-weight:600;color:var(--suave)}
+  #dlgEntrar input{font:inherit;padding:8px 10px;border:1px solid var(--linha);border-radius:8px;background:var(--papel);color:var(--tinta);width:100%}
+  #dlgEntrar .erro{color:#b3261e;font-size:13px;min-height:18px}
+  #dlgEntrar .rod{display:flex;gap:8px;justify-content:flex-end}
   .btn-pip.sec{background:var(--papel);color:var(--marca-2);border:1px solid var(--marca-2)}
   .mod.relatorio .num{background:var(--laranja);color:#fff} .mod.relatorio{border:2px solid var(--laranja);background:linear-gradient(180deg,var(--papel),var(--realce))}
   .mod.relatorio .num{background:var(--laranja)}
@@ -332,6 +341,11 @@
   </section>
 
   <!-- GESTÃO: só aparece para quem está logado como equipe -->
+  <section id="secConvite">
+    <div class="tit"><h2>Área da equipe e dos gerentes</h2></div>
+    <div class="entrar-convite">Entre com seu e-mail para ver as ferramentas do seu perfil (cadastro das UCs, Sala de Situação, Sala Técnica, importações).
+      <button type="button" class="btn-pip" data-entrar>Entrar</button></div>
+  </section>
   <section id="secGestao" hidden>
     <div class="tit"><h2>Gestão do sistema</h2><span class="cadeado" id="gQuem"></span></div>
     <div class="gestao">
@@ -365,6 +379,15 @@
 </footer>
 <script src="pipcif_modulos.js?v=20261001d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<dialog id="dlgEntrar"><form method="dialog" id="formEntrar">
+  <h2>Entrar no Colibri</h2>
+  <div class="dica" style="font-size:13px;color:var(--suave)">Equipe do Previncêndio, Salas e gerentes de UC.</div>
+  <label for="eEmail">E-mail</label><input id="eEmail" type="email" autocomplete="username" required>
+  <label for="eSenha">Senha</label><input id="eSenha" type="password" autocomplete="current-password" required>
+  <div class="erro" id="eErro"></div>
+  <div class="rod"><button type="button" class="btn-pip sec" id="eCancelar">Cancelar</button><button class="btn-pip" id="eEntrar">Entrar</button></div>
+  <a href="ucs.html" style="font-size:12.5px;color:var(--suave)">Esqueceu a senha ou é o primeiro acesso? Abra a página de entrada completa</a>
+</form></dialog>
 <script>
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 // módulos do PIPCIF (estrutura, mesmo sem estarem prontos)
@@ -385,8 +408,25 @@ const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
   let sb; try{ sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39"); }catch(e){ return; }
   // sessão: conta no alto e gestão conforme o papel
   try{
+    const dlg = document.getElementById("dlgEntrar");
+    const abrir = ev => { if (ev){ ev.preventDefault(); } document.getElementById("eErro").textContent = ""; dlg.showModal(); document.getElementById("eEmail").focus(); };
+    document.querySelectorAll("[data-entrar]").forEach(b => b.onclick = abrir);
+    const lk = document.querySelector("#conta a"); if (lk) lk.onclick = abrir;
+    document.getElementById("eCancelar").onclick = () => dlg.close();
+    document.getElementById("formEntrar").onsubmit = async ev => {
+      ev.preventDefault(); const b = document.getElementById("eEntrar"); b.disabled = true;
+      const {error} = await sb.auth.signInWithPassword({email: document.getElementById("eEmail").value.trim(), password: document.getElementById("eSenha").value});
+      b.disabled = false;
+      if (error){ document.getElementById("eErro").textContent = /invalid/i.test(error.message) ? "E-mail ou senha incorretos." : error.message; return; }
+      const {data: q} = await sb.rpc("meu_perfil");
+      if (!q){ await sb.auth.signOut(); document.getElementById("eErro").textContent = "Este e-mail não está cadastrado na equipe. Fale com o Previncêndio."; return; }
+      if (q.trocar_senha){ location.href = "ucs.html"; return; }
+      location.reload();
+    };
+    if (new URLSearchParams(location.search).has("entrar")) abrir();
     const {data:{session}} = await sb.auth.getSession(); if (!session) return;
     const {data: p} = await sb.rpc("meu_perfil"); if (!p) return;
+    document.getElementById("secConvite").hidden = true;
     document.getElementById("conta").innerHTML = `<span>${esc(p.nome)}</span><a href="#" id="sairConta">Sair</a>`;
     document.getElementById("sairConta").onclick = async ev => { ev.preventDefault(); await sb.auth.signOut(); location.reload(); };
     let n = 0;
