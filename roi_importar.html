@@ -120,6 +120,12 @@
 <div id="msg"></div>
 
 <script>
+window.addEventListener("error", e => { const m = document.getElementById("msg"); if (m){ m.className = "erro"; m.textContent = "Erro ao abrir a página: " + (e.message || "script não carregou") + ". Recarregue com Ctrl+F5."; } });
+if (!window.pdfjsLib || !window.supabase){
+  document.getElementById("telaLogin").hidden = false;
+  document.getElementById("erroLogin").textContent = "Não foi possível carregar as bibliotecas da página (" + [!window.pdfjsLib && "leitor de PDF", !window.supabase && "banco de dados"].filter(Boolean).join(" e ") + "). Verifique a internet ou se a rede bloqueia cdnjs.cloudflare.com / cdn.jsdelivr.net e recarregue.";
+  throw new Error("bibliotecas ausentes");
+}
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
 const $ = (s, el=document) => el.querySelector(s), $$ = (s, el=document) => [...el.querySelectorAll(s)];
@@ -132,9 +138,14 @@ let ITENS = [], UCS = [], atual = -1;
 
 /* ---------------- acesso ---------------- */
 async function entrar(){
+  try{ await entrar2(); }
+  catch(e){ $("#telaLogin").hidden = false; $("#app").hidden = true; $("#erroLogin").textContent = "Erro ao entrar: " + (e.message || e); }
+}
+async function entrar2(){
   const {data:{session}} = await sb.auth.getSession();
   if (!session){ $("#telaLogin").hidden = false; $("#app").hidden = true; return; }
-  const {data} = await sb.rpc("meu_perfil");
+  const {data, error} = await sb.rpc("meu_perfil");
+  if (error) throw new Error(error.message);
   if (!data || !["tecnica","gpcif","admin"].includes(data.papel)){
     $("#telaLogin").hidden = false; $("#app").hidden = true;
     $("#erroLogin").textContent = data ? "Somente o Previncêndio e a Sala Técnica importam ROIs." : "E-mail não cadastrado na equipe."; return;
