@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="img/favicon.png">
 <title>Importar ROIs — Colibri</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="lib/pdfjs/pdf.min.js?v=3.11.174"></script>
 <script src="roi_pdf.js?v=20261001a"></script>
 <style>
   :root{
@@ -123,10 +123,10 @@
 window.addEventListener("error", e => { const m = document.getElementById("msg"); if (m){ m.className = "erro"; m.textContent = "Erro ao abrir a página: " + (e.message || "script não carregou") + ". Recarregue com Ctrl+F5."; } });
 if (!window.pdfjsLib || !window.supabase){
   document.getElementById("telaLogin").hidden = false;
-  document.getElementById("erroLogin").textContent = "Não foi possível carregar as bibliotecas da página (" + [!window.pdfjsLib && "leitor de PDF", !window.supabase && "banco de dados"].filter(Boolean).join(" e ") + "). Verifique a internet ou se a rede bloqueia cdnjs.cloudflare.com / cdn.jsdelivr.net e recarregue.";
+  document.getElementById("erroLogin").textContent = "Não foi possível carregar as bibliotecas da página (" + [!window.pdfjsLib && "leitor de PDF", !window.supabase && "banco de dados"].filter(Boolean).join(" e ") + "). Verifique a internet ou e recarregue com Ctrl+F5.";
   throw new Error("bibliotecas ausentes");
 }
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdfjs/pdf.worker.min.js?v=3.11.174";
 const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
 const $ = (s, el=document) => el.querySelector(s), $$ = (s, el=document) => [...el.querySelectorAll(s)];
 const esc = s => (s ?? "").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
