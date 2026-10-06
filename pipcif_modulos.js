@@ -28,7 +28,7 @@ window.PIPCIF_MODULOS = [
     {s:"12", t:"Cronograma de ações preventivas", d:"capacitação e sensibilização — período, local e público"},
     {s:"13", t:"Projetos de sustentabilidade", d:"dentro e no entorno da UC", mapa:true},
     {s:"16", t:"Atuação dos brigadistas contratados", d:"contratações por ano, rondas, plantão e pontos estratégicos"}]},
-  {n:6, ic:'<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>', id:"risco", tom:"verm", sintese:"Setores de risco da UC, com fatores favoráveis e adversos e o histórico de cicatrizes do BDG.", nome:"Mapa de risco", blocos:[
+  {n:6, ic:'<path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>', id:"risco", tom:"verm", pronto:true, sintese:"Setores de risco da UC, com fatores favoráveis e adversos e o histórico de cicatrizes do BDG.", nome:"Mapa de risco", blocos:[
     {s:"14", t:"Setores de risco", d:"fatores favoráveis e adversos por setor, com o histórico de cicatrizes do BDG", mapa:true}]},
   {n:7, ic:'<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.3-3.7 1.5-5.5 1.2 1 2 2.2 2.5 2.5.2-2.4-.3-4.6 1-7z"/>', id:"operacional", tom:"fogo", sintese:"Procedimentos de combate: inicial, grandes incêndios, parceiros e pós-incêndio.", nome:"Plano operacional", blocos:[
     {s:"15", t:"Plano operacional de combate", d:"procedimentos iniciais, intermediários (grandes incêndios), dos parceiros e pós-incêndio"}]}

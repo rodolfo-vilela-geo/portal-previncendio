@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="pipcif_modulos.js?v=20261001d"></script>
+<script src="pipcif_modulos.js?v=20261006a"></script>
 <script src="icones_mapa.js?v=20261001d"></script>
 <style>
   :root{
@@ -620,6 +620,7 @@ function ligarAbasModulos(nome){
     $("#mod-cadastro").hidden = id !== "cadastro";
     if (id === "cadastro"){ $("#mod-conteudo").innerHTML = ""; if (mapa) setTimeout(() => mapa.invalidateSize(), 30); return; }
     if (id === "infraestrutura") return abrirInfra(nome);
+    if (id === "risco" && window.abrirModuloRisco) return abrirModuloRisco(nome);
     if (window.MODULOS_UC?.[id]) return abrirModuloUC(id, nome);
     const m = (window.PIPCIF_MODULOS||[]).find(x => x.id === id);
     $("#mod-conteudo").innerHTML = `<div class="breve-mod"><b>Módulo ${m.n} · ${esc(m.nome)}</b> — em construção. Vai reunir:<ul>${m.blocos.map(bl => `<li><b>${esc(bl.s)}</b> ${esc(bl.t)}${bl.d ? ` — ${esc(bl.d)}` : ""}</li>`).join("")}</ul></div>`;
@@ -941,5 +942,7 @@ $$(".abas button").forEach(b => b.onclick = async () => {
 entrar();
 </script>
 <script src="modulos_uc.js?v=20261001d"></script>
+<script src="risco_mapa.js?v=20261006a"></script>
+<script src="modulo_risco.js?v=20261006a"></script>
 </body>
 </html>
