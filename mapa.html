@@ -603,21 +603,25 @@ $("#busca").onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); $("#b
 $("#limparUC").onclick = () => { ucFoco = null; if (focoLayer) mapa.removeLayer(focoLayer); focoLayer = null; $("#ucSel").hidden = true; $("#optUC").hidden = true; salvarHash(); };
 
 /* ======================= link (hash) ======================= */
-function salvarHash(){
-  if (!mapa) return;
+// A vista (camadas, anos, fundo, UC) só vai para o endereço no "Copiar link". Ao abrir, um link compartilhado
+// (marcado com l=1) é aplicado e o endereço volta a ficar limpo: recarregar a página abre o padrão.
+function linkVista(){
   const c = mapa.getCenter(), lig = CAMADAS.filter(x => x.ativa).map(x => x.id).join(",");
-  const h = `v=${mapa.getZoom()}/${c.lat.toFixed(4)}/${c.lng.toFixed(4)}&c=${lig}&a=${ANOS.join("-")}${baseAtual ? "&b=" + baseAtual.k : ""}${ucFoco ? "&u=" + encodeURIComponent(ucFoco) : ""}`;
-  history.replaceState(null, "", location.pathname + location.search + "#" + h);
+  return location.origin + location.pathname + location.search + "#" +
+    `l=1&v=${mapa.getZoom()}/${c.lat.toFixed(4)}/${c.lng.toFixed(4)}&c=${lig}&a=${ANOS.join("-")}${baseAtual ? "&b=" + baseAtual.k : ""}${ucFoco ? "&u=" + encodeURIComponent(ucFoco) : ""}`;
 }
+function salvarHash(){}
 function lerHash(){
   const p = new URLSearchParams(location.hash.slice(1)), o = {};
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  if (p.get("l") !== "1") return o;   // endereços antigos (antes do l=1) são ignorados
   if (p.get("v")){ const v = p.get("v").split("/").map(Number); if (v.length === 3 && v.every(isFinite)) o.v = v; }
   if (p.has("c")) o.c = p.get("c").split(",").filter(Boolean);
   if (p.get("a")){ const a = p.get("a").split("-").map(Number); if (a.length === 2 && a.every(isFinite)) o.a = a; }
   o.b = p.get("b"); o.u = p.get("u");
   return o;
 }
-$("#btnLink").onclick = async () => { salvarHash(); try{ await navigator.clipboard.writeText(location.href); msg("Link copiado. Quem abrir precisa ter login."); }catch(e){ prompt("Copie o link:", location.href); } };
+$("#btnLink").onclick = async () => { const u = linkVista(); try{ await navigator.clipboard.writeText(u); msg("Link copiado. Quem abrir precisa ter login."); }catch(e){ prompt("Copie o link:", u); } };
 
 /* ======================= exportar ======================= */
 $("#btnExportar").onclick = () => {
