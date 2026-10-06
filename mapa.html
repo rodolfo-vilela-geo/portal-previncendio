@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="img/favicon.png">
-<title>Mapa do Colibri</title>
+<title>Geo Colibri</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -47,6 +47,8 @@
   .marca h1{font:600 18px/1.1 Sora,sans-serif;margin:0;letter-spacing:-.01em}
   .marca h1 small{display:block;font:400 12.5px "Source Sans 3",sans-serif;color:var(--liquen);margin-top:2px;letter-spacing:0}
   .marca .fechar{margin-left:auto;display:none;background:none;border:0;font-size:22px;cursor:pointer;color:var(--liquen)}
+  .voltar{display:inline-flex;align-items:center;gap:4px;margin:0 16px 8px;font-size:13px;font-weight:600;text-decoration:none;color:var(--bf)}
+  .voltar:hover{text-decoration:underline}
   .busca{padding:4px 16px 10px;position:relative}
   .busca input{width:100%;padding:9px 12px 9px 34px;border-radius:10px;border:1px solid var(--trilha);background:var(--dossel)}
   .busca svg{position:absolute;left:27px;top:15px;opacity:.6}
@@ -168,7 +170,7 @@
 <div id="telaLogin" hidden>
   <form id="formLogin">
     <img src="img/logo_colibri_escuro.png?v=1" alt="Colibri">
-    <h1>Mapa do Colibri</h1>
+    <h1>Geo Colibri</h1>
     <p>Todas as camadas do Colibri num só mapa. Entre com o login da equipe ou de gerente.</p>
     <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
     <label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required>
@@ -182,9 +184,10 @@
   <aside id="painel" aria-label="Camadas">
     <div class="marca">
       <a href="index.html" title="Colibri — página inicial"><img src="img/logo_portal_selo.png" alt="Colibri" onerror="this.src='img/favicon.png'"></a>
-      <h1>Mapa do Colibri<small>Unidades de conservação de Minas Gerais</small></h1>
+      <h1>Geo Colibri<small>Unidades de conservação de Minas Gerais</small></h1>
       <button type="button" class="fechar" id="fecharPainel" aria-label="Fechar painel">×</button>
     </div>
+    <a class="voltar" href="index.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Página inicial do Colibri</a>
     <div class="busca">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
       <input id="busca" list="listaUC" placeholder="Ir para uma UC ou município" autocomplete="off" aria-label="Ir para uma UC ou município">
@@ -245,9 +248,6 @@ const fmtHa = v => v == null ? "" : (+v).toLocaleString("pt-BR", {maximumFractio
 const CATS = {PAR:"Parque Estadual", APA:"Área de Proteção Ambiental", MONA:"Monumento Natural", ESEC:"Estação Ecológica", REBIO:"Reserva Biológica",
               RVS:"Refúgio de Vida Silvestre", FLOE:"Floresta Estadual", RDS:"Reserva de Desenvolvimento Sustentável", APE:"Área de Proteção Especial"};
 const ANO0 = 2013, ANO1 = new Date().getFullYear();
-const IDE_WMS = "https://geoserver.meioambiente.mg.gov.br/ows";
-const REGIONAIS_IDE = [["amsf","Alto Médio São Francisco"],["ap","Alto Paranaíba"],["cn","Centro-Norte"],["co","Centro-Oeste"],["cs","Centro-Sul"],["jeq","Jequitinhonha"],
-  ["mata","Mata"],["metrop","Metropolitana"],["ne","Nordeste"],["no","Noroeste"],["nor","Norte"],["doce","Rio Doce"],["sul","Sul"],["tm","Triângulo"]];
 let perfil = null, mapa = null, UCS = [], LIM = null, OCORR = [], ANOS = [ANO0, ANO1], ucFoco = null, focoLayer = null;
 
 /* ======================= símbolos (legenda e ficha) ======================= */
@@ -256,7 +256,6 @@ const sbLinha = (cor, tracejado) => `<svg width="28" height="14" viewBox="0 0 28
 const sbArea = (cor, fill, tracejado) => `<svg width="26" height="18" viewBox="0 0 26 18"><path d="M3 5l8-3 12 4-2 9-13 1z" fill="${fill || cor}" fill-opacity="${fill ? .55 : .2}" stroke="${cor}" stroke-width="1.8" ${tracejado ? 'stroke-dasharray="3 2"' : ""}/></svg>`;
 const sbIcone = t => `<span style="transform:scale(.92);display:inline-block">${iconeLegenda(t, 20).replace("margin-right:5px", "margin:0")}</span>`;
 const sbRisco = () => `<svg width="26" height="18" viewBox="0 0 26 18">${[["#b2182b",4,4],["#e8743b",12,4],["#f6c453",20,4],["#e8743b",8,11],["#f6c453",16,11]].map(([c,x,y]) => `<path d="M${x} ${y-3.5}l3.5 2v4l-3.5 2-3.5-2v-4z" fill="${c}" transform="translate(0 2)"/>`).join("")}</svg>`;
-const sbWms = cor => `<svg width="26" height="18" viewBox="0 0 26 18"><rect x="2" y="2" width="22" height="14" rx="3" fill="${cor}" fill-opacity=".35" stroke="${cor}" stroke-width="1.5"/><path d="M2 11l6-4 5 4 4-3 7 5" fill="none" stroke="${cor}" stroke-width="1.5"/></svg>`;
 
 /* ======================= definição das camadas ======================= */
 // carregar() devolve uma lista de Features GeoJSON; cada uma com properties._t (título) e properties.nome_uc quando houver.
@@ -269,8 +268,7 @@ const GRUPOS = [
   {id:"fogo", nome:"Fogo e risco", aberto:true},
   {id:"estrutura", nome:"Estrutura das UCs"},
   {id:"prevencao", nome:"Prevenção"},
-  {id:"apoio", nome:"Rede de apoio"},
-  {id:"ide", nome:"IDE-Sisema (consulta)"}
+  {id:"apoio", nome:"Rede de apoio"}
 ];
 const CAMADAS = [
   {id:"ucs", g:"limites", nome:"Unidades de conservação", sb: sbArea("#9bd46f"), ligada:true, tipo:"poli",
@@ -339,12 +337,6 @@ const CAMADAS = [
      .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, tipo:r.tipo, localizacao:r.localizacao, municipio:r.municipio, apoio:r.apoio, _icone: r.tipo === "brigadista" ? "brigadista" : "colaborador"})),
    ficha: p => ({linhas:[["Tipo", p.tipo], ["Localização", p.localizacao], ["Município", p.municipio], ["Apoio", p.apoio]], links:[["Rede de apoio", linkMod(p.nome_uc, "apoio")]]})},
 
-  {id:"ide_ucs", g:"ide", nome:"UCs estaduais (IDE)", sb: sbWms("#7fd1ae"), tipo:"wms", camada:"IDE:ide_2010_mg_unidades_conservacao_estaduais_pol"},
-  {id:"ide_za", g:"ide", nome:"ZA de plano de manejo (IDE)", sb: sbWms("#e0d48a"), tipo:"wms", camada:"IDE:ide_2011_mg_amortecimento_uc_plano_manejo_pol"},
-  {id:"ide_veg", g:"ide", nome:"Vegetação 2025 (análise do CAR)", nota:"uma regional por vez", sb: sbWms("#4caf50"), tipo:"wms", camada: () => `IDE:ide_210604_mg_analise_car_veg_2025_${$("#ideReg")?.value || "nor"}_pol`,
-   extra: `<select id="ideReg" aria-label="Regional da camada de vegetação">${REGIONAIS_IDE.map(([k, n]) => `<option value="${k}" ${k === "nor" ? "selected" : ""}>${n}</option>`).join("")}</select>`},
-  {id:"ide_outra", g:"ide", nome:"Outra camada do IDE-Sisema", sb: sbWms("#86b7ff"), tipo:"wms", camada: () => $("#ideNome")?.value.trim(),
-   extra: `<div class="lin"><input id="ideNome" placeholder="ex.: IDE:ide_2010_mg_..." aria-label="Nome da camada WMS"><button type="button" id="ideUsar">Mostrar</button></div><div style="margin-top:4px">Nome da camada como aparece no IDE-Sisema (aba Webservices).</div>`}
 ];
 const C = Object.fromEntries(CAMADAS.map(c => [c.id, c]));
 
@@ -421,8 +413,6 @@ function montarPainel(ligadasHash){
       ${cs.map(c => `<label class="cam" data-c="${c.id}"><input type="checkbox" data-cam="${c.id}" ${c.ligada ? "checked" : ""}><span class="sb">${c.sb}</span><span class="nome">${esc(c.nome)}${c.nota ? `<small>${esc(c.nota)}</small>` : ""}</span><span class="qt" data-qt="${c.id}"></span></label>${c.extra ? `<div class="extra">${c.extra}</div>` : ""}`).join("")}</details>`;
   }).join("");
   $$("[data-cam]").forEach(i => i.onchange = () => ligar(i.dataset.cam, i.checked));
-  $("#ideReg").onchange = () => { if (ligada("ide_veg")) { desligar("ide_veg"); ligar("ide_veg", true); } };
-  $("#ideUsar").onclick = () => { if (!$("#ideNome").value.trim()) return msg("Informe o nome da camada.", "erro"); desligar("ide_outra"); $('[data-cam="ide_outra"]').checked = true; ligar("ide_outra", true); };
   contarGrupos();
 }
 const ligada = id => !!C[id].ativa;
@@ -435,13 +425,6 @@ async function ligar(id, on){
   c.ativa = true; contarGrupos(); salvarHash();
   try{
     row?.classList.add("carregando");
-    if (c.tipo === "wms"){
-      const nome = typeof c.camada === "function" ? c.camada() : c.camada;
-      if (!nome){ c.ativa = false; $(`[data-cam="${id}"]`).checked = false; return; }
-      c.layer = L.tileLayer.wms(IDE_WMS, {layers: nome, format:"image/png", transparent:true, version:"1.1.1", opacity:.75, attribution:"IDE-Sisema", pane:"limites"})
-        .on("tileerror", () => { if (!c._avisou){ c._avisou = true; msg("O IDE-Sisema não respondeu para esta camada. Confira o nome ou tente mais tarde.", "erro"); } });
-      c.layer.addTo(mapa); return;
-    }
     if (c.tipo === "queimadas"){ c.layer ||= L.layerGroup(); c.layer.addTo(mapa); queimadasAtualizar(); return; }
     if (c.tipo === "risco"){ await riscoLigar(c); return; }
     if (!c.feats) c.feats = await c.carregar();
@@ -638,8 +621,8 @@ $("#btnExportar").onclick = () => {
   $("#optUC").hidden = !ucFoco;
   if (!ucFoco && $('[name=escopo][value=uc]').checked) $('[name=escopo][value=tela]').checked = true;
   $("#expCamadas").innerHTML = ativas.length ? ativas.map(c => {
-    const pode = !["wms", "risco"].includes(c.tipo);
-    return `<label><input type="checkbox" value="${c.id}" ${pode ? "checked" : "disabled"}> ${esc(c.nome)} ${pode ? "" : `<small>${c.tipo === "wms" ? "baixe no próprio IDE-Sisema" : "ainda não exporta"}</small>`}</label>`;
+    const pode = c.tipo !== "risco";
+    return `<label><input type="checkbox" value="${c.id}" ${pode ? "checked" : "disabled"}> ${esc(c.nome)} ${pode ? "" : `<small>ainda não exporta</small>`}</label>`;
   }).join("") : `<span style="color:var(--liquen)">Ligue ao menos uma camada no painel.</span>`;
   $("#expMsg").textContent = ""; $("#dlgExportar").showModal();
 };

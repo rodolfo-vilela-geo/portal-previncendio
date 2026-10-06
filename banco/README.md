@@ -48,7 +48,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 25_pipcif_origem.sql         Ano do PIPCIF de onde vieram os dados de cada UC (acompanhamento da migração)
 26_mapa_risco.sql            Mapa de risco por UC (protótipo): células compactadas, método e conferência; leitura logada, gravação Previncêndio
 27_risco_revisao.sql         Conferência do mapa de risco pela UC (parecer, nota, marcações) por versão; leitura logada, gravação de quem edita a UC
-28_visualizador.sql          Mapa do Colibri: geo_ocorrencias, geo_queimadas, geo_ocorrencia, geo_limites (só usuários logados, sem dados pessoais)
+28_visualizador.sql          Geo Colibri: geo_ocorrencias, geo_queimadas, geo_ocorrencia, geo_limites (só usuários logados, sem dados pessoais)
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
