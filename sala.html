@@ -70,6 +70,14 @@
   .marco .t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--suave)} .marco .v{font-weight:700;font-size:14px}
   .marco .q{font-size:12px;color:var(--suave)}
   .acoes-ri{display:flex;gap:8px;flex-wrap:wrap;border-top:0;margin-top:8px;padding-top:0}
+  .abas-ri{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--linha);margin:16px 0 0}
+  .abas-ri button{font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;color:var(--suave);padding:9px 12px;border-bottom:3px solid transparent;cursor:pointer;margin-bottom:-1px}
+  .abas-ri button small{font-weight:600;font-size:11.5px;background:var(--linha);color:var(--suave);border-radius:99px;padding:1px 7px;margin-left:4px}
+  .abas-ri button small:empty{display:none}
+  .abas-ri button[aria-selected=true]{color:var(--verde);border-bottom-color:var(--verde)}
+  .abas-ri button[aria-selected=true] small{background:var(--verde);color:#fff}
+  .aba-ri>.bloco:first-child{border-top:0;margin-top:6px}
+  @media print{ .aba-ri[hidden]{display:block!important} }
   .bloco>h3{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--suave)}
   .linha-tempo{list-style:none;margin:0;padding:0}
   .linha-tempo li{border-left:3px solid var(--linha);padding:4px 0 12px 14px;position:relative}
@@ -464,6 +472,7 @@ $("#novoRI").onclick = () => {
 };
 
 /* ======================= DETALHE DO RI ======================= */
+let abaRI = "andamento";
 async function abrirRI(ano, ri){
   const [{data: r, error}, {data: evs}] = await Promise.all([
     sb.from("ri").select("*").eq("ano", ano).eq("ri", ri).single(),
@@ -483,24 +492,43 @@ async function abrirRI(ano, ri){
     <div class="bloco nao-imprime acoes-ri">
       ${r.status === "debelado" && !r.fechado_por ? `<button class="btn primario peq" id="fecharRI">Fechar RI</button>` : ""}
       <button class="btn peq" id="pdfRI">PDF do RI</button></div>
-    <div class="bloco" id="atuacoes"><h3>Apoios empenhados (atuações)</h3><div class="dica">Carregando…</div></div>
-    <div class="bloco" id="contatos"><h3>Contatos neste registro</h3><div class="dica">Carregando…</div></div>
-    <div class="bloco" id="pmamb"><h3>Acionamentos da PM Ambiental</h3><div class="dica">Carregando…</div></div>
-    <div class="bloco"><h3>Linha do tempo (${(evs||[]).length})</h3>
-      <ul class="linha-tempo">${(evs||[]).map(e => `<li>
-        <span class="quando">${e.data_hora ? fmtDH(e.data_hora) : esc(e.data_hora_txt||"sem data")}</span><span class="tipo">${TIPOS[e.tipo]||e.tipo}</span>
-        <span class="dica"> · ${esc(e.atendente||"")}${e.informante ? " · informou: "+esc(e.informante) : ""}</span>
-        <div class="desc">${esc(e.descricao||"")}</div>
-        <div class="rec">${resumoRecursos(e)}</div></li>`).join("") || `<li class="dica">Sem eventos.</li>`}</ul></div>
-    <div class="bloco nao-imprime" id="formEvento"><h3>Registrar nova ligação / atualização</h3>
-      ${htmlEvento(ultimo)}
-      <div class="dica" style="margin:6px 0">Os recursos vêm preenchidos com a última atualização — altere só o que mudou.
-        Quando o RI tem atuações registradas (bloco acima), o boletim e o ROI usam as atuações.</div>
-      <button class="btn primario" id="salvarEvento">Registrar evento</button></div>
-    <div class="bloco nao-imprime"><details><summary style="cursor:pointer;font-weight:600">Editar dados do RI</summary>
-      <div id="cabEd" data-editando="1" style="margin-top:10px">${htmlCabecalho(r)}</div>
-      <button class="btn" id="salvarCab" style="margin-top:10px">Salvar alterações</button></details></div>`;
+    <nav class="abas-ri nao-imprime" role="tablist">
+      <button type="button" data-aba="andamento">Andamento <small>${(evs||[]).length}</small></button>
+      <button type="button" data-aba="recursos">Recursos empenhados <small id="nAtu"></small></button>
+      <button type="button" data-aba="contatos">Contatos e PM Ambiental <small id="nCont"></small></button>
+      <button type="button" data-aba="dados">Dados do RI</button>
+    </nav>
+    <div class="aba-ri" data-aba="andamento">
+      <div class="bloco nao-imprime" id="formEvento"><h3>Registrar nova ligação ou atualização</h3>
+        ${htmlEvento(ultimo)}
+        <div class="dica" style="margin:6px 0">Os recursos vêm preenchidos com a última atualização — altere só o que mudou.
+          Quando o RI tem atuações registradas (aba Recursos empenhados), o boletim e o ROI usam as atuações.</div>
+        <button class="btn primario" id="salvarEvento">Registrar evento</button></div>
+      <div class="bloco"><h3>Linha do tempo · ${(evs||[]).length} ${(evs||[]).length === 1 ? "registro" : "registros"} <span style="text-transform:none;letter-spacing:0;font-weight:400">(mais recente primeiro)</span></h3>
+        <ul class="linha-tempo">${[...(evs||[])].reverse().map(e => `<li>
+          <span class="quando">${e.data_hora ? fmtDH(e.data_hora) : esc(e.data_hora_txt||"sem data")}</span><span class="tipo">${TIPOS[e.tipo]||e.tipo}</span>
+          <span class="dica"> · ${esc(e.atendente||"")}${e.informante ? " · informou: "+esc(e.informante) : ""}</span>
+          <div class="desc">${esc(e.descricao||"")}</div>
+          <div class="rec">${resumoRecursos(e)}</div></li>`).join("") || `<li class="dica">Sem eventos.</li>`}</ul></div>
+    </div>
+    <div class="aba-ri" data-aba="recursos"><div class="bloco" id="atuacoes"><h3>Apoios empenhados (atuações)</h3><div class="dica">Carregando…</div></div></div>
+    <div class="aba-ri" data-aba="contatos">
+      <div class="bloco" id="contatos"><h3>Contatos neste registro</h3><div class="dica">Carregando…</div></div>
+      <div class="bloco" id="pmamb"><h3>Acionamentos da PM Ambiental</h3><div class="dica">Carregando…</div></div>
+    </div>
+    <div class="aba-ri nao-imprime" data-aba="dados"><div class="bloco">
+      <div id="cabEd" data-editando="1">${htmlCabecalho(r)}</div>
+      <button class="btn primario" id="salvarCab" style="margin-top:10px">Salvar alterações</button></div></div>`;
   ligarEvento($("#formEvento")); ligarUC($("#cabEd"));
+  const mostrarAba = id => { abaRI = id; $$(".abas-ri button").forEach(b => b.setAttribute("aria-selected", b.dataset.aba === id)); $$(".aba-ri").forEach(d => d.hidden = d.dataset.aba !== id); };
+  $$(".abas-ri button").forEach(b => b.onclick = () => mostrarAba(b.dataset.aba));
+  if (window._ultimoRI !== `${r.ano}/${r.ri}`) abaRI = "andamento"; window._ultimoRI = `${r.ano}/${r.ri}`;
+  mostrarAba(abaRI || "andamento");
+  // contagens das abas quando os blocos terminam de carregar
+  const pôr = (id, t) => { const e = $("#" + id); if (e && e.textContent !== t) e.textContent = t; };   // só altera se mudou (evita laço com o observador)
+  const contar = () => { const nA = $("#atuacoes h3")?.textContent.match(/(\d+)\s+dia/); pôr("nAtu", nA && nA[1] !== "0" ? nA[1] + (nA[1] === "1" ? " dia" : " dias") : "");
+    const n1 = +($("#contatos h3")?.textContent.match(/\((\d+)\)/)?.[1] || 0), n2 = +($("#pmamb h3")?.textContent.match(/\((\d+)\)/)?.[1] || 0); pôr("nCont", n1 + n2 ? String(n1 + n2) : ""); };
+  window._obsRI?.disconnect(); window._obsRI = new MutationObserver(contar); window._obsRI.observe($("#detalhe"), {childList:true, subtree:true}); contar();
   carregarAtuacoes(r); carregarListasRI(r);
   $("#fecharRI")?.addEventListener("click", async () => {
     if (!confirm(`Fechar o RI ${r.ri}/${r.ano} em nome de ${perfil.nome}?`)) return;
