@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Mapa do Colibri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="icones_mapa.js?v=20261001d"></script>
+<script src="risco_mapa.js?v=20261006a"></script>
+<style>
+  :root{
+    color-scheme: dark;
+    --mata:#0e2219; --dossel:#163326; --dossel-2:#1d4030; --trilha:#2a5240;
+    --nevoa:#eef4ee; --liquen:#a3bcac; --musgo:#7d9888;
+    --bf:#86b7ff; --bf-esc:#5b93e6; --broto:#9bd46f; --brasa:#ff9a2e; --brasa-2:#ff5a1f; --erro:#ff8a80;
+    --painel:352px;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{margin:0;background:var(--mata);color:var(--nevoa);font:15px/1.45 "Source Sans 3",system-ui,sans-serif;overflow:hidden}
+  button,input,select{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--bf);outline-offset:2px}
+  a{color:var(--bf)}
+
+  /* login */
+  #telaLogin{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(1200px 600px at 70% 20%,#1b3f2d,var(--mata))}
+  #telaLogin form{width:min(360px,calc(100% - 32px));background:var(--dossel);border:1px solid var(--trilha);border-radius:16px;padding:26px 24px}
+  #telaLogin img{width:210px;display:block;margin:0 0 14px}
+  #telaLogin h1{font:600 21px/1.2 Sora,sans-serif;margin:0 0 4px}
+  #telaLogin p{color:var(--liquen);margin:0 0 16px;font-size:14px}
+  #telaLogin label{display:block;font-size:13px;color:var(--liquen);margin:10px 0 3px}
+  #telaLogin input{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--trilha);background:var(--mata)}
+  #telaLogin button{margin-top:16px;width:100%;padding:10px;border:0;border-radius:9px;background:var(--bf);color:#0b1d33;font-weight:700;cursor:pointer}
+  #erroLogin{color:var(--erro);font-size:13px;min-height:18px;margin-top:8px}
+
+  /* estrutura */
+  #app{display:grid;grid-template-columns:var(--painel) 1fr;height:100vh}
+  #painel{background:var(--mata);border-right:1px solid var(--trilha);display:flex;flex-direction:column;min-height:0;z-index:1001}
+  .marca{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}
+  .marca a{display:flex} .marca img{height:34px}
+  .marca h1{font:600 18px/1.1 Sora,sans-serif;margin:0;letter-spacing:-.01em}
+  .marca h1 small{display:block;font:400 12.5px "Source Sans 3",sans-serif;color:var(--liquen);margin-top:2px;letter-spacing:0}
+  .marca .fechar{margin-left:auto;display:none;background:none;border:0;font-size:22px;cursor:pointer;color:var(--liquen)}
+  .busca{padding:4px 16px 10px;position:relative}
+  .busca input{width:100%;padding:9px 12px 9px 34px;border-radius:10px;border:1px solid var(--trilha);background:var(--dossel)}
+  .busca svg{position:absolute;left:27px;top:15px;opacity:.6}
+  .busca .uc-sel{display:flex;align-items:center;gap:6px;margin-top:7px;font-size:13px;color:var(--liquen)}
+  .busca .uc-sel b{color:var(--nevoa);font-weight:600}
+  .busca .uc-sel button{margin-left:auto;background:none;border:0;color:var(--bf);cursor:pointer;font-size:13px;padding:0}
+  #rolagem{overflow:auto;flex:1;padding:0 8px 12px;scrollbar-width:thin;scrollbar-color:var(--trilha) transparent}
+
+  /* faixa do fogo (histograma de ocorrências por ano — também filtra) */
+  .fogo{margin:4px 8px 12px;padding:12px 12px 10px;border-radius:14px;background:linear-gradient(180deg,#2a1a0e 0%,#1a1710 100%);border:1px solid #4a2c12}
+  .fogo .tit{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .fogo .tit b{font:600 15px Sora,sans-serif}
+  .fogo .tit span{font-size:12.5px;color:#e9c9a6}
+  #hist{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;align-items:end;height:74px;margin:10px 0 4px;cursor:pointer;user-select:none;touch-action:none}
+  #hist .b{position:relative;height:100%;display:flex;align-items:flex-end}
+  #hist .b i{display:block;width:100%;border-radius:3px 3px 1px 1px;background:var(--brasa);opacity:.28;transition:opacity .15s}
+  #hist .b.on i{opacity:1;background:linear-gradient(180deg,#ffc06b,var(--brasa) 40%,var(--brasa-2))}
+  #hist .b:hover i{opacity:.75}
+  .anos{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;font-size:10.5px;color:#c9a888;text-align:center}
+  .fogo .dica{font-size:12px;color:#c9a888;margin-top:6px}
+
+  /* camadas */
+  details.grupo{margin:0 0 4px;border-radius:12px}
+  details.grupo>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:8px 8px;cursor:pointer;border-radius:10px;font:600 14px Sora,sans-serif;color:var(--nevoa)}
+  details.grupo>summary::-webkit-details-marker{display:none}
+  details.grupo>summary:hover{background:var(--dossel)}
+  details.grupo>summary .seta{transition:transform .15s;opacity:.6}
+  details.grupo[open]>summary .seta{transform:rotate(90deg)}
+  details.grupo>summary .n{margin-left:auto;font:400 12px "Source Sans 3",sans-serif;color:var(--musgo)}
+  .cam{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;padding:5px 8px 5px 10px;border-radius:9px;cursor:pointer}
+  .cam:hover{background:var(--dossel)}
+  .cam input{position:absolute;opacity:0;pointer-events:none}
+  .cam .sb{width:30px;height:20px;display:grid;place-items:center;border-radius:6px;opacity:.45;transition:opacity .15s}
+  .cam .nome{font-size:14px;color:var(--liquen);line-height:1.25}
+  .cam .nome small{display:block;font-size:12px;color:var(--musgo)}
+  .cam .qt{font-size:12px;color:var(--musgo);font-variant-numeric:tabular-nums}
+  .cam:has(input:checked) .sb{opacity:1}
+  .cam:has(input:checked) .nome{color:var(--nevoa)}
+  .cam:has(input:focus-visible){outline:2px solid var(--bf)}
+  .cam.carregando .qt::after{content:"…"}
+  .extra{padding:2px 10px 8px 48px;font-size:13px;color:var(--liquen)}
+  .extra select,.extra input{width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--trilha);background:var(--dossel);font-size:13px}
+  .extra .lin{display:flex;gap:6px;margin-top:6px}
+  .extra button{padding:6px 10px;border-radius:8px;border:1px solid var(--bf-esc);background:transparent;color:var(--bf);cursor:pointer;font-size:13px;white-space:nowrap}
+
+  .rodape{border-top:1px solid var(--trilha);padding:10px 16px 12px;display:flex;gap:8px;align-items:center}
+  .btn{padding:8px 14px;border-radius:10px;border:1px solid var(--trilha);background:var(--dossel);cursor:pointer;font-weight:600;font-size:14px}
+  .btn:hover{border-color:var(--musgo)}
+  .btn.pri{background:var(--bf);border-color:var(--bf);color:#0b1d33}
+  .btn.pri:hover{background:#a3c8ff}
+  .rodape .quem{margin-left:auto;font-size:12.5px;color:var(--musgo);text-align:right;line-height:1.25}
+  .rodape .quem button{background:none;border:0;color:var(--bf);cursor:pointer;padding:0;font-size:12.5px}
+
+  /* mapa */
+  #mapa{height:100vh;background:#0b1a13}
+  .leaflet-container{font:inherit}
+  .base{position:absolute;left:12px;bottom:26px;z-index:1000;display:flex;gap:6px}
+  .base button{width:62px;height:52px;border-radius:10px;border:2px solid transparent;padding:0;cursor:pointer;background-size:cover;background-position:center;position:relative;overflow:hidden;box-shadow:0 2px 8px #0008}
+  .base button span{position:absolute;inset:auto 0 0 0;font-size:11px;font-weight:600;background:#000a;color:#fff;padding:1px 0}
+  .base button[aria-pressed=true]{border-color:var(--bf)}
+  #coord{position:absolute;right:10px;bottom:48px;z-index:1000;background:#0e2219e6;border:1px solid var(--trilha);border-radius:8px;padding:4px 9px;font-size:12px;color:var(--liquen);font-variant-numeric:tabular-nums;pointer-events:none}
+  #aviso{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:#2a1a0e;border:1px solid #6b3d16;color:#ffd7ad;border-radius:99px;padding:5px 14px;font-size:13px}
+  #abrirPainel{display:none;position:absolute;left:12px;top:12px;z-index:1000}
+
+  /* ficha */
+  #ficha{position:absolute;right:12px;top:12px;z-index:1000;width:min(340px,calc(100vw - 24px));max-height:calc(100vh - 90px);overflow:auto;background:var(--dossel);border:1px solid var(--trilha);border-radius:14px;box-shadow:0 10px 30px #000a}
+  #ficha .cab{display:flex;gap:10px;align-items:flex-start;padding:14px 14px 8px}
+  #ficha .cab .sb{flex:none;margin-top:2px}
+  #ficha h2{font:600 16px/1.25 Sora,sans-serif;margin:0}
+  #ficha .cam-nome{font-size:12.5px;color:var(--liquen);margin-top:2px}
+  #ficha .x{margin-left:auto;background:none;border:0;font-size:20px;line-height:1;cursor:pointer;color:var(--liquen)}
+  #ficha dl{margin:0;padding:4px 14px 10px;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:13.5px}
+  #ficha dt{color:var(--musgo)} #ficha dd{margin:0;color:var(--nevoa);overflow-wrap:anywhere}
+  #ficha .acoes{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 14px}
+  #ficha .acoes a{font-size:13.5px;font-weight:600;text-decoration:none;border:1px solid var(--bf-esc);border-radius:8px;padding:5px 10px}
+
+  /* exportar */
+  dialog{border:1px solid var(--trilha);border-radius:16px;background:var(--dossel);color:var(--nevoa);padding:0;width:min(460px,calc(100vw - 24px))}
+  dialog::backdrop{background:#000a}
+  dialog form{padding:18px 20px}
+  dialog h2{font:600 18px Sora,sans-serif;margin:0 0 4px}
+  dialog p{color:var(--liquen);font-size:13.5px;margin:0 0 12px}
+  dialog fieldset{border:0;padding:0;margin:0 0 14px}
+  dialog legend{font-weight:700;font-size:14px;margin-bottom:6px}
+  .opcoes{display:flex;flex-wrap:wrap;gap:6px}
+  .opcoes label{display:flex;gap:6px;align-items:center;border:1px solid var(--trilha);border-radius:9px;padding:6px 10px;cursor:pointer;font-size:14px}
+  .opcoes label:has(input:checked){border-color:var(--bf);background:#86b7ff1a}
+  .opcoes input{accent-color:var(--bf)}
+  #expCamadas{max-height:180px;overflow:auto;display:grid;gap:3px;font-size:14px}
+  #expCamadas label{display:flex;gap:8px;align-items:center}
+  #expCamadas small{color:var(--musgo)}
+  .dlg-acoes{display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  #expMsg{margin-right:auto;font-size:13px;color:var(--liquen)}
+
+  #msg{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:3000;background:var(--nevoa);color:var(--mata);padding:8px 16px;border-radius:99px;font-weight:600;font-size:14px;box-shadow:0 6px 20px #0009}
+  #msg:empty{display:none} #msg.erro{background:var(--erro)}
+
+  .lbl-uc{background:transparent;border:0;box-shadow:none;color:#fff;font-weight:700;font-size:12px;text-shadow:0 0 3px #000,0 0 2px #000}
+  .lbl-uc::before{display:none}
+  .rk-quad{background:transparent;border:0;box-shadow:none;color:#fff;font-weight:700;font-size:11px;text-shadow:0 0 3px #000,0 0 2px #000}
+  .rk-quad::before{display:none}
+  .leaflet-control-scale-line{background:#0e2219cc;color:var(--liquen);border-color:var(--liquen)}
+
+  @media (max-width:820px){
+    #app{grid-template-columns:1fr}
+    #painel{position:fixed;inset:0 auto 0 0;width:min(var(--painel),92vw);transform:translateX(-102%);transition:transform .2s;box-shadow:8px 0 30px #000a}
+    #painel.aberto{transform:none}
+    .marca .fechar{display:block}
+    #abrirPainel{display:block}
+    .base{bottom:34px} .base button{width:52px;height:44px}
+    #coord{display:none}
+    #ficha{top:auto;bottom:92px;left:12px;right:12px;width:auto;max-height:45vh}
+  }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+
+<div id="telaLogin" hidden>
+  <form id="formLogin">
+    <img src="img/logo_colibri_escuro.png?v=1" alt="Colibri">
+    <h1>Mapa do Colibri</h1>
+    <p>Todas as camadas do Colibri num só mapa. Entre com o login da equipe ou de gerente.</p>
+    <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+    <label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required>
+    <button type="submit">Entrar</button>
+    <div id="erroLogin"></div>
+    <p style="margin:10px 0 0"><a href="index.html">Voltar à página inicial</a></p>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <aside id="painel" aria-label="Camadas">
+    <div class="marca">
+      <a href="index.html" title="Colibri — página inicial"><img src="img/logo_portal_selo.png" alt="Colibri" onerror="this.src='img/favicon.png'"></a>
+      <h1>Mapa do Colibri<small>Unidades de conservação de Minas Gerais</small></h1>
+      <button type="button" class="fechar" id="fecharPainel" aria-label="Fechar painel">×</button>
+    </div>
+    <div class="busca">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="busca" list="listaUC" placeholder="Ir para uma UC ou município" autocomplete="off" aria-label="Ir para uma UC ou município">
+      <datalist id="listaUC"></datalist>
+      <div class="uc-sel" id="ucSel" hidden>UC em foco: <b id="ucSelNome"></b><button type="button" id="limparUC">tirar foco</button></div>
+    </div>
+    <div id="rolagem">
+      <div class="fogo">
+        <div class="tit"><b>Ocorrências</b><span id="fogoResumo"></span></div>
+        <div id="hist" role="group" aria-label="Anos das ocorrências: clique num ano ou arraste para escolher um período"></div>
+        <div class="anos" id="histAnos"></div>
+        <div class="dica">Clique num ano ou arraste sobre as barras. Vale para ocorrências e áreas queimadas.</div>
+      </div>
+      <div id="grupos"></div>
+    </div>
+    <div class="rodape">
+      <button type="button" class="btn pri" id="btnExportar">Exportar</button>
+      <button type="button" class="btn" id="btnLink" title="Copiar o link desta vista">Copiar link</button>
+      <div class="quem"><span id="quem"></span><br><button type="button" id="sair">Sair</button></div>
+    </div>
+  </aside>
+  <main style="position:relative;min-width:0">
+    <div id="mapa"></div>
+    <button type="button" class="btn" id="abrirPainel">Camadas</button>
+    <div id="aviso" hidden></div>
+    <div class="base" id="bases"></div>
+    <div id="coord"></div>
+    <section id="ficha" hidden aria-live="polite"></section>
+  </main>
+</div>
+
+<dialog id="dlgExportar">
+  <form method="dialog" id="formExportar">
+    <h2>Exportar camadas</h2>
+    <p>Baixa as camadas ligadas, com os atributos, para abrir no QGIS, Google Earth ou planilha.</p>
+    <fieldset><legend>Onde</legend><div class="opcoes">
+      <label><input type="radio" name="escopo" value="tela" checked> Área visível no mapa</label>
+      <label id="optUC"><input type="radio" name="escopo" value="uc"> UC em foco</label>
+      <label><input type="radio" name="escopo" value="tudo"> Minas Gerais inteiro</label></div></fieldset>
+    <fieldset><legend>Camadas</legend><div id="expCamadas"></div></fieldset>
+    <fieldset><legend>Formato</legend><div class="opcoes">
+      <label><input type="radio" name="formato" value="geojson" checked> GeoJSON</label>
+      <label><input type="radio" name="formato" value="kml"> KML (Google Earth)</label>
+      <label><input type="radio" name="formato" value="csv"> CSV (planilha)</label></div></fieldset>
+    <div class="dlg-acoes"><span id="expMsg"></span><button type="button" class="btn" value="cancel" id="expCancelar">Cancelar</button><button type="button" class="btn pri" id="expBaixar">Baixar</button></div>
+  </form>
+</dialog>
+<div id="msg" role="status"></div>
+
+<script>
+const sb = supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let tMsg; function msg(t, tipo = ""){ const m = $("#msg"); m.textContent = t; m.className = tipo; clearTimeout(tMsg); tMsg = setTimeout(() => { if (m.textContent === t) m.textContent = ""; }, tipo === "erro" ? 8000 : 3500); }
+const fmtN = n => (n ?? 0).toLocaleString("pt-BR");
+const fmtD = d => d ? d.split("-").reverse().join("/") : "";
+const fmtHa = v => v == null ? "" : (+v).toLocaleString("pt-BR", {maximumFractionDigits: 2}) + " ha";
+const CATS = {PAR:"Parque Estadual", APA:"Área de Proteção Ambiental", MONA:"Monumento Natural", ESEC:"Estação Ecológica", REBIO:"Reserva Biológica",
+              RVS:"Refúgio de Vida Silvestre", FLOE:"Floresta Estadual", RDS:"Reserva de Desenvolvimento Sustentável", APE:"Área de Proteção Especial"};
+const ANO0 = 2013, ANO1 = new Date().getFullYear();
+const IDE_WMS = "https://geoserver.meioambiente.mg.gov.br/ows";
+const REGIONAIS_IDE = [["amsf","Alto Médio São Francisco"],["ap","Alto Paranaíba"],["cn","Centro-Norte"],["co","Centro-Oeste"],["cs","Centro-Sul"],["jeq","Jequitinhonha"],
+  ["mata","Mata"],["metrop","Metropolitana"],["ne","Nordeste"],["no","Noroeste"],["nor","Norte"],["doce","Rio Doce"],["sul","Sul"],["tm","Triângulo"]];
+let perfil = null, mapa = null, UCS = [], LIM = null, OCORR = [], ANOS = [ANO0, ANO1], ucFoco = null, focoLayer = null;
+
+/* ======================= símbolos (legenda e ficha) ======================= */
+const sbPonto = (cor, borda = "#fff") => `<svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="5.5" fill="${cor}" stroke="${borda}" stroke-width="1.5"/></svg>`;
+const sbLinha = (cor, tracejado) => `<svg width="28" height="14" viewBox="0 0 28 14"><path d="M2 10 Q9 2 14 7 T26 4" fill="none" stroke="${cor}" stroke-width="3" ${tracejado ? 'stroke-dasharray="4 3"' : ""} stroke-linecap="round"/></svg>`;
+const sbArea = (cor, fill, tracejado) => `<svg width="26" height="18" viewBox="0 0 26 18"><path d="M3 5l8-3 12 4-2 9-13 1z" fill="${fill || cor}" fill-opacity="${fill ? .55 : .2}" stroke="${cor}" stroke-width="1.8" ${tracejado ? 'stroke-dasharray="3 2"' : ""}/></svg>`;
+const sbIcone = t => `<span style="transform:scale(.92);display:inline-block">${iconeLegenda(t, 20).replace("margin-right:5px", "margin:0")}</span>`;
+const sbRisco = () => `<svg width="26" height="18" viewBox="0 0 26 18">${[["#b2182b",4,4],["#e8743b",12,4],["#f6c453",20,4],["#e8743b",8,11],["#f6c453",16,11]].map(([c,x,y]) => `<path d="M${x} ${y-3.5}l3.5 2v4l-3.5 2-3.5-2v-4z" fill="${c}" transform="translate(0 2)"/>`).join("")}</svg>`;
+const sbWms = cor => `<svg width="26" height="18" viewBox="0 0 26 18"><rect x="2" y="2" width="22" height="14" rx="3" fill="${cor}" fill-opacity=".35" stroke="${cor}" stroke-width="1.5"/><path d="M2 11l6-4 5 4 4-3 7 5" fill="none" stroke="${cor}" stroke-width="1.5"/></svg>`;
+
+/* ======================= definição das camadas ======================= */
+// carregar() devolve uma lista de Features GeoJSON; cada uma com properties._t (título) e properties.nome_uc quando houver.
+const pt = (lon, lat, props) => ({type:"Feature", geometry:{type:"Point", coordinates:[+lon, +lat]}, properties: props});
+async function tabela(tab, campos, filtro = q => q){ const {data, error} = await filtro(sb.from(tab).select(campos)).limit(5000); if (error) throw error; return data || []; }
+const linkMod = (uc, mod) => uc ? `ucs.html?uc=${encodeURIComponent(uc)}&mod=${mod}` : null;
+
+const GRUPOS = [
+  {id:"limites", nome:"Limites", aberto:true},
+  {id:"fogo", nome:"Fogo e risco", aberto:true},
+  {id:"estrutura", nome:"Estrutura das UCs"},
+  {id:"prevencao", nome:"Prevenção"},
+  {id:"apoio", nome:"Rede de apoio"},
+  {id:"ide", nome:"IDE-Sisema (consulta)"}
+];
+const CAMADAS = [
+  {id:"ucs", g:"limites", nome:"Unidades de conservação", sb: sbArea("#9bd46f"), ligada:true, tipo:"poli",
+   carregar: async () => (await limites()).filter(l => l.tipo === "uc").map(l => ({type:"Feature", geometry:l.geom,
+     properties:{_t: (CATS[l.categoria] || l.categoria || "") + " " + l.nome_uc, nome_uc:l.nome_uc, categoria:l.categoria, regional:l.ufbio}})),
+   estilo: () => ({color:"#9bd46f", weight:1.6, fillColor:"#9bd46f", fillOpacity:.10}),
+   ficha: p => ({linhas:[["Categoria", CATS[p.categoria] || p.categoria], ["Regional", p.regional]], links:[["Painel da UC", "painel_uc.html?uc=" + encodeURIComponent(p.nome_uc)], ["Cadastro", linkMod(p.nome_uc, "cadastro")]]})},
+  {id:"za", g:"limites", nome:"Zonas de amortecimento", nota:"do plano de manejo ou faixa de 3 km", sb: sbArea("#d7e8a8", null, true), ligada:true, tipo:"poli",
+   carregar: async () => (await limites()).filter(l => l.tipo !== "uc").map(l => ({type:"Feature", geometry:l.geom,
+     properties:{_t: "ZA · " + l.nome_uc, nome_uc:l.nome_uc, tipo: l.tipo === "za_pm" ? "Plano de manejo" : "Faixa de 3 km"}})),
+   estilo: () => ({color:"#d7e8a8", weight:1.2, dashArray:"4 4", fillOpacity:0}),
+   ficha: p => ({linhas:[["Definida por", p.tipo]]})},
+  {id:"municipios", g:"limites", nome:"Municípios", sb: sbArea("#c7d0d9", null), tipo:"poli",
+   carregar: async () => (await fetch("dados/municipios_mg.geojson").then(r => r.json())).features.map(f => (f.properties = {_t: f.properties.nome, municipio: f.properties.nome, cod_ibge: f.properties.cod}, f)),
+   estilo: () => ({color:"#c7d0d9", weight:.7, opacity:.7, fillOpacity:0}),
+   ficha: p => ({linhas:[["Código IBGE", p.cod_ibge]]})},
+
+  {id:"ocorr", g:"fogo", nome:"Ocorrências", nota:"um ponto por ROI/RI", sb: sbPonto("#ff9a2e", "#2a1a0e"), ligada:true, tipo:"ocorr",
+   carregar: async () => OCORR.map(o => pt(o[0], o[1], {_t: o[3] ? "Ocorrência " + o[3] : `RI ${o[8]}/${o[2]}`, cod_bdp:o[3], ano:o[2], nome_uc:o[4], area_ha:o[5], poligono:o[6] ? "sim" : "não", origem:o[7], ri:o[8]})),
+   filtroAno: true},
+  {id:"queimadas", g:"fogo", nome:"Áreas queimadas (BDG)", nota:"aparecem ao aproximar o mapa", sb: sbArea("#ff5a1f", "#ff5a1f"), ligada:true, tipo:"queimadas", filtroAno:true},
+  {id:"risco", g:"fogo", nome:"Mapa de risco", nota:"protótipo · UCs com mapa gerado", sb: sbRisco(), tipo:"risco"},
+
+  {id:"sede", g:"estrutura", nome:"Sedes", sb: sbIcone("sede"), tipo:"ponto", icone:"sede",
+   carregar: async () => (await tabela("uc_cadastro", "nome_uc,sede_lat,sede_lon,sede_municipio", q => q.not("sede_lat", "is", null)))
+     .map(r => pt(r.sede_lon, r.sede_lat, {_t:"Sede · " + r.nome_uc, nome_uc:r.nome_uc, municipio:r.sede_municipio})),
+   ficha: p => ({linhas:[["Município", p.municipio]], links:[["Cadastro", linkMod(p.nome_uc, "cadastro")]]})},
+  ...[["vigilancia","Torres e postos de observação"],["pista","Pistas de pouso"],["heliponto","Helipontos"],["estacao","Estações meteorológicas"],["agua","Pontos de água"]].map(([t, nome]) => (
+  {id:t, g:"estrutura", nome, sb: sbIcone(t), tipo:"ponto", icone:t, fonte:"pontos",
+   carregar: async () => (await pontosUC()).filter(r => r.tipo === t)
+     .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, situacao:r.situacao, altitude_m:r.altitude_m, ponto_ref:r.ponto_ref, obs:r.obs, _icone: tipoIcone(r.tipo, r.atributos)})),
+   ficha: p => ({linhas:[["Situação", p.situacao], ["Altitude", p.altitude_m != null ? p.altitude_m + " m" : ""], ["Referência", p.ponto_ref], ["Observação", p.obs]], links:[["Infraestrutura", linkMod(p.nome_uc, "infraestrutura")]]})})),
+  {id:"radios", g:"estrutura", nome:"Repetidoras e rádios fixos", sb: sbIcone("antena"), tipo:"ponto", icone:"antena",
+   carregar: async () => (await tabela("uc_radio", "nome_uc,origem,tipo,nome,quantidade,conservacao,lat,lon,obs", q => q.not("lat", "is", null)))
+     .map(r => pt(r.lon, r.lat, {_t:r.nome || "Rádio", nome_uc:r.nome_uc, tipo:r.tipo, origem:r.origem, quantidade:r.quantidade, conservacao:r.conservacao, obs:r.obs, _icone: r.tipo === "repetidora" ? "antena" : "radio"})),
+   ficha: p => ({linhas:[["Tipo", p.tipo], ["De", p.origem === "uc" ? "UC" : "parceiro"], ["Conservação", p.conservacao], ["Observação", p.obs]], links:[["Recursos", linkMod(p.nome_uc, "recursos")]]})},
+
+  ...[["aceiro","Aceiros","#ff9f1c"],["estrada","Estradas","#ffe066"],["trilha","Trilhas","#5ce1e6"]].map(([t, nome, cor]) => (
+  {id:t, g:"prevencao", nome, sb: sbLinha(cor), tipo:"linha", cor,
+   carregar: async () => (await vias()).filter(r => r.tipo === t && r.geojson).map(r => ({type:"Feature", geometry:r.geojson,
+     properties:{_t:r.nome, nome_uc:r.nome_uc, condicao:r.condicao, comprimento_m:r.comprimento_m ?? r.compr_mapa_m, largura_m:r.largura_m, manutencao:r.manutencao, tracado:r.tracado_origem === "pontos" ? "aproximado (início e fim)" : "desenhado/importado", obs:r.obs}})),
+   estilo: f => ({color:cor, weight:3, dashArray: f.properties.tracado.startsWith("aprox") ? "6 5" : null}),
+   ficha: p => ({linhas:[["Condição", p.condicao], ["Comprimento", p.comprimento_m ? (+p.comprimento_m).toLocaleString("pt-BR") + " m" : ""], ["Largura", p.largura_m ? p.largura_m + " m" : ""], ["Manutenção", p.manutencao], ["Traçado", p.tracado], ["Observação", p.obs]], links:[["Atividades preventivas", linkMod(p.nome_uc, "prevencao")]]})})),
+  {id:"acoes", g:"prevencao", nome:"Ações realizadas", sb: sbIcone("acao"), tipo:"ponto", icone:"acao",
+   carregar: async () => {
+     const ex = await tabela("uc_acao_execucao", "acao_id,nome_uc,data,local,participantes,relato,lat,lon", q => q.not("lat", "is", null));
+     const ids = [...new Set(ex.map(e => e.acao_id))], ac = ids.length ? await tabela("uc_acao_preventiva", "id,nome,categoria", q => q.in("id", ids)) : [];
+     const A = new Map(ac.map(a => [a.id, a]));
+     return ex.map(e => pt(e.lon, e.lat, {_t: A.get(e.acao_id)?.nome || "Ação", nome_uc:e.nome_uc, categoria:A.get(e.acao_id)?.categoria, data:e.data, local:e.local, participantes:e.participantes, relato:e.relato})); },
+   ficha: p => ({linhas:[["Categoria", p.categoria], ["Data", fmtD(p.data)], ["Local", p.local], ["Pessoas alcançadas", p.participantes], ["Relato", p.relato]], links:[["Atividades preventivas", linkMod(p.nome_uc, "prevencao")]]})},
+  {id:"projetos", g:"prevencao", nome:"Projetos de sustentabilidade", sb: sbIcone("projeto"), tipo:"ponto", icone:"projeto",
+   carregar: async () => (await tabela("uc_projeto", "nome_uc,nome,tipo,propriedade,municipio,area_ha,situacao,lat,lon", q => q.not("lat", "is", null)))
+     .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, tipo:r.tipo, propriedade:r.propriedade, municipio:r.municipio, area_ha:r.area_ha, situacao:r.situacao})),
+   ficha: p => ({linhas:[["Tipo", p.tipo], ["Propriedade", p.propriedade], ["Município", p.municipio], ["Área", fmtHa(p.area_ha)], ["Situação", p.situacao]], links:[["Atividades preventivas", linkMod(p.nome_uc, "prevencao")]]})},
+
+  {id:"parceiros", g:"apoio", nome:"Parceiros", sb: sbIcone("parceiro"), tipo:"ponto", icone:"parceiro",
+   carregar: async () => (await tabela("uc_parceiro", "nome_uc,tipo,nome,municipio,ponto_ref,apoios,lat,lon", q => q.not("lat", "is", null)))
+     .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, tipo:r.tipo, municipio:r.municipio, ponto_ref:r.ponto_ref, apoios: Array.isArray(r.apoios) ? r.apoios.join(", ") : r.apoios})),
+   ficha: p => ({linhas:[["Tipo", p.tipo], ["Município", p.municipio], ["Apoios", p.apoios], ["Referência", p.ponto_ref]], links:[["Rede de apoio", linkMod(p.nome_uc, "apoio")]]})},
+  {id:"prestadores", g:"apoio", nome:"Prestadores de serviço", nota:"alimentação, saúde, abastecimento", sb: sbIcone("saude"), tipo:"ponto", icone:"outro",
+   carregar: async () => (await tabela("uc_prestador", "nome_uc,tipo,nome,municipio,distancia,servicos,capacidade,lat,lon", q => q.not("lat", "is", null)))
+     .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, tipo:r.tipo, municipio:r.municipio, distancia:r.distancia, servicos:r.servicos, capacidade:r.capacidade, _icone: ["alimentacao","saude","abastecimento"].includes(r.tipo) ? r.tipo : "outro"})),
+   ficha: p => ({linhas:[["Tipo", p.tipo], ["Município", p.municipio], ["Distância", p.distancia], ["Serviços", p.servicos], ["Capacidade", p.capacidade]], links:[["Rede de apoio", linkMod(p.nome_uc, "apoio")]]})},
+  {id:"colaboradores", g:"apoio", nome:"Colaboradores e brigadistas voluntários", sb: sbIcone("colaborador"), tipo:"ponto", icone:"colaborador",
+   carregar: async () => (await tabela("uc_colaborador", "nome_uc,tipo,nome,localizacao,municipio,apoio,lat,lon", q => q.not("lat", "is", null)))
+     .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, tipo:r.tipo, localizacao:r.localizacao, municipio:r.municipio, apoio:r.apoio, _icone: r.tipo === "brigadista" ? "brigadista" : "colaborador"})),
+   ficha: p => ({linhas:[["Tipo", p.tipo], ["Localização", p.localizacao], ["Município", p.municipio], ["Apoio", p.apoio]], links:[["Rede de apoio", linkMod(p.nome_uc, "apoio")]]})},
+
+  {id:"ide_ucs", g:"ide", nome:"UCs estaduais (IDE)", sb: sbWms("#7fd1ae"), tipo:"wms", camada:"IDE:ide_2010_mg_unidades_conservacao_estaduais_pol"},
+  {id:"ide_za", g:"ide", nome:"ZA de plano de manejo (IDE)", sb: sbWms("#e0d48a"), tipo:"wms", camada:"IDE:ide_2011_mg_amortecimento_uc_plano_manejo_pol"},
+  {id:"ide_veg", g:"ide", nome:"Vegetação 2025 (análise do CAR)", nota:"uma regional por vez", sb: sbWms("#4caf50"), tipo:"wms", camada: () => `IDE:ide_210604_mg_analise_car_veg_2025_${$("#ideReg")?.value || "nor"}_pol`,
+   extra: `<select id="ideReg" aria-label="Regional da camada de vegetação">${REGIONAIS_IDE.map(([k, n]) => `<option value="${k}" ${k === "nor" ? "selected" : ""}>${n}</option>`).join("")}</select>`},
+  {id:"ide_outra", g:"ide", nome:"Outra camada do IDE-Sisema", sb: sbWms("#86b7ff"), tipo:"wms", camada: () => $("#ideNome")?.value.trim(),
+   extra: `<div class="lin"><input id="ideNome" placeholder="ex.: IDE:ide_2010_mg_..." aria-label="Nome da camada WMS"><button type="button" id="ideUsar">Mostrar</button></div><div style="margin-top:4px">Nome da camada como aparece no IDE-Sisema (aba Webservices).</div>`}
+];
+const C = Object.fromEntries(CAMADAS.map(c => [c.id, c]));
+
+/* ======================= dados compartilhados ======================= */
+let _lim, _pontos, _vias;
+const limites = () => _lim ||= sb.rpc("geo_limites", {p_tol: 0.0006}).then(r => { if (r.error) throw r.error; return LIM = r.data || []; });
+const pontosUC = () => _pontos ||= tabela("uc_ponto", "nome_uc,tipo,nome,lat,lon,altitude_m,ponto_ref,situacao,atributos,obs", q => q.not("lat", "is", null));
+const vias = () => _vias ||= tabela("uc_via", "nome_uc,tipo,nome,condicao,comprimento_m,compr_mapa_m,largura_m,manutencao,tracado_origem,geojson,obs");
+
+/* ======================= login ======================= */
+async function entrar(){
+  const {data:{session}} = await sb.auth.getSession();
+  if (!session){ $("#telaLogin").hidden = false; $("#app").hidden = true; return; }
+  const {data, error} = await sb.rpc("meu_perfil");
+  if (error || !data){ $("#erroLogin").textContent = "Seu e-mail não está cadastrado. Fale com o Previncêndio."; await sb.auth.signOut(); $("#telaLogin").hidden = false; return; }
+  perfil = data; $("#quem").textContent = perfil.nome || perfil.email || ""; $("#telaLogin").hidden = true; $("#app").hidden = false;
+  iniciar();
+}
+$("#formLogin").onsubmit = async e => { e.preventDefault(); $("#erroLogin").textContent = "";
+  const {error} = await sb.auth.signInWithPassword({email: $("#email").value.trim().toLowerCase(), password: $("#senha").value});
+  if (error){ $("#erroLogin").textContent = /invalid/i.test(error.message) ? "E-mail ou senha incorretos." : error.message; return; } entrar(); };
+$("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+/* ======================= mapa ======================= */
+const BASES = {
+  sat:   {nome:"Satélite", url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr:"Imagem © Esri, Maxar", amostra:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/6/35/23"},
+  relevo:{nome:"Relevo", url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", attr:"© Esri", amostra:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/6/35/23"},
+  escuro:{nome:"Escuro", url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap · © CARTO", amostra:"https://a.basemaps.cartocdn.com/dark_all/6/23/35.png"},
+  claro: {nome:"Claro", url:"https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap · © CARTO", amostra:"https://a.basemaps.cartocdn.com/light_all/6/23/35.png"}
+};
+let baseAtual = null;
+function trocarBase(k){
+  if (baseAtual) mapa.removeLayer(baseAtual.l);
+  const b = BASES[k]; baseAtual = {k, l: L.tileLayer(b.url, {maxZoom:19, subdomains:"abcd", attribution:b.attr}).addTo(mapa)}; baseAtual.l.bringToBack();
+  $$("#bases button").forEach(x => x.setAttribute("aria-pressed", x.dataset.k === k)); salvarHash();
+}
+
+async function iniciar(){
+  const h = lerHash();
+  mapa = L.map("mapa", {zoomControl:false, preferCanvas:false, zoomSnap:.5, minZoom:5}).setView(h.v ? [h.v[1], h.v[2]] : [-18.6, -44.6], h.v ? h.v[0] : 6.5);
+  L.control.zoom({position:"topright"}).addTo(mapa);
+  L.control.scale({imperial:false, position:"bottomright"}).addTo(mapa);
+  mapa.createPane("limites").style.zIndex = 410; mapa.createPane("queim").style.zIndex = 420; mapa.createPane("linhas").style.zIndex = 430; mapa.createPane("pontos").style.zIndex = 440;
+  $("#bases").innerHTML = Object.entries(BASES).map(([k, b]) => `<button type="button" data-k="${k}" aria-pressed="false" style="background-image:url('${b.amostra}')" title="Mapa de fundo: ${b.nome}"><span>${b.nome}</span></button>`).join("");
+  $$("#bases button").forEach(b => b.onclick = () => trocarBase(b.dataset.k));
+  trocarBase(h.b && BASES[h.b] ? h.b : "sat");
+  mapa.on("mousemove", e => { const z = Math.floor((e.latlng.lng + 180) / 6) + 1, [x, y] = RiscoMapa.llParaUTM(e.latlng.lat, e.latlng.lng, z);
+    $("#coord").textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}  ·  UTM ${z}S ${Math.round(x).toLocaleString("pt-BR")} E ${Math.round(y).toLocaleString("pt-BR")} N`; });
+  mapa.on("moveend", () => { salvarHash(); if (ligada("queimadas")) queimadasAtualizar(); });
+  mapa.on("click", e => cliqueMapa(e));
+
+  montarPainel(h.c);
+  // UCs para a busca
+  const {data: ucs} = await sb.from("uc").select("nome_uc,categoria,ufbio").eq("ativo", true).order("nome_uc");
+  UCS = ucs || [];
+  $("#listaUC").innerHTML = UCS.map(u => `<option value="${esc(u.nome_uc)}">${esc(CATS[u.categoria] || u.categoria || "")}</option>`).join("");
+  // ocorrências (todas; o filtro de anos é no navegador)
+  const r = await sb.rpc("geo_ocorrencias", {p_ano_ini: ANO0, p_ano_fim: 2100});
+  if (r.error) msg("Ocorrências: " + r.error.message, "erro");
+  OCORR = r.data || [];
+  if (h.a) ANOS = h.a;
+  histograma();
+  for (const c of CAMADAS) if (c.ligada) await ligar(c.id, true);
+  if (h.u) focarUC(h.u, !h.v);
+  else { const q = new URLSearchParams(location.search).get("uc"); if (q) focarUC(q, true); }
+}
+
+/* ======================= painel de camadas ======================= */
+function montarPainel(ligadasHash){
+  if (ligadasHash) CAMADAS.forEach(c => c.ligada = ligadasHash.includes(c.id));
+  $("#grupos").innerHTML = GRUPOS.map(g => {
+    const cs = CAMADAS.filter(c => c.g === g.id);
+    return `<details class="grupo" data-g="${g.id}" ${g.aberto || cs.some(c => c.ligada) ? "open" : ""}><summary><svg class="seta" width="10" height="10" viewBox="0 0 10 10"><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>${esc(g.nome)}<span class="n" data-gn="${g.id}"></span></summary>
+      ${cs.map(c => `<label class="cam" data-c="${c.id}"><input type="checkbox" data-cam="${c.id}" ${c.ligada ? "checked" : ""}><span class="sb">${c.sb}</span><span class="nome">${esc(c.nome)}${c.nota ? `<small>${esc(c.nota)}</small>` : ""}</span><span class="qt" data-qt="${c.id}"></span></label>${c.extra ? `<div class="extra">${c.extra}</div>` : ""}`).join("")}</details>`;
+  }).join("");
+  $$("[data-cam]").forEach(i => i.onchange = () => ligar(i.dataset.cam, i.checked));
+  $("#ideReg").onchange = () => { if (ligada("ide_veg")) { desligar("ide_veg"); ligar("ide_veg", true); } };
+  $("#ideUsar").onclick = () => { if (!$("#ideNome").value.trim()) return msg("Informe o nome da camada.", "erro"); desligar("ide_outra"); $('[data-cam="ide_outra"]').checked = true; ligar("ide_outra", true); };
+  contarGrupos();
+}
+const ligada = id => !!C[id].ativa;
+function contarGrupos(){ GRUPOS.forEach(g => { const n = CAMADAS.filter(c => c.g === g.id && c.ativa).length; const el = $(`[data-gn="${g.id}"]`); if (el) el.textContent = n ? `${n} ligada${n > 1 ? "s" : ""}` : ""; }); }
+function desligar(id){ const c = C[id]; if (c.layer) mapa.removeLayer(c.layer); c.ativa = false; }
+
+async function ligar(id, on){
+  const c = C[id], row = $(`[data-c="${id}"]`);
+  if (!on){ desligar(id); contarGrupos(); salvarHash(); if (id === "queimadas") $("#aviso").hidden = true; return; }
+  c.ativa = true; contarGrupos(); salvarHash();
+  try{
+    row?.classList.add("carregando");
+    if (c.tipo === "wms"){
+      const nome = typeof c.camada === "function" ? c.camada() : c.camada;
+      if (!nome){ c.ativa = false; $(`[data-cam="${id}"]`).checked = false; return; }
+      c.layer = L.tileLayer.wms(IDE_WMS, {layers: nome, format:"image/png", transparent:true, version:"1.1.1", opacity:.75, attribution:"IDE-Sisema", pane:"limites"})
+        .on("tileerror", () => { if (!c._avisou){ c._avisou = true; msg("O IDE-Sisema não respondeu para esta camada. Confira o nome ou tente mais tarde.", "erro"); } });
+      c.layer.addTo(mapa); return;
+    }
+    if (c.tipo === "queimadas"){ c.layer ||= L.layerGroup(); c.layer.addTo(mapa); queimadasAtualizar(); return; }
+    if (c.tipo === "risco"){ await riscoLigar(c); return; }
+    if (!c.feats) c.feats = await c.carregar();
+    desenhar(c);
+  }catch(e){ console.error(e); msg(`${c.nome}: ${e.message || e}`, "erro"); }
+  finally{ row?.classList.remove("carregando"); }
+}
+
+function corAno(ano){ const t = Math.max(0, Math.min(1, (ano - ANO0) / Math.max(1, ANO1 - ANO0))); return `hsl(${18 + (1 - t) * 22}, ${70 + t * 30}%, ${48 + t * 6}%)`; }
+function desenhar(c){
+  if (c.layer) mapa.removeLayer(c.layer);
+  let fs = c.feats;
+  if (c.filtroAno) fs = fs.filter(f => f.properties.ano >= ANOS[0] && f.properties.ano <= ANOS[1]);
+  if (ucFoco && c.tipo !== "poli") {} // foco só enquadra; não esconde o restante
+  let layer;
+  if (c.tipo === "ocorr"){
+    const tela = c._r ||= L.canvas({pane:"pontos", padding:.3});
+    layer = L.layerGroup(fs.map(f => { const [lon, lat] = f.geometry.coordinates, p = f.properties;
+      return L.circleMarker([lat, lon], {renderer: tela, radius: Math.max(3, Math.min(9, 2.4 + Math.sqrt(p.area_ha || 0) / 3)), color:"#2a1a0e", weight:1, fillColor: corAno(p.ano), fillOpacity:.88, _f:f, _c:c.id})
+        .on("click", ev => { L.DomEvent.stop(ev); abrirFicha(c, f); }); }));
+  } else if (c.tipo === "ponto"){
+    layer = L.layerGroup(fs.map(f => { const [lon, lat] = f.geometry.coordinates;
+      return L.marker([lat, lon], {icon: iconeMapa(f.properties._icone || c.icone), pane:"pontos", title: f.properties._t, keyboard:true})
+        .on("click", ev => { L.DomEvent.stop(ev); abrirFicha(c, f); }); }));
+  } else {
+    layer = L.geoJSON({type:"FeatureCollection", features: fs}, {pane: c.tipo === "linha" ? "linhas" : "limites", style: c.estilo,
+      interactive: c.tipo === "linha", onEachFeature: (f, l) => l.on("click", ev => { L.DomEvent.stop(ev); abrirFicha(c, f); })});
+  }
+  c.layer = layer.addTo(mapa); c.vis = fs;
+  const q = $(`[data-qt="${c.id}"]`); if (q) q.textContent = fmtN(fs.length);
+}
+
+/* polígonos e limites não capturam clique (ficam por baixo dos pontos): o clique no mapa procura o polígono */
+function cliqueMapa(e){
+  if (window._riscoClique && window._riscoClique(e)) return;
+  for (const id of ["queimadas", "ucs", "za", "municipios"]){
+    const c = C[id]; if (!c.ativa) continue;
+    const fs = id === "queimadas" ? c.vis || [] : c.vis || [];
+    const f = fs.find(f => contem(f.geometry, e.latlng.lng, e.latlng.lat));
+    if (f) return abrirFicha(c, f);
+  }
+  $("#ficha").hidden = true;
+}
+function dentroAnel(a, x, y){ let d = false; for (let i = 0, j = a.length - 1; i < a.length; j = i++){ const [xi, yi] = a[i], [xj, yj] = a[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) d = !d; } return d; }
+function contem(g, x, y){
+  if (!g) return false;
+  const polys = g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : [];
+  if (g.type === "LineString" || g.type === "MultiLineString"){ return false; }
+  return polys.some(p => dentroAnel(p[0], x, y) && !p.slice(1).some(h => dentroAnel(h, x, y)));
+}
+
+/* ======================= áreas queimadas (por caixa e zoom) ======================= */
+let tQ = null, reqQ = 0;
+function queimadasAtualizar(){
+  clearTimeout(tQ);
+  tQ = setTimeout(async () => {
+    const c = C.queimadas, z = mapa.getZoom();
+    if (!c.ativa) return;
+    if (z < 10){ c.layer.clearLayers(); c.vis = []; $("#aviso").textContent = "Aproxime o mapa para ver as áreas queimadas do BDG"; $("#aviso").hidden = false; $(`[data-qt="queimadas"]`).textContent = ""; return; }
+    $("#aviso").hidden = true;
+    const b = mapa.getBounds().pad(.15), meu = ++reqQ, tol = Math.max(0, 0.00003 * Math.pow(2, 14 - z));
+    const {data, error} = await sb.rpc("geo_queimadas", {x0:b.getWest(), y0:b.getSouth(), x1:b.getEast(), y1:b.getNorth(), p_ano_ini:ANOS[0], p_ano_fim:ANOS[1], p_tol:tol, p_lim:4000});
+    if (meu !== reqQ || !c.ativa) return;
+    if (error) return msg("Áreas queimadas: " + error.message, "erro");
+    const fs = (data || []).map(r => ({type:"Feature", geometry:r.geom, properties:{_t:"Área queimada · " + r.cod_bdp, cod_bdp:r.cod_bdp, ano:r.ano, nome_uc:r.nome_uc, area_ha:r.area_ha, fonte:r.fonte}}));
+    c.layer.clearLayers();
+    L.geoJSON({type:"FeatureCollection", features: fs}, {pane:"queim", interactive:false,
+      style: f => ({color: corAno(f.properties.ano), weight:1, fillColor: corAno(f.properties.ano), fillOpacity:.38})}).addTo(c.layer);
+    c.vis = fs; $(`[data-qt="queimadas"]`).textContent = fmtN(fs.length) + (fs.length >= 4000 ? "+" : "");
+  }, 250);
+}
+
+/* ======================= mapa de risco ======================= */
+async function riscoLigar(c){
+  if (!c.layer){
+    const {data, error} = await sb.from("uc_risco").select("nome_uc,versao,metodo,dados");
+    if (error) throw error;
+    c.mapas = (data || []).map(R => ({R, ...RiscoMapa.camada(R)}));
+    c.layer = L.layerGroup(c.mapas.map(m => m.camada));
+    $(`[data-qt="risco"]`).textContent = c.mapas.length ? `${c.mapas.length} UC${c.mapas.length > 1 ? "s" : ""}` : "nenhuma";
+    window._riscoClique = e => {
+      if (!c.ativa) return false;
+      for (const m of c.mapas){ const i = m.celula(e.latlng); if (i < 0) continue;
+        const cel = m.R.dados.cel, cl = cel.c[i], mot = cl >= 2 ? (cel.m[i] || "").split(",").filter(Boolean).map(k => m.R.dados.motivos[+k]) : [];
+        mostrarFicha({sb: sbRisco(), titulo: RiscoMapa.NOME[cl], sub: `Mapa de risco · ${m.R.nome_uc} · quadrante ${m.quadrante(e.latlng) || "—"}`,
+          linhas: [["Queimou", cel.a[i] ? `${cel.a[i]} dos 13 anos (2013–2025)` : "não queimou em 2013–2025"], ...(mot.length ? [["Por quê", mot.join("; ")]] : []), ["Confiança", RiscoMapa.CONF[cel.k[i]]]],
+          links: [["Abrir o módulo", linkMod(m.R.nome_uc, "risco")]]});
+        return true; }
+      return false; };
+  }
+  c.layer.addTo(mapa);
+}
+
+/* ======================= ficha ======================= */
+function abrirFicha(c, f){
+  const p = f.properties, d = c.ficha ? c.ficha(p) : {linhas:[]};
+  const sub = [c.nome, p.nome_uc && c.id !== "ucs" ? p.nome_uc : ""].filter(Boolean).join(" · ");
+  if (c.id === "ocorr" || c.id === "queimadas") return fichaOcorrencia(c, p);
+  mostrarFicha({sb: p._icone ? sbIcone(p._icone) : c.sb, titulo: p._t, sub, linhas: d.linhas, links: d.links});
+}
+async function fichaOcorrencia(c, p){
+  mostrarFicha({sb: c.sb, titulo: p._t, sub: "Carregando…", linhas: []});
+  const {data, error} = await sb.rpc("geo_ocorrencia", p.cod_bdp ? {p_cod: p.cod_bdp} : {p_cod: null, p_ano: p.ano, p_ri: p.ri});
+  if (error || !data) return mostrarFicha({sb: c.sb, titulo: p._t, sub: c.nome, linhas: [["Ano", p.ano], ["UC", p.nome_uc], ["Área", fmtHa(p.area_ha)]]});
+  const o = data;
+  mostrarFicha({sb: c.sb, titulo: o.cod_bdp ? `Ocorrência ${o.cod_bdp}` : `RI ${o.ri}/${o.ano} · em andamento`, sub: [o.nome_uc, o.municipio].filter(Boolean).join(" · "),
+    linhas: [["Detecção", fmtD(o.dat_detec)], ["Extinção", fmtD(o.dat_final)], ["Local", [o.local, o.nome_local].filter(Boolean).join(" · ")], ["Detectado por", o.f_detec],
+             ["Causa provável", o.causa_p], ["Área declarada", o.area_int != null || o.area_ent != null ? `${fmtHa(o.area_int || 0)} na UC · ${fmtHa(o.area_ent || 0)} no entorno` : ""],
+             ["Área dos polígonos", fmtHa(o.area_poligonos)], ...(c.id === "queimadas" ? [["Este polígono", fmtHa(p.area_ha) + (p.fonte ? ` · ${p.fonte}` : "")]] : [])],
+    links: [["Painel da UC", o.nome_uc ? "painel_uc.html?uc=" + encodeURIComponent(o.nome_uc) : null]]});
+}
+function mostrarFicha({sb: s, titulo, sub, linhas = [], links = []}){
+  const L2 = linhas.filter(([, v]) => v !== null && v !== undefined && v !== ""), K = (links || []).filter(([, h]) => h);
+  $("#ficha").innerHTML = `<div class="cab"><span class="sb">${s || ""}</span><div><h2>${esc(titulo)}</h2><div class="cam-nome">${esc(sub || "")}</div></div><button type="button" class="x" aria-label="Fechar">×</button></div>
+    ${L2.length ? `<dl>${L2.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}
+    ${K.length ? `<div class="acoes">${K.map(([t, h]) => `<a href="${esc(h)}">${esc(t)}</a>`).join("")}</div>` : ""}`;
+  $("#ficha").hidden = false; $("#ficha .x").onclick = () => $("#ficha").hidden = true;
+}
+
+/* ======================= histograma de anos ======================= */
+function histograma(){
+  const anos = []; for (let a = ANO0; a <= ANO1; a++) anos.push(a);
+  const cont = Object.fromEntries(anos.map(a => [a, 0])); OCORR.forEach(o => { if (cont[o[2]] !== undefined) cont[o[2]]++; });
+  const mx = Math.max(1, ...Object.values(cont));
+  $("#hist").innerHTML = anos.map(a => `<div class="b" data-a="${a}" title="${a}: ${fmtN(cont[a])} ocorrências"><i style="height:${Math.max(3, cont[a] / mx * 100)}%"></i></div>`).join("");
+  $("#histAnos").innerHTML = anos.map(a => `<span>${a === ANO0 || a === ANO1 || a % 3 === 0 ? "’" + String(a).slice(2) : ""}</span>`).join("");
+  let ini = null;
+  const anoEm = ev => { const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("#hist .b"); return el ? +el.dataset.a : null; };
+  const H = $("#hist");
+  H.onpointerdown = ev => { const a = anoEm(ev); if (a == null) return; ini = a; H.setPointerCapture(ev.pointerId); aplicarAnos([a, a], false); };
+  H.onpointermove = ev => { if (ini == null) return; const a = anoEm(ev); if (a != null) aplicarAnos([Math.min(ini, a), Math.max(ini, a)], false); };
+  H.onpointerup = () => { if (ini == null) return; ini = null; aplicarAnos(ANOS, true); };
+  H.ondblclick = () => aplicarAnos([ANO0, ANO1], true);
+  aplicarAnos(ANOS, false); resumoAnos(cont);
+}
+function resumoAnos(cont){
+  cont ||= {}; if (!Object.keys(cont).length) OCORR.forEach(o => cont[o[2]] = (cont[o[2]] || 0) + 1);
+  let n = 0; for (let a = ANOS[0]; a <= ANOS[1]; a++) n += cont[a] || 0;
+  $("#fogoResumo").textContent = `${ANOS[0] === ANOS[1] ? ANOS[0] : ANOS[0] + "–" + ANOS[1]} · ${fmtN(n)}`;
+}
+function aplicarAnos(a, redesenhar){
+  ANOS = a; $$("#hist .b").forEach(b => b.classList.toggle("on", +b.dataset.a >= a[0] && +b.dataset.a <= a[1])); resumoAnos();
+  if (!redesenhar) return;
+  if (C.ocorr.ativa && C.ocorr.feats) desenhar(C.ocorr);
+  if (C.queimadas.ativa) queimadasAtualizar();
+  salvarHash();
+}
+
+/* ======================= foco numa UC / busca ======================= */
+async function focarUC(nome, enquadrar = true){
+  const lim = await limites().catch(() => []);
+  const ls = lim.filter(l => l.nome_uc === nome && l.tipo === "uc");
+  if (!ls.length){
+    const m = await municipioPorNome(nome);
+    if (m){ if (focoLayer) mapa.removeLayer(focoLayer); focoLayer = L.geoJSON(m, {style:{color:"#fff", weight:2.5, fill:false}, interactive:false}).addTo(mapa); mapa.fitBounds(focoLayer.getBounds(), {padding:[30, 30]}); return; }
+    return msg("UC ou município não encontrado.", "erro");
+  }
+  ucFoco = nome;
+  if (focoLayer) mapa.removeLayer(focoLayer);
+  focoLayer = L.geoJSON({type:"FeatureCollection", features: ls.map(l => ({type:"Feature", geometry:l.geom}))}, {pane:"linhas", style:{color:"#ffffff", weight:3, fill:false}, interactive:false}).addTo(mapa);
+  if (enquadrar) mapa.fitBounds(focoLayer.getBounds(), {padding:[30, 30], maxZoom:13});
+  $("#ucSel").hidden = false; $("#ucSelNome").textContent = nome; $("#optUC").hidden = false; salvarHash();
+}
+let _mun = null;
+async function municipioPorNome(n){
+  _mun ||= fetch("dados/municipios_mg.geojson").then(r => r.json());
+  const d = await _mun, s = x => x.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return d.features.find(f => s(f.properties.nome || f.properties.municipio || "") === s(n));
+}
+$("#busca").onchange = () => { const v = $("#busca").value.trim(); if (v) focarUC(v); $("#busca").value = ""; fecharPainelMovel(); };
+$("#busca").onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); $("#busca").onchange(); } };
+$("#limparUC").onclick = () => { ucFoco = null; if (focoLayer) mapa.removeLayer(focoLayer); focoLayer = null; $("#ucSel").hidden = true; $("#optUC").hidden = true; salvarHash(); };
+
+/* ======================= link (hash) ======================= */
+function salvarHash(){
+  if (!mapa) return;
+  const c = mapa.getCenter(), lig = CAMADAS.filter(x => x.ativa).map(x => x.id).join(",");
+  const h = `v=${mapa.getZoom()}/${c.lat.toFixed(4)}/${c.lng.toFixed(4)}&c=${lig}&a=${ANOS.join("-")}${baseAtual ? "&b=" + baseAtual.k : ""}${ucFoco ? "&u=" + encodeURIComponent(ucFoco) : ""}`;
+  history.replaceState(null, "", location.pathname + location.search + "#" + h);
+}
+function lerHash(){
+  const p = new URLSearchParams(location.hash.slice(1)), o = {};
+  if (p.get("v")){ const v = p.get("v").split("/").map(Number); if (v.length === 3 && v.every(isFinite)) o.v = v; }
+  if (p.has("c")) o.c = p.get("c").split(",").filter(Boolean);
+  if (p.get("a")){ const a = p.get("a").split("-").map(Number); if (a.length === 2 && a.every(isFinite)) o.a = a; }
+  o.b = p.get("b"); o.u = p.get("u");
+  return o;
+}
+$("#btnLink").onclick = async () => { salvarHash(); try{ await navigator.clipboard.writeText(location.href); msg("Link copiado. Quem abrir precisa ter login."); }catch(e){ prompt("Copie o link:", location.href); } };
+
+/* ======================= exportar ======================= */
+$("#btnExportar").onclick = () => {
+  const ativas = CAMADAS.filter(c => c.ativa);
+  $("#optUC").hidden = !ucFoco;
+  if (!ucFoco && $('[name=escopo][value=uc]').checked) $('[name=escopo][value=tela]').checked = true;
+  $("#expCamadas").innerHTML = ativas.length ? ativas.map(c => {
+    const pode = !["wms", "risco"].includes(c.tipo);
+    return `<label><input type="checkbox" value="${c.id}" ${pode ? "checked" : "disabled"}> ${esc(c.nome)} ${pode ? "" : `<small>${c.tipo === "wms" ? "baixe no próprio IDE-Sisema" : "ainda não exporta"}</small>`}</label>`;
+  }).join("") : `<span style="color:var(--liquen)">Ligue ao menos uma camada no painel.</span>`;
+  $("#expMsg").textContent = ""; $("#dlgExportar").showModal();
+};
+$("#expCancelar").onclick = () => $("#dlgExportar").close();
+$("#expBaixar").onclick = async () => {
+  const ids = $$("#expCamadas input:checked").map(i => i.value), escopo = $("[name=escopo]:checked").value, fmt = $("[name=formato]:checked").value;
+  if (!ids.length) return $("#expMsg").textContent = "Escolha ao menos uma camada.";
+  $("#expMsg").textContent = "Preparando…"; $("#expBaixar").disabled = true;
+  try{
+    let caixa = null, ucB = null;
+    if (escopo === "tela") caixa = mapa.getBounds();
+    if (escopo === "uc"){ ucB = focoLayer.getBounds(); }
+    const dentro = (f, b) => { const bb = L.geoJSON(f).getBounds(); return b.intersects(bb); };
+    const camadas = [];
+    for (const id of ids){
+      const c = C[id]; let fs;
+      if (id === "queimadas"){
+        const b = caixa || ucB || L.latLngBounds([-23, -52], [-14, -39]);
+        const {data, error} = await sb.rpc("geo_queimadas", {x0:b.getWest(), y0:b.getSouth(), x1:b.getEast(), y1:b.getNorth(), p_ano_ini:ANOS[0], p_ano_fim:ANOS[1], p_tol:0, p_uc: escopo === "uc" ? ucFoco : null, p_lim: 20000});
+        if (error) throw error;
+        fs = (data || []).map(r => ({type:"Feature", geometry:r.geom, properties:{_t:r.cod_bdp, cod_bdp:r.cod_bdp, ano:r.ano, nome_uc:r.nome_uc, area_ha:r.area_ha, fonte:r.fonte}}));
+      } else {
+        fs = c.vis || c.feats || [];
+        if (escopo === "tela") fs = fs.filter(f => dentro(f, caixa));
+        if (escopo === "uc") fs = ["ucs", "za", "municipios"].includes(id) ? fs.filter(f => f.properties.nome_uc === ucFoco || (id === "municipios" && dentro(f, ucB))) : fs.filter(f => f.properties.nome_uc === ucFoco);
+      }
+      camadas.push({c, fs});
+    }
+    const total = camadas.reduce((s, x) => s + x.fs.length, 0);
+    if (!total){ $("#expMsg").textContent = "Nada a exportar nessa área."; return; }
+    const nome = `colibri_${escopo === "uc" ? ucFoco.replace(/\W+/g, "_").toLowerCase() : escopo === "tela" ? "area_visivel" : "mg"}_${new Date().toISOString().slice(0, 10)}`;
+    if (fmt === "geojson") baixar(nome + ".geojson", JSON.stringify({type:"FeatureCollection", features: camadas.flatMap(({c, fs}) => fs.map(f => ({type:"Feature", geometry:f.geometry, properties: limpar(f.properties, c)})))}), "application/geo+json");
+    if (fmt === "kml") baixar(nome + ".kml", kml(camadas, nome), "application/vnd.google-earth.kml+xml");
+    if (fmt === "csv") baixar(nome + ".csv", csv(camadas), "text/csv");
+    $("#dlgExportar").close(); msg(`${fmtN(total)} feições exportadas.`);
+  }catch(e){ $("#expMsg").textContent = e.message || String(e); }
+  finally{ $("#expBaixar").disabled = false; }
+};
+function limpar(p, c){ const o = {camada: c.nome, nome: p._t}; for (const [k, v] of Object.entries(p)) if (!k.startsWith("_") && v !== null && v !== undefined && v !== "") o[k] = v; return o; }
+function baixar(nome, txt, tipo){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], {type: tipo})); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+const xml = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function kmlGeom(g){
+  const co = cs => cs.map(([x, y]) => `${x},${y}`).join(" ");
+  const pol = p => `<Polygon><outerBoundaryIs><LinearRing><coordinates>${co(p[0])}</coordinates></LinearRing></outerBoundaryIs>${p.slice(1).map(h => `<innerBoundaryIs><LinearRing><coordinates>${co(h)}</coordinates></LinearRing></innerBoundaryIs>`).join("")}</Polygon>`;
+  switch (g.type){
+    case "Point": return `<Point><coordinates>${g.coordinates[0]},${g.coordinates[1]}</coordinates></Point>`;
+    case "LineString": return `<LineString><tessellate>1</tessellate><coordinates>${co(g.coordinates)}</coordinates></LineString>`;
+    case "MultiLineString": return `<MultiGeometry>${g.coordinates.map(l => `<LineString><tessellate>1</tessellate><coordinates>${co(l)}</coordinates></LineString>`).join("")}</MultiGeometry>`;
+    case "Polygon": return pol(g.coordinates);
+    case "MultiPolygon": return `<MultiGeometry>${g.coordinates.map(pol).join("")}</MultiGeometry>`;
+    default: return "";
+  }
+}
+const kmlCor = hex => { const h = (hex || "#ffffff").replace("#", ""); return "ff" + h.slice(4, 6) + h.slice(2, 4) + h.slice(0, 2); };
+function kml(camadas, nome){
+  const cor = c => c.cor || ({ucs:"#9bd46f", za:"#d7e8a8", municipios:"#c7d0d9", ocorr:"#ff9a2e", queimadas:"#ff5a1f"}[c.id]) || "#86b7ff";
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${xml(nome)}</name>
+${camadas.map(({c}) => `<Style id="s_${c.id}"><LineStyle><color>${kmlCor(cor(c))}</color><width>2</width></LineStyle><PolyStyle><color>${"55" + kmlCor(cor(c)).slice(2)}</color></PolyStyle><IconStyle><color>${kmlCor(cor(c))}</color><scale>.8</scale></IconStyle></Style>`).join("\n")}
+${camadas.map(({c, fs}) => `<Folder><name>${xml(c.nome)}</name>${fs.map(f => { const p = limpar(f.properties, c);
+  return `<Placemark><name>${xml(p.nome)}</name><styleUrl>#s_${c.id}</styleUrl><ExtendedData>${Object.entries(p).filter(([k]) => k !== "nome").map(([k, v]) => `<Data name="${xml(k)}"><value>${xml(v)}</value></Data>`).join("")}</ExtendedData>${kmlGeom(f.geometry)}</Placemark>`; }).join("")}</Folder>`).join("\n")}
+</Document></kml>`;
+}
+function wkt(g){
+  const co = cs => cs.map(([x, y]) => `${x} ${y}`).join(", "), anel = p => "(" + p.map(r => "(" + co(r) + ")").join(", ") + ")";
+  switch (g.type){
+    case "Point": return `POINT (${g.coordinates[0]} ${g.coordinates[1]})`;
+    case "LineString": return `LINESTRING (${co(g.coordinates)})`;
+    case "MultiLineString": return `MULTILINESTRING (${g.coordinates.map(l => "(" + co(l) + ")").join(", ")})`;
+    case "Polygon": return `POLYGON ${anel(g.coordinates)}`;
+    case "MultiPolygon": return `MULTIPOLYGON (${g.coordinates.map(anel).join(", ")})`;
+    default: return "";
+  }
+}
+function csv(camadas){
+  const linhas = camadas.flatMap(({c, fs}) => fs.map(f => { const p = limpar(f.properties, c), g = f.geometry;
+    if (g.type === "Point"){ p.lon = g.coordinates[0]; p.lat = g.coordinates[1]; } else p.wkt = wkt(g); return p; }));
+  const fixas = ["camada", "nome", "nome_uc"], todas = [...new Set(linhas.flatMap(Object.keys))];
+  const cols = fixas.filter(k => todas.includes(k)).concat(todas.filter(k => !fixas.includes(k) && !["lon", "lat", "wkt"].includes(k)), ["lon", "lat", "wkt"].filter(k => todas.includes(k)));
+  const q = v => { const s = String(v ?? ""); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  return "﻿" + [cols.join(";")].concat(linhas.map(l => cols.map(k => q(typeof l[k] === "number" ? String(l[k]).replace(".", ",") : l[k])).join(";"))).join("\r\n");
+}
+
+/* ======================= painel no celular ======================= */
+const fecharPainelMovel = () => $("#painel").classList.remove("aberto");
+$("#abrirPainel").onclick = () => $("#painel").classList.add("aberto");
+$("#fecharPainel").onclick = fecharPainelMovel;
+
+entrar();
+</script>
+</body>
+</html>
