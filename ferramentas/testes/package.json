@@ -1,0 +1,10 @@
+{
+  "name": "colibri-testes",
+  "private": true,
+  "description": "Testes locais do Colibri (Playwright + Supabase-js redirecionado para o PostgREST local)",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "leaflet": "^1.9.4",
+    "playwright-core": "^1.63.0"
+  }
+}

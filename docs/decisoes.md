@@ -1,0 +1,39 @@
+# Decisões do projeto Colibri
+
+Registro das escolhas feitas com o Rodolfo, para não serem rediscutidas nem desfeitas por engano. Acrescente no fim de cada seção, com data.
+
+## Visão geral
+- Nome: **Colibri · Sistema Integrado de Gestão do Fogo em Unidades de Conservação** (antes SIGFogo). O Previncêndio continua sendo o programa/gerência. Identidade visual verde; logos do Colibri, Previncêndio e IEF no topo.
+- Cabeçalho da página inicial (4 linhas): Instituto Estadual de Florestas - IEF MG / Diretoria de Unidades de Conservação - DIUC / Gerência de Prevenção e Combate a Incêndios Florestais - Previncêndio / Coordenação de Informações Previncêndio. O nome Colibri não se repete (já está no logo). O login é oferecido logo na página inicial.
+- Construção "por partes": cada módulo entra como protótipo funcional e é ajustado com o uso.
+
+## Ocorrências (RI, ROI, Sala Técnica)
+- RI é documento da Sala de Situação (só equipe com login); ROI é da UC. Fluxo: RI → ROI (10 dias após o fim do incêndio) → REDS (PM Ambiental/Bombeiros) → processo SEI → Polícia Civil. A Sala Técnica controla prazos e cobranças.
+- ROI final é exportado em PDF e autenticado no SEI (o formulário em si não exige assinatura).
+- Quando Sala e UC divergem (ex.: empenho de pessoal/veículos), **vale a UC**, porque esteve no campo.
+- Os eventos realmente ocorridos em 2026 são os RIs com nome de UC preenchido; os demais números foram reservados na planilha antiga.
+- ROIs de 2026 em PDF são transcritos pela equipe do Previncêndio no importador de PDFs (`roi_importar.html`).
+- A seção de empenho (pessoal/veículos) do RI e do ROI será redesenhada e unificada, provavelmente valendo a partir de 2027, mesmo que os dados fiquem diferentes dos anos anteriores.
+
+## Cadastro das UCs (PIPCIF)
+- O PIPCIF vira módulos do cadastro; ~60 gerentes (alguns com até 3 UCs) fazem login. Todos veem todas as UCs; cada um edita só as suas; toda alteração fica registrada (auditoria).
+- O PIPCIF passa a ser um relatório gerado a partir dos módulos.
+- Carga dos PIPCIF 2026: ver `docs/pipcif.md`.
+
+## Mapa de risco (módulo 6)
+- Ver `docs/mapa_risco.md` (método, receita e diário de decisões).
+- Duas vertentes: **mapa de risco** (técnico, método único estadual, responsabilidade do Previncêndio) e **mapa de planejamento** (anual, competência do gerente; o Previncêndio comenta, não decide).
+- Interface para gerentes sem formação técnica: sem pesos ou índices na tela; cores e frases simples; "por que esta área?"; conferência em passos (concordo/discordo + nota, marcações, seção 14 gerada).
+- O mapa vive no módulo 6; os outros lugares (Painel, Geo Colibri, futura Sala) só o mostram como camada.
+- Trilhas e acessos (`uc_via`) poderão entrar como variável de ignição quando o cadastro estiver completo; aceiros entram como capacidade, não como risco.
+
+## Geo Colibri (`mapa.html`)
+- Visualizador só para usuários logados (há dados não públicos).
+- Ocorrências e áreas queimadas são visíveis a **todos os usuários logados**, sem dados pessoais (sem nomes, telefones, REDS, descrição). Contatos de parceiros/colaboradores ficam fora do mapa e das exportações.
+- **Sem camadas do IDE-Sisema** (06/10/2026): considerado redundante; o Geo Colibri mostra só o que está no banco do Colibri.
+- Na página inicial, fica ao lado do Painel da UC, com ícone próprio.
+
+## Privacidade e infraestrutura
+- Repositório público: só código, estrutura do banco e dados públicos.
+- Dados internos só no Supabase, com RLS.
+- pdf.js hospedado no próprio site (o cdnjs é bloqueado em computadores do Estado).

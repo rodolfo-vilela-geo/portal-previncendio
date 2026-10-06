@@ -1,0 +1,11 @@
+const { chromium, fs, rotas, extra } = require('./comum');
+(async()=>{ const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome'});
+ const ctx=await b.newContext({viewport:{width:1366,height:900}}); const p=await ctx.newPage(); const log=[];
+ p.on('pageerror',e=>log.push('ERRO '+e.message)); await rotas(p, log); await extra(p); await p.route(/cartocdn|fonts\.g/, r => r.fulfill({status:200, body:''}));
+ await p.goto('http://localhost:8765/index.html'); await p.waitForTimeout(1500);
+ const el = await p.$('#pipGrade'); const box = await el.boundingBox(); await p.evaluate(y=>scrollTo(0,y-420), box.y); await p.waitForTimeout(300);
+ await p.screenshot({path:'/tmp/home_geo.png'});
+ await p.goto('http://localhost:8765/mapa.html'); await p.fill('#email','rodolfo@teste.br'); await p.fill('#senha','x'); await p.click('#formLogin button'); await p.waitForTimeout(6000);
+ console.log('grupos:', await p.$$eval('details.grupo summary', x=>x.map(e=>e.textContent.trim())));
+ await p.screenshot({path:'/tmp/geo1.png'});
+ console.log(log.join('\n')); await b.close(); })();
