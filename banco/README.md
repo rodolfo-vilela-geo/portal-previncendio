@@ -46,6 +46,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 23_execucao_acoes.sql        Registros de execução das ações preventivas (vários por ação, até 3 fotos no bucket privado acoes-fotos), motivo, pendências
 24_poligonos_bdg.sql         Polígonos do BDG: importação em lote (shapefile/GeoJSON/KML), ROIs sem polígono, pontos do histórico no Painel da UC
 25_pipcif_origem.sql         Ano do PIPCIF de onde vieram os dados de cada UC (acompanhamento da migração)
+26_mapa_risco.sql            Mapa de risco por UC (protótipo): células compactadas, método e conferência; leitura logada, gravação Previncêndio
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador

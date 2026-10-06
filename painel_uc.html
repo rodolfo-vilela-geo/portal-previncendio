@@ -71,6 +71,16 @@
   .sel-anos button{font:inherit;color:inherit;cursor:pointer}
   .sel-anos .sa-rec{background:none;border:0;font-size:16px;line-height:1;padding:0 2px}
   .sel-anos.fechado .sa-corpo{display:none}
+  .ctl-risco{background:rgba(20,22,18,.9);color:#fff;border-radius:8px;padding:7px 9px;font-size:12px;width:250px;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+  .ctl-risco button.rk-lig{width:100%;font:inherit;font-weight:700;cursor:pointer;border:1px solid #f6c453;background:transparent;color:#f6c453;border-radius:6px;padding:5px 8px;text-align:left}
+  .ctl-risco.ativo button.rk-lig{background:#f6c453;color:#1d1d1f}
+  .ctl-risco .rk-corpo{display:none;margin-top:6px;line-height:1.5}
+  .ctl-risco.ativo .rk-corpo{display:block}
+  .ctl-risco .rk-cl{display:flex;align-items:center;gap:6px} .ctl-risco .rk-cl i{width:14px;height:10px;display:inline-block;border-radius:2px}
+  .ctl-risco .rk-nota{color:#d9d9d4;font-size:11.5px;margin-top:4px}
+  .rk-pop h4{margin:0 0 4px;font-size:14px} .rk-pop ul{margin:4px 0;padding-left:18px} .rk-pop .rk-conf{color:#666;font-size:12px}
+  .rk-quad{background:transparent;border:0;box-shadow:none;color:#fff;font-weight:700;font-size:11px;text-shadow:0 0 3px #000,0 0 2px #000}
+  .rk-quad::before{display:none}
   .sa-grade{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}
   .sa-grade button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:3px 4px;min-width:0;display:flex;align-items:center;gap:4px;font-weight:650}
   .sa-grade button i{width:9px;height:9px;border-radius:2px;flex:none;opacity:.35}
@@ -198,6 +208,7 @@ async function carregar(){
     sb.rpc("uc_recursos_resumo", {p_nome_uc: nome}), sb.from("vw_uc_rede_geo").select("tabela,tipo,nome,lat,lon,situacao").eq("nome_uc", nome),
     sb.rpc("uc_prevencao_resumo", {p_nome_uc: nome}), sb.from("uc_via").select("tipo,nome,geojson,tracado_origem,condicao").eq("nome_uc", nome).not("geojson", "is", null)]);
   if (data){ data.infra = infra || []; data.rec = rec || null; data.rede = rede || []; data.prev = prev || null; data.vias = vias || []; }
+  if (data){ const {data: rk} = await sb.from("uc_risco").select("versao,metodo,dados").eq("nome_uc", nome).maybeSingle(); data.risco = rk || null; }
   if (error){ $("#conteudo").innerHTML = `<div class="carregando" style="color:var(--erro)">${esc(error.message)}</div>`; return; }
   D = data; desenhar();
 }
@@ -335,6 +346,97 @@ function htmlPrevencao(p){
     p.favoraveis + p.adversos ? `<b>${p.favoraveis}</b> elementos favoráveis e <b>${p.adversos}</b> adversos` : null].filter(Boolean);
   return `<div style="font-size:13px;line-height:1.7">${linhas.join(" · ")}</div>`;
 }
+/* ---------------- mapa de risco (módulo 6, protótipo) ---------------- */
+// UTM (SIRGAS 2000 / GRS80) -> lat/lon
+function utmParaLL(x, y, zona, sul){
+  const a = 6378137, f = 1/298.257222101, k0 = .9996, e2 = f*(2-f), ep2 = e2/(1-e2), e1 = (1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+  x -= 500000; if (sul) y -= 10000000;
+  const M = y/k0, mu = M/(a*(1-e2/4-3*e2*e2/64-5*e2**3/256));
+  const p1 = mu + (3*e1/2-27*e1**3/32)*Math.sin(2*mu) + (21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu) + (151*e1**3/96)*Math.sin(6*mu) + (1097*e1**4/512)*Math.sin(8*mu);
+  const s1 = Math.sin(p1), c1 = Math.cos(p1), t1 = Math.tan(p1), N1 = a/Math.sqrt(1-e2*s1*s1), R1 = a*(1-e2)/Math.pow(1-e2*s1*s1, 1.5);
+  const C1 = ep2*c1*c1, T1 = t1*t1, D = x/(N1*k0);
+  const lat = p1 - (N1*t1/R1)*(D*D/2 - (5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24 + (61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+  const lon = (D - (1+2*T1+C1)*D**3/6 + (5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/c1;
+  return [lat*180/Math.PI, (zona*6-183) + lon*180/Math.PI];
+}
+// lat/lon -> UTM (mesmo elipsoide)
+function llParaUTM(lat, lon, zona){
+  const a = 6378137, f = 1/298.257222101, k0 = .9996, e2 = f*(2-f), ep2 = e2/(1-e2);
+  const fi = lat*Math.PI/180, la = lon*Math.PI/180, la0 = (zona*6-183)*Math.PI/180;
+  const N = a/Math.sqrt(1-e2*Math.sin(fi)**2), T = Math.tan(fi)**2, C = ep2*Math.cos(fi)**2, A = Math.cos(fi)*(la-la0);
+  const M = a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*fi - (3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*fi) + (15*e2*e2/256+45*e2**3/1024)*Math.sin(4*fi) - (35*e2**3/3072)*Math.sin(6*fi));
+  const x = k0*N*(A + (1-T+C)*A**3/6 + (5-18*T+T*T+72*C-58*ep2)*A**5/120) + 500000;
+  let y = k0*(M + N*Math.tan(fi)*(A*A/2 + (5-T+9*C+4*C*C)*A**4/24 + (61-58*T+T*T+600*C-330*ep2)*A**6/720));
+  if (lat < 0) y += 10000000;
+  return [x, y];
+}
+const RISCO_COR = ["#9aa3ad", "#f2efe3", "#f6c453", "#e8743b", "#b2182b"];
+const RISCO_NOME = ["Sem combustível", "Atenção baixa", "Atenção moderada", "Atenção alta", "Atenção muito alta"];
+const RISCO_CONF = ["menor — fora da UC, da ZA e da faixa de 3 km, onde o BDG registra pouco", "média — zona de amortecimento ou até 3 km", "alta — dentro da UC"];
+function camadaRisco(R){
+  const g = R.dados.grade, c = R.dados.cel, s = g.lado_m, w = Math.sqrt(3)*s, z = g.zona, sul = g.sul;
+  const Q = R.dados.quadrantes || [];
+  const quadDe = ll => { const r = Q.find(q => q._b && q._b.contains(ll)); return r ? r.n : null; };
+  let todos = null;
+  const construir = () => {
+  const tela = L.canvas({padding:.5}), grupo = L.layerGroup();
+  const ang = [0,1,2,3,4,5].map(i => (i*60 + 30) * Math.PI/180);
+  for (let i = 0; i < c.id.length; i++){
+    const lin = Math.floor(c.id[i] / 100000), col = c.id[i] - lin*100000;
+    const cy = lin*1.5*s, cx = col*w + (lin % 2 ? w/2 : 0);
+    const pts = ang.map(t => utmParaLL(cx + s*Math.cos(t), cy + s*Math.sin(t), z, sul));
+    const cl = c.c[i];
+    const op = cl === 1 ? .35 : .72;
+    L.polygon(pts, {renderer: tela, color: RISCO_COR[cl], weight: .8, opacity: op, fillColor: RISCO_COR[cl], fillOpacity: op, interactive:false}).addTo(grupo);
+  }
+  // quadrantes (UTM -> lat/lon) com o nome
+  const quads = L.layerGroup();
+  Q.forEach(q => { const p = [[q.x0,q.y0],[q.x1,q.y0],[q.x1,q.y1],[q.x0,q.y1]].map(([x, y]) => utmParaLL(x, y, z, sul));
+    q._b = L.latLngBounds(p);
+    L.polygon(p, {color:"#fff", weight:.8, opacity:.7, dashArray:"3 4", fill:false, interactive:false}).addTo(quads);
+    L.tooltip({permanent:true, direction:"center", className:"rk-quad", interactive:false}).setLatLng(q._b.getCenter()).setContent(q.n).addTo(quads); });
+  // confiança menor: hachura (SVG)
+  let hach = null;
+  if (R.dados.baixa_confianca){
+    const svg = L.svg({padding:.5});
+    hach = L.geoJSON(R.dados.baixa_confianca, {renderer: svg, style:{color:"#ddd", weight:.6, fillOpacity:1, fillColor:"#000"}, interactive:false});
+    hach.on("add", () => { const el = svg._container; if (el && !el.querySelector("#rkHach")){
+        el.insertAdjacentHTML("afterbegin", `<defs><pattern id="rkHach" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="rgba(0,0,0,.15)"/><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,.75)" stroke-width="2"/></pattern></defs>`); }
+      hach.eachLayer(l => l._path && l._path.setAttribute("fill", "url(#rkHach)")); });
+  }
+  todos = L.layerGroup([grupo, quads].concat(hach ? [hach] : []));
+  };
+  // clique no mapa: acha a célula pela posição (não depende de qual camada está por cima)
+  const porId = new Map(c.id.map((v, i) => [v, i]));
+  const abrirCelula = (i, ll) => {
+    const cl = c.c[i], anos = c.a[i], q = quadDe(ll);
+    const mot = cl >= 2 ? (c.m[i] || "").split(",").filter(Boolean).map(k => R.dados.motivos[+k]) : [];
+    L.popup({maxWidth:300}).setLatLng(ll).setContent(`<div class="rk-pop"><h4 style="color:${cl >= 3 ? RISCO_COR[cl] : "#1d1d1f"}">${RISCO_NOME[cl]}${q ? ` · quadrante ${esc(q)}` : ""}</h4>
+      <b>${cl >= 2 ? "Por que esta área?" : "O que se sabe desta área"}</b><ul><li>${anos ? `Queimou em <b>${anos}</b> dos 13 anos (2013–2025)` : "Não queimou entre 2013 e 2025"}</li>${mot.map(m => `<li>${esc(m[0].toUpperCase() + m.slice(1))}</li>`).join("")}</ul>
+      <div class="rk-conf">Confiança ${RISCO_CONF[c.k[i]]}.</div></div>`).openOn(mapa);
+  };
+  mapa.on("click", ev => {
+    if (!todos || !mapa.hasLayer(todos)) return;
+    const [x, y] = llParaUTM(ev.latlng.lat, ev.latlng.lng, z);
+    const r0 = Math.round(y/(1.5*s)); let best = null, bd = Infinity;
+    for (let lin = r0-1; lin <= r0+1; lin++){ const off = lin % 2 ? w/2 : 0, c0 = Math.round((x-off)/w);
+      for (let col = c0-1; col <= c0+1; col++){ const dx = col*w+off-x, dy = lin*1.5*s-y, dd = dx*dx+dy*dy; if (dd < bd){ bd = dd; best = lin*100000+col; } } }
+    if (porId.has(best)) abrirCelula(porId.get(best), ev.latlng);
+  });
+  const M = R.metodo || {};
+  const Ctl = L.Control.extend({onAdd(){
+    const d = L.DomUtil.create("div", "ctl-risco");
+    d.innerHTML = `<button type="button" class="rk-lig">◈ Mapa de risco <small style="font-weight:400">· protótipo</small></button>
+      <div class="rk-corpo">${[4,3,2,1,0].map(k => `<div class="rk-cl"><i style="background:${RISCO_COR[k]}"></i>${RISCO_NOME[k]}</div>`).join("")}
+        <div class="rk-cl"><i style="background:repeating-linear-gradient(45deg,#fff 0 2px,#555 2px 5px)"></i>Confiança menor</div>
+        <div class="rk-nota">${esc(M.resumo || "")} Calibrado com o BDG ${esc(M.calibracao || "")} e conferido em ${esc(M.conferencia || "")}. Clique numa célula para ver <b>por que</b>.</div>
+        <div class="rk-nota">Versão ${esc(R.versao)}</div></div>`;
+    L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    d.querySelector(".rk-lig").onclick = () => { const on = !d.classList.contains("ativo"); d.classList.toggle("ativo", on);
+      if (on){ if (!todos){ d.querySelector(".rk-lig").textContent = "Montando o mapa…"; construir(); d.querySelector(".rk-lig").innerHTML = `◈ Mapa de risco <small style="font-weight:400">· protótipo</small>`; } todos.addTo(mapa); mapa.fitBounds(L.latLngBounds(Q.flatMap(q => [q._b.getSouthWest(), q._b.getNorthEast()])), {padding:[10,10]}); } else mapa.removeLayer(todos); };
+    return d; }});
+  new Ctl({position:"topright"}).addTo(mapa);
+}
 function montarMapa(){
   if (mapa){ mapa.remove(); mapa = null; }
   const u = D.uc, g = D.geo;
@@ -424,6 +526,7 @@ function montarMapa(){
   const pts = [];
   if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: iconeMapa("sede", {tam:26}), zIndexOffset:600}).bindTooltip("Sede da UC")); leg.push(`${iconeLegenda("sede", 16)}Sede`); }
   if (pts.length) cam["Sede"] = L.featureGroup(pts).addTo(mapa);
+  if (D.risco) camadaRisco(D.risco);
   L.control.layers({"Satélite": sat, "Mapa": ruas}, cam, {collapsed: true}).addTo(mapa);
   // norte e legenda dentro do mapa (não vazam para fora quando a ficha ao lado é mais alta)
   const Norte = L.Control.extend({onAdd(){ const d = L.DomUtil.create("div", "norte"); d.innerHTML = "▲<br>N"; return d; }});
