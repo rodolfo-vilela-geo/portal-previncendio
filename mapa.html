@@ -271,12 +271,16 @@ const GRUPOS = [
   {id:"apoio", nome:"Rede de apoio"}
 ];
 const CAMADAS = [
+  {id:"mg", g:"limites", nome:"Minas Gerais", nota:"limite do estado", sb: sbArea("#f4f1e6", null), ligada:true, tipo:"poli",
+   carregar: async () => { const d = await fetch("dados/mg.geojson").then(r => r.json()); const fs = d.type === "FeatureCollection" ? d.features : [d];
+     return fs.map(f => ({type:"Feature", geometry:f.geometry, properties:{_t:"Minas Gerais"}})); },
+   estilo: () => ({color:"#f4f1e6", weight:2.2, opacity:.9, fillOpacity:0})},
   {id:"ucs", g:"limites", nome:"Unidades de conservação", sb: sbArea("#9bd46f"), ligada:true, tipo:"poli",
    carregar: async () => (await limites()).filter(l => l.tipo === "uc").map(l => ({type:"Feature", geometry:l.geom,
      properties:{_t: (CATS[l.categoria] || l.categoria || "") + " " + l.nome_uc, nome_uc:l.nome_uc, categoria:l.categoria, regional:l.ufbio}})),
    estilo: () => ({color:"#9bd46f", weight:1.6, fillColor:"#9bd46f", fillOpacity:.10}),
    ficha: p => ({linhas:[["Categoria", CATS[p.categoria] || p.categoria], ["Regional", p.regional]], links:[["Painel da UC", "painel_uc.html?uc=" + encodeURIComponent(p.nome_uc)], ["Cadastro", linkMod(p.nome_uc, "cadastro")]]})},
-  {id:"za", g:"limites", nome:"Zonas de amortecimento", nota:"do plano de manejo ou faixa de 3 km", sb: sbArea("#d7e8a8", null, true), ligada:true, tipo:"poli",
+  {id:"za", g:"limites", nome:"Zonas de amortecimento", nota:"do plano de manejo ou faixa de 3 km", sb: sbArea("#d7e8a8", null, true), tipo:"poli",
    carregar: async () => (await limites()).filter(l => l.tipo !== "uc").map(l => ({type:"Feature", geometry:l.geom,
      properties:{_t: "ZA · " + l.nome_uc, nome_uc:l.nome_uc, tipo: l.tipo === "za_pm" ? "Plano de manejo" : "Faixa de 3 km"}})),
    estilo: () => ({color:"#d7e8a8", weight:1.2, dashArray:"4 4", fillOpacity:0}),
@@ -286,10 +290,10 @@ const CAMADAS = [
    estilo: () => ({color:"#c7d0d9", weight:.7, opacity:.7, fillOpacity:0}),
    ficha: p => ({linhas:[["Código IBGE", p.cod_ibge]]})},
 
-  {id:"ocorr", g:"fogo", nome:"Ocorrências", nota:"um ponto por ROI/RI", sb: sbPonto("#ff9a2e", "#2a1a0e"), ligada:true, tipo:"ocorr",
+  {id:"ocorr", g:"fogo", nome:"Ocorrências", nota:"um ponto por ROI/RI", sb: sbPonto("#ff9a2e", "#2a1a0e"), tipo:"ocorr",
    carregar: async () => OCORR.map(o => pt(o[0], o[1], {_t: o[3] ? "Ocorrência " + o[3] : `RI ${o[8]}/${o[2]}`, cod_bdp:o[3], ano:o[2], nome_uc:o[4], area_ha:o[5], poligono:o[6] ? "sim" : "não", origem:o[7], ri:o[8]})),
    filtroAno: true},
-  {id:"queimadas", g:"fogo", nome:"Áreas queimadas (BDG)", nota:"aparecem ao aproximar o mapa", sb: sbArea("#ff5a1f", "#ff5a1f"), ligada:true, tipo:"queimadas", filtroAno:true},
+  {id:"queimadas", g:"fogo", nome:"Áreas queimadas (BDG)", nota:"aparecem ao aproximar o mapa", sb: sbArea("#ff5a1f", "#ff5a1f"), tipo:"queimadas", filtroAno:true},
   {id:"risco", g:"fogo", nome:"Mapa de risco", nota:"protótipo · UCs com mapa gerado", sb: sbRisco(), tipo:"risco"},
 
   {id:"sede", g:"estrutura", nome:"Sedes", sb: sbIcone("sede"), tipo:"ponto", icone:"sede",
