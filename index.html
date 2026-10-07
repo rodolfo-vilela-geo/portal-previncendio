@@ -243,7 +243,8 @@
       </a>
       <div class="seta" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       <a class="passo t-azul" href="smc.html">
-        <div class="topo"><span class="n">2</span><span class="quem">Unidade de Conservação</span></div>
+        <div class="topo"><span class="n">2</span><span class="quem">Unidade de Conservação</span>
+          <span class="cadeado" title="Requer login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>login</span></div>
         <h3>Mapear a área queimada (SMC)</h3>
         <p>Delimite a cicatriz em imagens Sentinel-2 no Sistema de Mapeamento de Cicatrizes e exporte o KML.</p>
         <div class="alt">Levantou o perímetro em campo? Pode usar o polígono do GPS direto no ROI.</div>
@@ -251,7 +252,8 @@
       </a>
       <div class="seta" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
       <a class="passo t-verde" href="roi.html">
-        <div class="topo"><span class="n">3</span><span class="quem">Unidade de Conservação</span></div>
+        <div class="topo"><span class="n">3</span><span class="quem">Unidade de Conservação</span>
+          <span class="cadeado" title="Requer login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>login</span></div>
         <h3>Relatório de Ocorrência (ROI)</h3>
         <p>Informe o nº do RI e anexe o polígono: o formulário puxa os dados da sala e calcula as áreas. Ao final, gere o PDF para o SEI.</p>
         <span class="ir">Novo ROI →</span>
@@ -390,6 +392,7 @@
 <dialog id="dlgEntrar"><form method="dialog" id="formEntrar">
   <h2>Entrar no Colibri</h2>
   <div class="dica" style="font-size:13px;color:var(--suave)">Equipe do Previncêndio, Salas e gerentes de UC.</div>
+  <div id="eAviso" style="font-size:13px;color:#a0620a;font-weight:600;margin-top:4px"></div>
   <label for="eEmail">E-mail</label><input id="eEmail" type="email" autocomplete="username" required>
   <label for="eSenha">Senha</label><input id="eSenha" type="password" autocomplete="current-password" required>
   <div class="erro" id="eErro"></div>
@@ -429,11 +432,16 @@ const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
       const {data: q} = await sb.rpc("meu_perfil");
       if (!q){ await sb.auth.signOut(); document.getElementById("eErro").textContent = "Este e-mail não está cadastrado na equipe. Fale com o Previncêndio."; return; }
       if (q.trocar_senha){ location.href = "ucs.html"; return; }
+      if (volta){ location.href = volta; return; }
       location.reload();
     };
+    // ?volta=pagina.html: página restrita que mandou entrar (só páginas deste site)
+    const volta = (v => /^[a-z_]+\.html(\?[^#]*)?$/i.test(v || "") ? v : "")(new URLSearchParams(location.search).get("volta"));
+    if (volta) document.getElementById("eAviso").textContent = "Esta página exige login. Entre para continuar.";
     if (new URLSearchParams(location.search).has("entrar")) abrir();
     const {data:{session}} = await sb.auth.getSession(); if (!session) return;
     const {data: p} = await sb.rpc("meu_perfil"); if (!p) return;
+    if (volta && !p.trocar_senha){ location.replace(volta); return; }
     document.getElementById("secConvite").hidden = true;
     document.getElementById("conta").innerHTML = `<span>${esc(p.nome)}</span><a href="#" id="sairConta">Sair</a>`;
     document.getElementById("sairConta").onclick = async ev => { ev.preventDefault(); await sb.auth.signOut(); location.reload(); };

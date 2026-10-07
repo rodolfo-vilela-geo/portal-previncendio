@@ -26,6 +26,8 @@
   .marca{display:flex;align-items:center;gap:12px;min-width:0}
   .logo img{height:44px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="exige_login.js?v=20261007a"></script>
 <script src="fluxo.js?v=20261001" data-passo="smc"></script>
 </head>
 <body>
@@ -35,14 +37,17 @@
     <h1>SMC <small>— Sistema de Mapeamento de Cicatrizes</small></h1>
   </div></div>
   <nav>
-    <a class="nova" href="https://area-queimada-previncendio.projects.earthengine.app/view/cicatrizes-previncendio" target="_blank" rel="noopener" title="Abre o SMC sozinho, em tela cheia">Tela cheia ↗</a>
+    <a class="nova" id="smcCheia" href="#" target="_blank" rel="noopener" title="Abre o SMC sozinho, em tela cheia">Tela cheia ↗</a>
   </nav>
 </header>
 <main>
   <div class="carregando">Carregando o SMC… Se não abrir em alguns segundos, use “Tela cheia ↗”.</div>
-  <iframe src="https://area-queimada-previncendio.projects.earthengine.app/view/cicatrizes-previncendio"
-          title="SMC — Sistema de Mapeamento de Cicatrizes" allow="fullscreen; geolocation; clipboard-write"
-          onload="document.querySelector('.carregando').remove()"></iframe>
+  <iframe id="smc" title="SMC — Sistema de Mapeamento de Cicatrizes" allow="fullscreen; geolocation; clipboard-write"
+          onload="if (this.src) document.querySelector('.carregando')?.remove()"></iframe>
 </main>
+<script>
+const APP_SMC = "https://area-queimada-previncendio.projects.earthengine.app/view/cicatrizes-previncendio";
+window.COLIBRI_LOGIN?.then(p => { if (!p) return; document.getElementById("smc").src = APP_SMC; document.getElementById("smcCheia").href = APP_SMC; });
+</script>
 </body>
 </html>
