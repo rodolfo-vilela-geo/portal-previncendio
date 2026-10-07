@@ -9,7 +9,8 @@
     if (q.get("ri")) return {ano: q.get("ano") || String(new Date().getFullYear()), ri: q.get("ri").padStart(4, "0")};
     try{ return JSON.parse(sessionStorage.getItem(CHAVE) || "null"); }catch(e){ return null; }
   };
-  let ctx = ler();
+  let ctx = null;   // decisão de 07/10/2026: nenhum RI é levado de um passo para o outro (o ROI começa escolhendo o RI)
+  try{ sessionStorage.removeItem(CHAVE); }catch(e){}
   const PASSOS = [
     {id:"ri",  c:"RI", n:1, t:"Registro de Incêndio", s:"RI · Sala de Situação", url:"sala.html", cor:"#c2410c"},
     {id:"smc", c:"SMC", n:2, t:"Mapear a área queimada", s:"SMC", url:"smc.html", cor:"#1f5fa8"},
@@ -51,11 +52,6 @@
     nav.querySelector(".ctx button")?.addEventListener("click", () => window.fluxoRI(null));
   }
   // as páginas avisam quando um RI é aberto ou digitado
-  window.fluxoRI = (ano, ri) => {
-    ctx = ri ? {ano: String(ano), ri: String(ri).padStart(4, "0")} : null;
-    try{ ctx ? sessionStorage.setItem(CHAVE, JSON.stringify(ctx)) : sessionStorage.removeItem(CHAVE); }catch(e){}
-    desenhar();
-  };
-  if (ctx) try{ sessionStorage.setItem(CHAVE, JSON.stringify(ctx)); }catch(e){}
+  window.fluxoRI = () => {};
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", desenhar) : desenhar();
 })();

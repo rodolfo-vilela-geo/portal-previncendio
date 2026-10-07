@@ -44,6 +44,16 @@
   .linha-radio input{width:auto}
   .dms{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px}
   .tabela-wrap{overflow-x:auto;border:1px solid var(--linha);border-radius:8px}
+  #escolhaRI{background:var(--papel);border:1px solid var(--linha);border-left:5px solid #3f6b12;border-radius:var(--raio);padding:14px 16px;margin:0 0 14px}
+  #escolhaRI h2{margin:0 0 4px;font-size:17px} #escolhaRI .dica{margin:0 0 10px}
+  #escolhaRI .ris{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));margin:8px 0}
+  #escolhaRI .ri{border:1px solid var(--linha);border-radius:10px;padding:9px 11px;background:#fbfbf7;cursor:pointer;text-align:left;font:inherit;color:inherit}
+  #escolhaRI .ri:hover{border-color:#3f6b12;background:#f2f7ea} #escolhaRI .ri b{font-size:15px} #escolhaRI .ri small{display:block;color:var(--suave);font-size:12.5px;margin-top:2px}
+  #escolhaRI .ri .st{float:right;font-size:11px;font-weight:700;border-radius:99px;padding:1px 8px;background:#fde3d3;color:#9a3412} #escolhaRI .ri .st.debelado{background:#dcefd8;color:#1e6b2f}
+  #escolhaRI .ri.feito{opacity:.6} #escolhaRI .ri.sugerido{border:2px solid #1e6b2f;background:#f2f7ea} #escolhaRI .ri.atrasado{border-color:#e0a03a}
+  #escolhaRI .esc{display:flex;gap:12px;align-items:center;flex-wrap:wrap} #escolhaRI .esc select{max-width:420px}
+  #escolhaRI.escolhido{border-left-color:#1e6b2f;padding:10px 16px} #escolhaRI.escolhido h2{font-size:15px}
+  #form.sem-ri > :not(#escolhaRI){display:none!important}
   input.travado{background:#f1f1ea;color:#3d3d36}
   table.din{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
   table.din th{background:#e9eddf;font-size:12px;text-align:left;padding:6px;border-bottom:1px solid var(--linha);white-space:nowrap}
@@ -107,7 +117,7 @@
   .marca{display:flex;align-items:center;gap:12px;min-width:0}
   .logo img{height:50px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
-<script src="fluxo.js?v=20261001" data-passo="roi"></script>
+<script src="fluxo.js?v=20261007a" data-passo="roi"></script>
 </head>
 <body>
 
@@ -119,6 +129,7 @@
 </header>
 
 <main id="form">
+  <div id="escolhaRI" hidden></div>
   <div id="avisoRascunho" class="aviso" hidden>
     Rascunho restaurado deste navegador.
     <button type="button" class="btn peq" id="btnDescartar">Começar do zero</button>
@@ -344,7 +355,7 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.4</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.5</div>
 <div id="relatorio"></div>
 
 <script src="roi_empenho.js?v=20261007b"></script>
@@ -1559,6 +1570,66 @@ function iniciarImportacao(){
   parent.postMessage({tipo:"roi-pronto"}, location.origin);
 }
 
+/* ================================================================
+   ESCOLHA DO RI — todo ROI parte de um RI registrado pela Sala de Situação.
+   Quem está logado escolhe a UC e o RI (abertos ou aguardando ROI); só então o formulário aparece.
+   ================================================================ */
+let rascPendente = null;
+const fData = d => d ? String(d).slice(0, 10).split("-").reverse().join("/") : "";
+function montarEscolha(preUC, preRI){
+  const box = $("#escolhaRI"); box.hidden = false; box.className = ""; $("#form").classList.add("sem-ri");
+  const minhas = (PERFIL?.papel === "gerente" ? (PERFIL.ucs || []) : Object.keys(UCS)).filter(u => UCS[u]).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const uc0 = preUC || (minhas.length === 1 ? minhas[0] : "");
+  box.innerHTML = `<h2>1. Escolha a ocorrência</h2>
+    <p class="dica">Todo ROI começa por um <b>RI</b> registrado pela Sala de Situação. Escolha a unidade e o RI deste incêndio; os dados do RI preenchem o formulário.</p>
+    ${rascPendente ? `<div class="aviso" style="margin:0 0 10px">Há um rascunho neste navegador: <b>RI ${esc(rascPendente.ri || "?")}/${esc(rascPendente.ano || "")}</b>${rascPendente.nome_uc ? " · " + esc(rascPendente.nome_uc) : ""}.
+      <button type="button" class="btn peq" id="contRasc">Continuar o rascunho</button> <button type="button" class="btn peq" id="descRasc">Descartar</button></div>` : ""}
+    <div class="esc"><div style="flex:1;min-width:240px"><label>Unidade de Conservação</label>
+      <select id="escUC"><option value="">— escolha —</option>${minhas.map(u => `<option ${u === uc0 ? "selected" : ""}>${esc(u)}</option>`).join("")}</select></div></div>
+    <div id="escLista"></div>`;
+  $("#escUC").onchange = () => listarRIs($("#escUC").value);
+  $("#contRasc")?.addEventListener("click", () => { const r = rascPendente; rascPendente = null; aplicar(r); aplicarUC(false); aplicarLogin(); travarRI(); });
+  $("#descRasc")?.addEventListener("click", () => { try{ localStorage.removeItem(CHAVE_RASCUNHO); }catch(e){} rascPendente = null; montarEscolha($("#escUC").value); });
+  if (uc0) listarRIs(uc0, preRI);
+}
+async function listarRIs(uc, preRI){
+  const box = $("#escLista"); if (!uc){ box.innerHTML = ""; return; }
+  box.innerHTML = `<p class="dica">Buscando os RIs…</p>`;
+  const {data, error} = await sb.rpc("ris_da_uc", {p_nome_uc: uc});
+  if (error){ box.innerHTML = `<p class="dica" style="color:var(--erro)">${esc(error.message)}</p>`; return; }
+  const L = data || [], hoje = new Date().toISOString().slice(0, 10);
+  const card = r => `<button type="button" class="ri ${r.rois ? "feito" : ""} ${!r.rois && r.prazo && r.prazo < hoje ? "atrasado" : ""}" data-ano="${r.ano}" data-ri="${esc(r.ri)}">
+      <span class="st ${r.status}">${r.status === "debelado" ? "debelado" : "em andamento"}</span><b>RI ${esc(r.ri)}/${r.ano}</b>
+      <small>Detecção ${fData(r.dat_detec)}${r.hr_detec ? " " + r.hr_detec : ""}${r.municipio ? " · " + esc(r.municipio) : ""}</small>
+      <small>${r.rois ? `já tem ${r.rois} ROI — escolha só se for outro ROI do mesmo incêndio` : r.prazo ? `prazo do ROI: <b>${fData(r.prazo)}</b>${r.prazo < hoje ? " (vencido)" : ""}` : "o prazo conta quando o incêndio for debelado"}</small></button>`;
+  const pend = L.filter(r => !r.rois), feitos = L.filter(r => r.rois);
+  box.innerHTML = (pend.length ? `<p class="dica" style="margin:10px 0 0"><b>Aguardando ROI</b> (${pend.length})</p><div class="ris">${pend.map(card).join("")}</div>`
+      : `<div class="aviso" style="margin-top:10px">Não há RI aberto sem ROI para esta unidade nos últimos 13 meses.<br>
+         <b>Todo ROI começa por um RI:</b> mesmo que o incêndio já esteja debelado, peça à Sala de Situação para registrar a ocorrência e volte aqui.</div>`)
+    + (feitos.length ? `<details style="margin-top:6px"><summary class="dica" style="cursor:pointer">RIs que já têm ROI (${feitos.length})</summary><div class="ris">${feitos.map(card).join("")}</div></details>` : "");
+  box.querySelectorAll(".ri").forEach(b => b.onclick = () => escolherRI(uc, +b.dataset.ano, b.dataset.ri));
+  // link vindo da Sala: só destaca o RI (quem escolhe é a pessoa)
+  if (preRI){ const b = box.querySelector(`.ri[data-ri="${String(preRI).padStart(4, "0")}"]`); if (b){ b.classList.add("sugerido"); b.insertAdjacentHTML("afterbegin", `<small style="color:#1e6b2f;font-weight:700;margin:0 0 2px">indicado pelo link da Sala</small>`); b.scrollIntoView({block:"center"}); } }
+}
+function escolherRI(uc, ano, ri){
+  if (rascPendente && !(String(rascPendente.ri).padStart(4, "0") === String(ri).padStart(4, "0") && +rascPendente.ano === ano)){
+    if (!confirm(`Começar o ROI do RI ${ri}/${ano}? O rascunho do RI ${rascPendente.ri}/${rascPendente.ano} será descartado.`)) return;
+    try{ localStorage.removeItem(CHAVE_RASCUNHO); }catch(e){} rascPendente = null;
+  } else if (rascPendente){ const r = rascPendente; rascPendente = null; aplicar(r); aplicarUC(false); aplicarLogin(); travarRI(); return; }
+  F("nome_uc").value = uc; aplicarUC(true); aplicarLogin();
+  F("ano").value = ano; F("ri").value = ri; chaveRI = ""; travarRI(); atualizarDerivados(); preencherDoRI(); mudou();
+}
+// RI escolhido: some a escolha, fica um resumo com "trocar"
+function travarRI(){
+  ["ano", "ri"].forEach(n => { F(n).readOnly = true; F(n).classList.add("travado"); });
+  $("#form").classList.remove("sem-ri");
+  const box = $("#escolhaRI"); box.className = "escolhido";
+  box.innerHTML = `<h2>Ocorrência: RI ${esc(String(F("ri").value).padStart(4, "0"))}/${esc(F("ano").value)} · ${esc(F("nome_uc").value || "")}</h2>
+    <span class="dica">Os dados do RI foram trazidos da Sala de Situação. <button type="button" class="btn peq" id="trocarRI">Trocar de ocorrência</button></span>`;
+  $("#trocarRI").onclick = () => { if (!confirm("Trocar de ocorrência? O que foi preenchido neste ROI será apagado deste navegador.")) return;
+    try{ localStorage.removeItem(CHAVE_RASCUNHO); }catch(e){} location.href = "roi.html"; };
+}
+
 (async function iniciar(){
   $("#maxFotos").textContent = MAX_FOTOS;
   montarVeiculos(); montarVegetacao(); window.VEG?.iniciar();
@@ -1570,12 +1641,16 @@ function iniciarImportacao(){
   let rasc = null;
   if (MODO_IMPORTAR) iniciarImportacao();
   else try{ rasc = JSON.parse(localStorage.getItem(CHAVE_RASCUNHO) || "null"); }catch(e){}
-  if (rasc){ aplicar(rasc); $("#avisoRascunho").hidden = false; aplicarUC(false); }
-  else { F("ano").value = new Date().getFullYear(); if (window.EMP?.ativo) EMP.linha(); else linhaEvol(); }
-  if (F("nome_uc").value) aplicarUC(false);
-  aplicarLogin();
-  const q = new URLSearchParams(location.search);
-  if (q.get("ri")){ if (q.get("ano")) F("ano").value = q.get("ano"); F("ri").value = q.get("ri"); atualizarDerivados(); preencherDoRI(); }
+  if (window.EMP?.ativo) EMP.linha(); else linhaEvol();
+  if (MODO_IMPORTAR){ F("ano").value = new Date().getFullYear(); }
+  else {
+    // nada vem pré-carregado: a pessoa escolhe a UC e o RI (ou continua o rascunho)
+    rascPendente = rasc && rasc.ri ? rasc : null;
+    const q = new URLSearchParams(location.search);
+    let preUC = "", preRI = q.get("ri");
+    if (preRI){ const {data} = await sb.rpc("ri_para_roi", {p_ano: +(q.get("ano") || new Date().getFullYear()), p_ri: preRI}); preUC = data?.nome_uc || ""; }
+    montarEscolha(preUC, preUC ? preRI : null);
+  }
   $("#form").addEventListener("input", e => { e.target.classList?.remove("invalido"); mudou(); });
   $("#form").addEventListener("change", mudou);
   $("#addEvol").onclick = () => { linhaEvol(); mudou(); };

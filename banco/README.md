@@ -56,6 +56,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 33_acesso_restrito.sql       Só Painel (painel_dados) e Boletim (boletim_publico) são públicos: envio anônimo desligado (with check false), leituras abertas passam a só logados, funções revogadas do anon (inclusive o padrão para funções novas); "logado" passa a exigir usuário da equipe (is_usuario). No Supabase: 33, 33b, 33c
 34_vegetacao_inventario.sql  Vegetação do ROI pelo Inventário Florestal (IDE-Sisema): veg_classe (17 classes → campo do ROI), veg_inventario (carga por vegetacao_importar.html), vegetacao_poligono(), roi.veg_campo, roi_vegetacao (detalhe), vw_bdg com veg_campo (no fim). No Supabase: 34a/34b
 35_geo_vegetacao.sql         Geo Colibri: geo_vegetacao(caixa, tolerância) — inventário recortado pela tela e simplificado pelo zoom (o mapa pede a partir do zoom 11)
+36_ris_da_uc.sql             ris_da_uc(nome_uc): RIs da UC (últimos ~13 meses) com situação, prazo e nº de ROIs — o ROI começa escolhendo o RI
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
