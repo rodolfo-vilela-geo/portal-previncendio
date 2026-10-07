@@ -199,6 +199,8 @@
           <div><label>Início do combate — hora</label><input name="hr_comb" type="time"></div>
           <div class="dica largo" style="margin-top:-6px">Chegada da equipe ao local.</div>
         </div>
+        <div id="empNovo" hidden></div>
+        <div id="evolAntiga">
         <label>2.2 Evolução da operação de combate — quantidade de pessoas (um turno por linha)</label>
         <div class="tabela-wrap">
           <table class="din" id="tabEvol">
@@ -207,6 +209,7 @@
           </table>
         </div>
         <button type="button" class="btn peq" id="addEvol" style="margin-top:8px">+ Adicionar turno</button>
+        </div>
       </div>
       <div class="grade" style="margin-top:14px">
         <div><label>Fim da ocorrência (debelado) — data <span class="req">*</span></label><input name="dat_final" type="date" required></div>
@@ -337,9 +340,10 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-06.1</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.1</div>
 <div id="relatorio"></div>
 
+<script src="roi_empenho.js?v=20261007a"></script>
 <script>
 /* ================================================================
    CONFIGURAÇÃO
@@ -545,6 +549,13 @@ async function preencherDoRI(){
     F("f_detec").value = data.f_detec; feitos.push("forma de detecção"); }
   if (data.f_detec_quem && vazio("f_detec_quem")) F("f_detec_quem").value = data.f_detec_quem;
   if (data.dat_ini_comb && vazio("dat_comb")){ F("dat_comb").value = data.dat_ini_comb; if (data.hr_ini_comb && vazio("hr_comb")) F("hr_comb").value = data.hr_ini_comb; feitos.push("início do combate"); }
+  // recursos empenhados registrados pela Sala: linha a linha na 2.2 nova (a evolução e os veículos são calculados dela)
+  if (window.EMP?.ativo){
+    if (data.empenho?.length && !F("sem_combate").checked && EMP.vazio()){
+      EMP.doRI(data.empenho); feitos.push(`recursos empenhados (${data.empenho.length} ${data.empenho.length===1?"linha":"linhas"})`);
+      if (vazio("dat_comb")){ const e0 = data.empenho[0]; F("dat_comb").value = e0.data; if (e0.hr_inicio && vazio("hr_comb")) F("hr_comb").value = e0.hr_inicio; }
+    }
+  } else
   // apoios registrados pela sala (atuações): evolução diária, início do combate, veículos e instituições
   if (data.evolucao?.length && !F("sem_combate").checked && !lerTabela("tabEvol").some(l => l.data)){
     $("#tabEvol tbody").innerHTML = "";
@@ -553,12 +564,12 @@ async function preencherDoRI(){
     const e0 = data.evolucao[0];
     if (vazio("dat_comb")){ F("dat_comb").value = e0.data; if (e0.hr_inicio && vazio("hr_comb")) F("hr_comb").value = e0.hr_inicio; }
   }
-  if (data.veiculos){
+  if (data.veiculos && !window.EMP?.ativo){
     let v = false;
     Object.entries(data.veiculos).forEach(([k,x]) => { if (x && F(k) && vazio(k)){ F(k).value = x; v = true; } });
     if (v) feitos.push("veículos");
   }
-  if (data.instituicoes && vazio("vc_instituicoes")) F("vc_instituicoes").value = data.instituicoes;
+  if (data.instituicoes && vazio("vc_instituicoes") && !window.EMP?.ativo) F("vc_instituicoes").value = data.instituicoes;
   const uc = data.nome_uc ? `${data.nome_uc}${data.municipio ? " · "+data.municipio : ""}` : "";
   $("#riInfo").innerHTML = `<div class="dica" style="color:var(--ok)">✓ RI ${esc(data.ri)}/${data.ano} da Sala de Situação: ${esc(uc)}${feitos.length ? ` — preenchido: ${esc(feitos.join(", "))}` : ""}.</div>`
     + (data.status === "andamento" ? `<div class="dica" style="color:var(--alerta)">⚠ Este RI ainda está em andamento na sala. Confirme com a sala o fim do incêndio.</div>` : "")
@@ -601,7 +612,7 @@ function estado(){
     else if (el.type==="checkbox") s[el.name]=el.checked;
     else s[el.name]=el.value;
   });
-  s._evol = lerTabela("tabEvol"); s._fauna = lerTabela("tabFauna");
+  s._evol = lerTabela("tabEvol"); s._fauna = lerTabela("tabFauna"); if (window.EMP?.ativo) s._emp = EMP.ler();
   return s;
 }
 function aplicar(s){
@@ -615,6 +626,7 @@ function aplicar(s){
   });
   $("#tabEvol tbody").innerHTML=""; (s._evol||[]).forEach(linhaEvol);
   $("#tabFauna tbody").innerHTML=""; (s._fauna||[]).forEach(linhaFauna);
+  if (window.EMP?.ativo) EMP.aplicar(s._emp);
 }
 let timer=null;
 function mudou(){
@@ -1088,6 +1100,7 @@ function validar(){
   const c = coords();
   if (c.lat!==null && (c.lat < -23.5 || c.lat > -14)) marca("lat_g","Latitude fora de Minas Gerais.");
   if (c.lon!==null && (c.lon < -51.5 || c.lon > -39.5)) marca("lon_g","Longitude fora de Minas Gerais.");
+  if (window.EMP?.ativo) erros.push(...EMP.validar());
   return erros;
 }
 
@@ -1130,7 +1143,8 @@ function registro(){
     COMB.forEach(k => o[k] = num(l[k]) ?? 0);
     return o;
   });
-  return {r, linhasEvol, fauna};
+  const linhasEmp = window.EMP?.ativo ? EMP.linhas(r.cod_bdp) : [];
+  return {r, linhasEvol, linhasEmp, fauna};
 }
 
 /* ================================================================
@@ -1141,8 +1155,8 @@ $("#btnEnviar").onclick = async () => {
   const erros = validar();
   if (erros.length){ status(erros[0] + (erros.length>1 ? ` (+${erros.length-1} pendência(s))` : ""), "erro"); $(".invalido")?.scrollIntoView({behavior:"smooth", block:"center"}); return; }
   if (!sb){ status("Sem conexão com o banco (biblioteca não carregou). Verifique a internet.", "erro"); return; }
-  const {r, linhasEvol} = registro();
-  if (progresso.cod !== r.cod_bdp) progresso = {cod:r.cod_bdp, roi:false, evol:false, fotos:[], poli:false};
+  const {r, linhasEvol, linhasEmp} = registro();
+  if (progresso.cod !== r.cod_bdp) progresso = {cod:r.cod_bdp, roi:false, evol:false, emp:false, fotos:[], poli:false};
   const btn = $("#btnEnviar"); btn.disabled = true;
   try{
     if (!progresso.roi){
@@ -1161,6 +1175,12 @@ $("#btnEnviar").onclick = async () => {
       if (error) throw new Error("Tabela de combate: " + error.message);
     }
     progresso.evol = true;
+    if (!progresso.emp && linhasEmp.length){
+      status("Enviando os recursos empenhados…");
+      const {error} = await sb.from("roi_empenho").insert(linhasEmp);
+      if (error) throw new Error("Recursos empenhados: " + error.message);
+    }
+    progresso.emp = true;
     if (!progresso.poli && poligonos.length){
       status("Enviando o polígono da área queimada…");
       const {error} = await sb.from("area_queimada").insert({cod_bdp:r.cod_bdp, geom:paraWKT(poligonos), fonte: fontePoligono === "campo" ? "campo" : "SMC"});
@@ -1328,7 +1348,7 @@ function montarRelatorio(){
     <table><tr><td>Lat. (S)</td><td>${dmsTxt(F("lat_g").value,F("lat_m").value,F("lat_s").value)}</td><td>Long. (W)</td><td>${dmsTxt(F("lon_g").value,F("lon_m").value,F("lon_s").value)}</td>
       <td>Decimal</td><td>${c.lat!==null&&c.lon!==null ? `${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}` : ""}</td></tr></table>
     <div style="margin-top:4px">Início do combate: <b>${r.dat_comb ? fmtData(r.dat_comb)+" "+v(r.hr_comb) : "não houve combate"}</b> · Fim da ocorrência: <b>${fmtData(r.dat_final)} ${v(r.hr_final)}</b></div>
-    <b>2.2. Evolução da operação de combate</b>
+    ${window.EMP?.ativo && EMP.linhas("x").length ? `<b>2.2. Recursos empenhados</b>${EMP.html(v, fmtData)}<div style="margin-top:4px"><b>Pessoas por dia nas colunas do BDG</b></div>` : `<b>2.2. Evolução da operação de combate</b>`}
     <table><tr><th>Data</th><th>Início</th><th>Fim</th><th>UC</th><th>FTP</th><th>Parc.</th><th>Brig. CFM</th><th>Voluntária</th><th>PM</th><th>BM</th><th>Total</th></tr>${evolHtml}</table>
 
     <div class="sec">3. Veículos utilizados (quantidade)</div>
@@ -1443,12 +1463,12 @@ function iniciarImportacao(){
 (async function iniciar(){
   $("#maxFotos").textContent = MAX_FOTOS;
   montarVeiculos(); montarVegetacao();
-  await carregarListas();
+  await Promise.all([carregarListas(), window.EMP?.iniciar()]);
   let rasc = null;
   if (MODO_IMPORTAR) iniciarImportacao();
   else try{ rasc = JSON.parse(localStorage.getItem(CHAVE_RASCUNHO) || "null"); }catch(e){}
   if (rasc){ aplicar(rasc); $("#avisoRascunho").hidden = false; aplicarUC(false); }
-  else { F("ano").value = new Date().getFullYear(); linhaEvol(); }
+  else { F("ano").value = new Date().getFullYear(); if (window.EMP?.ativo) EMP.linha(); else linhaEvol(); }
   const q = new URLSearchParams(location.search);
   if (q.get("ri")){ if (q.get("ano")) F("ano").value = q.get("ano"); F("ri").value = q.get("ri"); atualizarDerivados(); preencherDoRI(); }
   $("#form").addEventListener("input", e => { e.target.classList?.remove("invalido"); mudou(); });

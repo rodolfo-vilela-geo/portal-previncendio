@@ -50,6 +50,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 27_risco_revisao.sql         Conferência do mapa de risco pela UC (parecer, nota, marcações) por versão; leitura logada, gravação de quem edita a UC
 28_visualizador.sql          Geo Colibri: geo_ocorrencias, geo_queimadas, geo_ocorrencia, geo_limites (só usuários logados, sem dados pessoais)
 29_empenho.sql               Empenho padronizado: empenho_categoria (13 categorias → colunas históricas), instituicao.grupo/municipio, atuacao sem turno + contrato da aeronave, roi_empenho, vw_roi_empenho_resumo (no Supabase aplicada como 29a/29b; carga do catálogo de instituições fica no pacote privado)
+30_ri_para_roi_empenho.sql   ri_para_roi devolve o empenho da Sala linha a linha (sem observação) para pré-preencher a 2.2 nova do ROI; instituição genérica "Outra instituição (ver observação)"
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
