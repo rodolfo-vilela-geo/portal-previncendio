@@ -189,9 +189,19 @@
     <h3 class="sec">Atuações registradas</h3>
     <div class="tab-wrap" style="max-height:420px"><table class="tab" id="tabApoios"></table></div>
     <h3 class="sec">Catálogo de instituições</h3>
-    <p class="dica">Nomes padronizados usados no registro das atuações, no boletim e no ROI. A categoria define em que coluna do ROI/BDG o efetivo entra
-      (“Outros” entra como Parceiros). Instituições já usadas não são apagadas: desmarque “ativa” para tirá-las da lista.</p>
-    <div class="tab-wrap" style="max-height:none"><table class="tab" id="tabInst"></table></div>
+    <p class="dica">Nomes padronizados usados no empenho do RI e do ROI. A <b>categoria</b> define em que coluna antiga do ROI/BDG o efetivo soma
+      (a série 2013–2025 continua comparável). <b>Variantes</b> são outros nomes pelos quais a instituição aparece nos PIPCIFs e relatos, separados por ponto e vírgula —
+      servem para a busca. Instituições já usadas não são apagadas: desmarque “ativa” para tirá-las da lista.
+      As cadastradas pela Sala durante um incêndio entram como <b>pendentes</b> até serem conferidas aqui.</p>
+    <div class="barra" style="margin-bottom:8px">
+      <div><label for="cGrupo">Categoria</label><select id="cGrupo"></select></div>
+      <div><label for="cMostrar">Mostrar</label><select id="cMostrar"><option value="ativas">Ativas</option><option value="pend">Só pendentes</option><option value="inativas">Inativas e juntadas</option><option value="">Todas</option></select></div>
+      <div style="min-width:220px"><label for="cBusca">Buscar</label><input id="cBusca" placeholder="nome ou variante"></div>
+    </div>
+    <p class="dica" id="cInfo"></p>
+    <div class="tab-wrap" style="max-height:640px"><table class="tab" id="tabInst"></table></div>
+    <h3 class="sec">Categorias do empenho</h3>
+    <div class="tab-wrap" style="max-height:none"><table class="tab" id="tabCateg"></table></div>
   </section>
 
   <!-- LISTAS (admin) -->
@@ -291,17 +301,31 @@ async function carregarFDetec(){
   const {data} = await sb.from("dominio").select("valor").eq("campo", "f_detec").eq("ativo", true).order("ordem").order("valor");
   F_DETEC = (data||[]).map(x => x.valor);
 }
+let GRUPOS = [];   // categorias do empenho (empenho_categoria), na ordem de exibição
 async function carregarInst(){
-  const {data} = await sb.from("instituicao").select("*").order("nome");
-  INST = data || [];
+  const [{data}, {data: g}] = await Promise.all([sb.from("instituicao").select("*").order("nome"),
+    sb.from("empenho_categoria").select("*").order("ordem")]);
+  INST = data || []; GRUPOS = g || [];
 }
 const instPorId = id => INST.find(i => i.id === id);
-function opcoesInst(sel, todas=false){
-  return `<option value="">${todas ? "Todas" : "— selecione —"}</option>` + Object.entries(CATEG).map(([c,t]) => {
-    const l = INST.filter(i => i.categoria===c && (i.ativo || i.id===sel || todas));
-    return l.length ? `<optgroup label="${esc(t)}">${l.map(i=>`<option value="${i.id}" ${i.id===sel?"selected":""}>${esc(i.nome)}${i.ativo?"":" (inativa)"}</option>`).join("")}</optgroup>` : "";
-  }).join("");
+const grupoDe = i => i?.grupo || ({uc:"uc", ftp:"ftp", sm:"cfm", bm:"bm", pm:"pm", par:"emp", vol:"vol"}[i?.categoria] || "out");
+const nomeGrupo = g => GRUPOS.find(x => x.id === g)?.nome || g || "";
+const juntada = i => /\(juntada\)$/.test(i.nome || "");
+const pendente = i => /^PENDENTE/.test(i.obs || "");
+// lista suspensa agrupada por categoria; fav = ids mais usados na UC (aparecem primeiro)
+function opcoesInst(sel, todas=false, fav=[]){
+  const op = i => `<option value="${i.id}" ${i.id===sel?"selected":""}>${esc(i.nome)}${i.ativo?"":" (inativa)"}${pendente(i)?" (pendente)":""}</option>`;
+  const usa = i => i.id === sel || (!juntada(i) && (i.ativo || todas));
+  const favs = fav.map(instPorId).filter(i => i && i.ativo);
+  return `<option value="">${todas ? "Todas" : "— selecione —"}</option>` +
+    (favs.length ? `<optgroup label="★ Mais usadas nesta UC">${favs.map(op).join("")}</optgroup>` : "") +
+    GRUPOS.map(g => {
+      const l = INST.filter(i => grupoDe(i) === g.id && usa(i));
+      return l.length ? `<optgroup label="${esc(g.nome)}">${l.map(op).join("")}</optgroup>` : "";
+    }).join("");
 }
+const semAcento = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const casaBusca = (i, q) => !q || semAcento([i.nome, i.sigla, ...(i.variantes || [])].join(" ")).includes(semAcento(q));
 const rotuloUC = n => UCS[n] ? `${CATS[UCS[n].categoria]||UCS[n].categoria} ${n}` : (n||"—");
 function montarFiltros(){
   const a = new Date().getFullYear();
@@ -311,7 +335,7 @@ function montarFiltros(){
   const ini = new Date(hoje - 7*864e5); $("#bDe").value = ini.toISOString().slice(0,10);
   $("#pDesde").value = new Date(hoje - 10*864e5).toISOString().slice(0,10);
   $("#aAte").value = hoje.toISOString().slice(0,10); $("#aDe").value = new Date(hoje - 30*864e5).toISOString().slice(0,10);
-  $("#aCat").innerHTML = `<option value="">Todas</option>` + Object.entries(CATEG).map(([k,t])=>`<option value="${k}">${esc(t)}</option>`).join("");
+  $("#aCat").innerHTML = `<option value="">Todas</option>` + GRUPOS.map(g=>`<option value="${g.id}">${esc(g.nome)}</option>`).join("");
   $("#aInst").innerHTML = opcoesInst(null, true);   // fins mais antigos: ROI já entregue em PDF ou vencido
 }
 async function carregarLista(){
@@ -682,86 +706,146 @@ function resumoDia(d){
     .filter(([k])=>d[k]).map(([k,t])=>`${t} ${d[k]}`).join(" · ");
   return `Total do dia: ${d.total_pessoas} pessoas (${cats})${d.horas_homem ? ` · ${String(d.horas_homem).replace(".",",")} h·homem` : ""}`;
 }
+const CONTRATOS = {CFM:"CFM (IEF via Vale)", FTP:"FTP (CBMMG)", "CBMMG/COMAVE":"CBMMG / COMAVE (próprio)", Outro:"Outro"};
+const AERO = ["a_helicop","a_air_tr","a_drone"];
+let FAV_UC = {}, ATU_DATA = {};   // ATU_DATA: última data usada em cada RI (o formulário volta nela)   // nome_uc -> ids de instituição mais usados
+async function favoritasUC(nome){
+  if (!nome) return [];
+  if (FAV_UC[nome]) return FAV_UC[nome];
+  const {data} = await sb.from("atuacao").select("instituicao_id, rif:ri!inner(nome_uc)").eq("rif.nome_uc", nome).limit(1000);
+  const c = {}; (data||[]).forEach(a => c[a.instituicao_id] = (c[a.instituicao_id]||0) + 1);
+  return FAV_UC[nome] = Object.entries(c).sort((x,y) => y[1]-x[1]).slice(0, 8).map(([id]) => +id);
+}
+function horario(a){
+  const h = a.hr_inicio ? `${fmtH(a.hr_inicio)}${a.hr_fim ? "–" + fmtH(a.hr_fim) : ""}` : "";
+  return a.turno ? `${TURNOS[a.turno]}${h ? " " + h : ""}` : h;   // turno só nos registros antigos
+}
 async function carregarAtuacoes(r){
   const box = $("#atuacoes"); if (!box) return;
-  const [{data: ats, error}, {data: dias}] = await Promise.all([
+  const [{data: ats, error}, {data: dias}, fav] = await Promise.all([
     sb.from("atuacao").select("*").eq("ano", r.ano).eq("ri", r.ri).order("data").order("hr_inicio", {nullsFirst:true}).order("id"),
-    sb.from("vw_atuacao_dia").select("*").eq("ano", r.ano).eq("ri", r.ri).order("data")
+    sb.from("vw_atuacao_dia").select("*").eq("ano", r.ano).eq("ri", r.ri).order("data"),
+    favoritasUC(r.nome_uc)
   ]);
-  if (error){ box.innerHTML = `<h3>Apoios empenhados (atuações)</h3><div class="dica" style="color:var(--erro)">${esc(error.message)}</div>`; return; }
+  if (error){ box.innerHTML = `<h3>Recursos empenhados</h3><div class="dica" style="color:var(--erro)">${esc(error.message)}</div>`; return; }
   const L = ats || [], D = dias || [];
   const ultimaData = L.length ? L[L.length-1].data : null;
   let corpo = "";
   D.forEach(d => {
     corpo += L.filter(a => a.data === d.data).map(a => { const i = instPorId(a.instituicao_id) || {};
-      return `<tr><td>${fmtD(a.data)}</td><td>${TURNOS[a.turno]}</td><td>${fmtH(a.hr_inicio)}${a.hr_fim?"–"+fmtH(a.hr_fim):""}</td>
-        <td>${esc(i.nome||"?")} <span class="cat">${esc(CATEG[i.categoria]||"")}</span></td><td class="n">${a.pessoas}</td>
-        <td>${esc(txtVeic(a))}</td><td>${esc(a.obs||"")}</td>
+      const aer = a.a_contrato && AERO.some(k => a[k]) ? ` · contrato ${a.a_contrato}` : "";
+      return `<tr><td>${fmtD(a.data)}</td><td>${esc(horario(a))}</td>
+        <td>${esc(i.nome||"?")}${pendente(i) ? ` <span class="cat" style="background:#fde8c8">pendente</span>` : ""} ${semAcento(i.nome).startsWith(semAcento(nomeGrupo(grupoDe(i)))) ? "" : `<span class="cat">${esc(nomeGrupo(grupoDe(i)))}</span>`}</td><td class="n">${a.pessoas}</td>
+        <td>${esc(txtVeic(a) + aer)}</td><td>${esc(a.obs||"")}</td>
         <td class="nao-imprime" style="white-space:nowrap"><button class="lnk" data-ed="${a.id}">editar</button><button class="lnk" data-del="${a.id}">excluir</button></td></tr>`; }).join("");
-    corpo += `<tr class="at-dia"><td colspan="8">${esc(resumoDia(d))}</td></tr>`;
+    corpo += `<tr class="at-dia"><td colspan="7">${esc(resumoDia(d))}</td></tr>`;
   });
-  box.innerHTML = `<h3>Apoios empenhados (atuações) · ${D.length} ${D.length===1?"dia":"dias"}</h3>
-    ${L.length ? `<div class="tab-wrap" style="max-height:none"><table class="tab"><thead><tr><th>Data</th><th>Turno</th><th>Horário</th><th>Instituição</th><th>Pessoas</th><th>Veículos / aeronaves</th><th>Obs.</th><th></th></tr></thead><tbody>${corpo}</tbody></table></div>`
-      : `<div class="dica">Nenhuma atuação registrada. Registre abaixo quem está no combate, por dia e turno.</div>`}
+  box.innerHTML = `<h3>Recursos empenhados · ${D.length} ${D.length===1?"dia":"dias"}</h3>
+    ${L.length ? `<div class="tab-wrap" style="max-height:none"><table class="tab"><thead><tr><th>Data</th><th>Horário</th><th>Instituição</th><th>Pessoas</th><th>Veículos / aeronaves</th><th>Obs.</th><th></th></tr></thead><tbody>${corpo}</tbody></table></div>`
+      : `<div class="dica">Nenhum recurso registrado. Registre abaixo, por dia, cada instituição que está no combate: quantas pessoas, veículos e aeronaves.</div>`}
     <div class="at-form nao-imprime" id="atForm">
       <div class="grade">
-        <div><label>Data</label><input type="date" name="data" value="${hojeISO()}"></div>
-        <div><label>Turno</label><select name="turno">${Object.entries(TURNOS).map(([k,t])=>`<option value="${k}">${t}</option>`).join("")}</select></div>
+        <div><label>Data</label><input type="date" name="data" value="${ATU_DATA[r.ano+"/"+r.ri] || hojeISO()}"></div>
         <div><label>Início</label><input type="time" name="hr_inicio"></div>
         <div><label>Fim</label><input type="time" name="hr_fim"></div>
-        <div style="grid-column:span 2;min-width:0"><label>Instituição *</label><select name="instituicao_id">${opcoesInst(null)}</select></div>
         <div><label>Pessoas *</label><input type="number" min="0" name="pessoas"></div>
+        <div style="grid-column:1/-1;min-width:0"><label>Instituição *</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input name="busca" placeholder="Buscar (nome ou apelido)…" style="flex:1 1 170px;min-width:0" autocomplete="off">
+            <select name="instituicao_id" style="flex:3 1 260px;min-width:0">${opcoesInst(null, false, fav)}</select>
+            <button class="btn" type="button" id="atOutra" title="A instituição não está na lista">Outra…</button>
+          </div>
+          <div id="atNova" hidden style="margin-top:6px;padding:8px;border:1px dashed var(--linha);border-radius:8px">
+            <div class="grade">
+              <div style="grid-column:span 2;min-width:0"><label>Nome da nova instituição</label><input name="n_nome" placeholder="ex.: Prefeitura de Itamarandiba"></div>
+              <div><label>Categoria</label><select name="n_grupo">${GRUPOS.filter(g=>g.ativo).map(g=>`<option value="${g.id}" ${g.id==="out"?"selected":""}>${esc(g.nome)}</option>`).join("")}</select></div>
+              <div><label>Município</label><input name="n_mun"></div>
+            </div>
+            <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn peq primario" type="button" id="atNovaOk">Incluir na lista</button>
+              <button class="btn peq" type="button" id="atNovaX">Cancelar</button><span class="dica">Entra como <b>pendente</b>; o Previncêndio confere depois no catálogo (aba Apoios).</span></div>
+          </div>
+        </div>
       </div>
-      <div class="veic">${VEICULOS.map(([k,t])=>`<div><label>${t}</label><input type="number" min="0" name="${k}"></div>`).join("")}</div>
-      <div style="margin-top:8px"><label>Observações (município, propriedade, UC de origem…)</label><input name="obs"></div>
+      <div class="veic">${VEICULOS.map(([k,t])=>`<div><label>${t}</label><input type="number" min="0" name="${k}"></div>`).join("")}
+        <div id="atContr" hidden style="grid-column:span 2"><label>Contrato da aeronave</label><select name="a_contrato"><option value="">—</option>${Object.entries(CONTRATOS).map(([k,t])=>`<option value="${k}">${esc(t)}</option>`).join("")}</select></div></div>
+      <div style="margin-top:8px"><label>Observações (empresa atendida pela brigada, propriedade, UC de origem…)</label><input name="obs"></div>
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn primario" id="atSalvar">Adicionar atuação</button>
+        <button class="btn primario" id="atSalvar">Adicionar</button>
         <button class="btn" id="atCancelar" hidden>Cancelar edição</button>
-        ${ultimaData ? `<button class="btn" id="atRepetir" title="Copia as atuações do último dia para a data escolhida acima">Repetir apoios de ${fmtD(ultimaData)} na data acima</button>` : ""}
-        <span class="dica">Mesma instituição em dois turnos do dia conta pelo maior efetivo; instituições diferentes somam.</span>
+        ${ultimaData ? `<button class="btn" id="atRepetir" title="Copia os recursos do último dia para a data escolhida acima">Repetir recursos de ${fmtD(ultimaData)} na data acima</button>` : ""}
+        <span class="dica">A mesma instituição duas vezes no dia conta pelo maior efetivo; instituições diferentes somam.</span>
       </div>
     </div>`;
   const f = $("#atForm"), g = n => f.querySelector(`[name="${n}"]`);
   let editId = null;
-  const limpar = () => { editId = null; ["hr_inicio","hr_fim","instituicao_id","pessoas","obs",...VEICULOS.map(v=>v[0])].forEach(n => g(n).value = "");
-    $("#atSalvar").textContent = "Adicionar atuação"; $("#atCancelar").hidden = true; };
-  const erroAmigavel = e => e.code === "23505" ? "Esta instituição já tem atuação nesse dia e turno — edite a linha existente." : e.message;
+  const verContrato = () => { const tem = AERO.some(k => num(g(k).value)); $("#atContr").hidden = !tem; if (!tem) g("a_contrato").value = ""; };
+  AERO.forEach(k => g(k).addEventListener("input", verContrato));
+  // busca: refaz a lista só com as que casam (nome, sigla ou variantes) e seleciona a primeira
+  g("busca").addEventListener("input", () => {
+    const q = g("busca").value.trim(), atual = +g("instituicao_id").value || null;
+    if (!q){ g("instituicao_id").innerHTML = opcoesInst(atual, false, fav); return; }
+    const l = INST.filter(i => i.ativo && !juntada(i) && casaBusca(i, q));
+    g("instituicao_id").innerHTML = l.length ? GRUPOS.map(gr => { const x = l.filter(i => grupoDe(i) === gr.id);
+      return x.length ? `<optgroup label="${esc(gr.nome)}">${x.map(i => `<option value="${i.id}">${esc(i.nome)}</option>`).join("")}</optgroup>` : ""; }).join("")
+      : `<option value="">nenhuma encontrada — use “Outra…”</option>`;
+  });
+  $("#atOutra").onclick = () => { $("#atNova").hidden = false; g("n_nome").value = g("busca").value.trim(); g("n_nome").focus(); };
+  $("#atNovaX").onclick = () => { $("#atNova").hidden = true; };
+  $("#atNovaOk").onclick = async () => {
+    const nome = txt(g("n_nome").value); if (!nome) return msg("Informe o nome da nova instituição.", "erro");
+    const parecida = INST.find(i => semAcento(i.nome) === semAcento(nome) || (i.variantes||[]).some(v => semAcento(v) === semAcento(nome)));
+    if (parecida){ g("instituicao_id").innerHTML = opcoesInst(parecida.id, false, fav); $("#atNova").hidden = true; return msg(`Já existe: ${parecida.nome}. Selecionada.`, "ok"); }
+    const o = {nome, grupo: g("n_grupo").value, categoria: "out", municipio: txt(g("n_mun").value), ativo: true,
+               obs: `PENDENTE: incluída pela Sala no RI ${r.ri}/${r.ano} em ${new Date().toLocaleDateString("pt-BR")}`};
+    const {data, error} = await sb.from("instituicao").insert(o).select().single();
+    if (error) return msg(error.code === "23505" ? "Já existe uma instituição com esse nome." : error.message, "erro");
+    await carregarInst(); g("busca").value = ""; g("instituicao_id").innerHTML = opcoesInst(data.id, false, fav);
+    $("#atNova").hidden = true; msg(`“${nome}” incluída (pendente de conferência).`, "ok");
+  };
+  const limpar = () => { editId = null; ["hr_inicio","hr_fim","instituicao_id","pessoas","obs","busca","a_contrato",...VEICULOS.map(v=>v[0])].forEach(n => g(n).value = "");
+    g("instituicao_id").innerHTML = opcoesInst(null, false, fav); verContrato();
+    $("#atSalvar").textContent = "Adicionar"; $("#atCancelar").hidden = true; };
+  const erroAmigavel = e => e.code === "23505" ? "Esta instituição já tem registro nesse dia — edite a linha existente." : e.message;
   $("#atSalvar").onclick = async () => {
-    const o = {data: g("data").value, turno: g("turno").value, hr_inicio: txt(g("hr_inicio").value), hr_fim: txt(g("hr_fim").value),
-               instituicao_id: +g("instituicao_id").value || null, pessoas: num(g("pessoas").value) ?? 0, obs: txt(g("obs").value)};
+    const o = {data: g("data").value, hr_inicio: txt(g("hr_inicio").value), hr_fim: txt(g("hr_fim").value),
+               instituicao_id: +g("instituicao_id").value || null, pessoas: num(g("pessoas").value) ?? 0, obs: txt(g("obs").value), a_contrato: txt(g("a_contrato").value)};
     VEICULOS.forEach(([k]) => o[k] = num(g(k).value));
-    if (!o.data) return msg("Informe a data da atuação.", "erro");
+    if (!o.data) return msg("Informe a data.", "erro");
     if (!o.instituicao_id) return msg("Escolha a instituição.", "erro");
-    if (!o.pessoas && !VEICULOS.some(([k]) => o[k])) return msg("Informe pessoas ou veículos.", "erro");
-    if (r.dat_detec && o.data < r.dat_detec) return msg("A data da atuação é anterior à detecção do incêndio.", "erro");
+    if (!o.pessoas && !VEICULOS.some(([k]) => o[k])) return msg("Informe pessoas, veículos ou aeronaves.", "erro");
+    if (AERO.some(k => o[k]) && !o.a_contrato) return msg("Informe o contrato da aeronave (CFM, FTP…).", "erro");
+    if (r.dat_detec && o.data < r.dat_detec) return msg("A data é anterior à detecção do incêndio.", "erro");
     const b = $("#atSalvar"); b.disabled = true;
     const {error} = editId ? await sb.from("atuacao").update(o).eq("id", editId) : await sb.from("atuacao").insert({ano: r.ano, ri: r.ri, ...o});
     b.disabled = false;
     if (error) return msg(erroAmigavel(error), "erro");
-    msg(editId ? "Atuação alterada." : "Atuação registrada.", "ok"); carregarAtuacoes(r); carregarLista();
+    delete FAV_UC[r.nome_uc];
+    ATU_DATA[r.ano+"/"+r.ri] = o.data;
+    msg(editId ? "Registro alterado." : "Recurso registrado.", "ok"); carregarAtuacoes(r); carregarLista();
   };
   $("#atCancelar").onclick = limpar;
   $$("[data-ed]", box).forEach(el => el.onclick = () => {
     const a = L.find(x => x.id === +el.dataset.ed); editId = a.id;
-    ["data","turno","obs"].forEach(n => g(n).value = a[n] ?? ""); g("hr_inicio").value = fmtH(a.hr_inicio); g("hr_fim").value = fmtH(a.hr_fim);
-    g("instituicao_id").innerHTML = opcoesInst(a.instituicao_id); g("pessoas").value = a.pessoas; VEICULOS.forEach(([k]) => g(k).value = a[k] ?? "");
+    ["data","obs","a_contrato"].forEach(n => g(n).value = a[n] ?? ""); g("hr_inicio").value = fmtH(a.hr_inicio); g("hr_fim").value = fmtH(a.hr_fim);
+    g("busca").value = ""; g("instituicao_id").innerHTML = opcoesInst(a.instituicao_id, false, fav); g("pessoas").value = a.pessoas; VEICULOS.forEach(([k]) => g(k).value = a[k] ?? "");
+    verContrato(); g("a_contrato").value = a.a_contrato ?? "";
     $("#atSalvar").textContent = "Salvar alteração"; $("#atCancelar").hidden = false; f.scrollIntoView({behavior:"smooth", block:"center"});
   });
   $$("[data-del]", box).forEach(el => el.onclick = async () => {
     const a = L.find(x => x.id === +el.dataset.del);
-    if (!confirm(`Excluir a atuação de ${instPorId(a.instituicao_id)?.nome||"?"} em ${fmtD(a.data)} (${TURNOS[a.turno]})?`)) return;
+    if (!confirm(`Excluir o registro de ${instPorId(a.instituicao_id)?.nome||"?"} em ${fmtD(a.data)}?`)) return;
     const {error} = await sb.from("atuacao").delete().eq("id", a.id);
     if (error) return msg(error.message, "erro");
-    msg("Atuação excluída.", "ok"); carregarAtuacoes(r); carregarLista();
+    msg("Registro excluído.", "ok"); carregarAtuacoes(r); carregarLista();
   });
   $("#atRepetir")?.addEventListener("click", async () => {
     const nova = g("data").value;
     if (!nova || nova === ultimaData) return msg("Escolha na data acima o dia para onde copiar.", "erro");
     if (r.dat_detec && nova < r.dat_detec) return msg("A data escolhida é anterior à detecção do incêndio.", "erro");
-    const copia = L.filter(a => a.data === ultimaData).map(({id, criado_em, criado_por, ...a}) => ({...a, data: nova}));
+    const copia = L.filter(a => a.data === ultimaData).map(({id, criado_em, criado_por, ...a}) => ({...a, data: nova, turno: null}));
     const {error} = await sb.from("atuacao").insert(copia);
     if (error) return msg(erroAmigavel(error), "erro");
-    msg(`${copia.length} ${copia.length===1?"atuação copiada":"atuações copiadas"} para ${fmtD(nova)} — ajuste o que mudou.`, "ok"); carregarAtuacoes(r); carregarLista();
+    msg(`${copia.length} ${copia.length===1?"registro copiado":"registros copiados"} para ${fmtD(nova)} — ajuste o que mudou.`, "ok"); carregarAtuacoes(r); carregarLista();
   });
 }
 
@@ -776,7 +860,7 @@ async function carregarApoios(){
     data.push(...r.data); if (r.data.length < 1000) break;
   }
   const cat = $("#aCat").value;
-  apoios = (data||[]).map(a => ({...a, inst: instPorId(a.instituicao_id) || {}})).filter(a => !cat || a.inst.categoria === cat);
+  apoios = (data||[]).map(a => ({...a, inst: instPorId(a.instituicao_id) || {}})).filter(a => !cat || grupoDe(a.inst) === cat);
   const hh = a => (a.hr_inicio && a.hr_fim) ? a.pessoas * (((+a.hr_fim.slice(0,2)*60 + +a.hr_fim.slice(3,5)) - (+a.hr_inicio.slice(0,2)*60 + +a.hr_inicio.slice(3,5)) + 1440) % 1440 || 1440) / 60 : 0;
   // por instituição: pessoas-dia = maior efetivo da instituição em cada RI/dia
   const por = {};
@@ -787,10 +871,10 @@ async function carregarApoios(){
   const totRI = new Set(apoios.map(a => a.ano+"/"+a.ri)).size;
   $("#aResumo").textContent = `${apoios.length} atuações · ${totRI} RIs · ${linhas.length} instituições · ${linhas.reduce((s,p)=>s+p.pd,0)} pessoas-dia · ${Math.round(linhas.reduce((s,p)=>s+p.hh,0))} horas-homem (onde há horário).`;
   $("#tabApoiosInst").innerHTML = `<thead><tr><th>Instituição</th><th>Categoria</th><th>RIs</th><th>Dias de atuação</th><th>Pessoas-dia</th><th>Horas-homem</th></tr></thead><tbody>` +
-    (linhas.map(p => `<tr><td>${esc(p.inst.nome)}</td><td>${esc(CATEG[p.inst.categoria]||"")}</td><td class="n">${p.ris.size}</td><td class="n">${p.nd}</td>
+    (linhas.map(p => `<tr><td>${esc(p.inst.nome)}</td><td>${esc(nomeGrupo(grupoDe(p.inst)))}</td><td class="n">${p.ris.size}</td><td class="n">${p.nd}</td>
       <td class="n">${p.pd}</td><td class="n">${p.hh ? Math.round(p.hh) : ""}</td></tr>`).join("") || `<tr><td colspan="6" class="dica">Nenhuma atuação no período.</td></tr>`) + "</tbody>";
-  $("#tabApoios").innerHTML = `<thead><tr><th>Data</th><th>Turno</th><th>RI</th><th>UC</th><th>Instituição</th><th>Pessoas</th><th>Veículos / aeronaves</th><th>Obs.</th></tr></thead><tbody>` +
-    apoios.map(a => `<tr><td>${fmtD(a.data)}</td><td>${TURNOS[a.turno]}${a.hr_inicio ? ` ${fmtH(a.hr_inicio)}–${fmtH(a.hr_fim)}` : ""}</td>
+  $("#tabApoios").innerHTML = `<thead><tr><th>Data</th><th>Horário</th><th>RI</th><th>UC</th><th>Instituição</th><th>Pessoas</th><th>Veículos / aeronaves</th><th>Obs.</th></tr></thead><tbody>` +
+    apoios.map(a => `<tr><td>${fmtD(a.data)}</td><td>${esc(horario(a))}</td>
       <td><button class="lnk" data-abrir="${a.ano}|${a.ri}">${a.ri}/${a.ano}</button></td><td>${esc(rotuloUC(a.rif?.nome_uc))}</td>
       <td>${esc(a.inst.nome||"")}</td><td class="n">${a.pessoas}</td><td>${esc(txtVeic(a))}</td><td>${esc(a.obs||"")}</td></tr>`).join("") + "</tbody>";
   $$("[data-abrir]").forEach(el => el.onclick = () => { const [ano, ri] = el.dataset.abrir.split("|");
@@ -800,30 +884,54 @@ async function carregarApoios(){
 ["#aDe","#aAte","#aCat","#aInst"].forEach(s => $(s).addEventListener("change", carregarApoios));
 $("#aCsv").onclick = () => {
   const cols = [["data",a=>a.data],["turno",a=>a.turno],["hr_inicio",a=>a.hr_inicio],["hr_fim",a=>a.hr_fim],["ano",a=>a.ano],["ri",a=>a.ri],
-    ["nome_uc",a=>a.rif?.nome_uc],["instituicao",a=>a.inst.nome],["sigla",a=>a.inst.sigla],["categoria",a=>a.inst.categoria],["pessoas",a=>a.pessoas],
-    ...VEICULOS.map(([k])=>[k,a=>a[k]]),["obs",a=>a.obs],["registrado_por",a=>a.criado_por]];
+    ["nome_uc",a=>a.rif?.nome_uc],["instituicao",a=>a.inst.nome],["sigla",a=>a.inst.sigla],["categoria_empenho",a=>grupoDe(a.inst)],["coluna_roi",a=>a.inst.categoria],["pessoas",a=>a.pessoas],
+    ...VEICULOS.map(([k])=>[k,a=>a[k]]),["a_contrato",a=>a.a_contrato],["obs",a=>a.obs],["registrado_por",a=>a.criado_por]];
   const q = v => v==null ? "" : /[";\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v);
   const csv = "﻿" + cols.map(c=>c[0]).join(";") + "\n" + apoios.map(a => cols.map(c=>q(c[1](a))).join(";")).join("\n");
   const el = document.createElement("a"); el.href = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
   el.download = `atuacoes_${$("#aDe").value}_a_${$("#aAte").value}.csv`; el.click();
 };
 function desenharCatalogo(){
-  const selCat = v => `<select data-k="categoria">${Object.entries(CATEG).map(([k,t])=>`<option value="${k}" ${k===v?"selected":""}>${esc(t)}</option>`).join("")}</select>`;
-  const linha = (i={}) => `<tr data-id="${i.id||""}"><td><input data-k="nome" value="${esc(i.nome||"")}" placeholder="Nome padronizado"></td>
-    <td><input data-k="sigla" value="${esc(i.sigla||"")}" style="max-width:110px"></td><td>${selCat(i.categoria||"par")}</td>
-    <td><input data-k="orgao" value="${esc(i.orgao||"")}" style="max-width:130px"></td><td><input data-k="obs" value="${esc(i.obs||"")}"></td>
+  if (!$("#cGrupo").options.length){
+    $("#cGrupo").innerHTML = `<option value="">Todas</option>` + GRUPOS.map(g=>`<option value="${g.id}">${esc(g.nome)}</option>`).join("");
+    ["#cGrupo","#cMostrar"].forEach(x => $(x).addEventListener("change", desenharCatalogo));
+    let t; $("#cBusca").addEventListener("input", () => { clearTimeout(t); t = setTimeout(desenharCatalogo, 250); });
+  }
+  const fg = $("#cGrupo").value, fm = $("#cMostrar").value, q = $("#cBusca").value.trim();
+  const ver = i => (!fg || grupoDe(i) === fg) && casaBusca(i, q) &&
+    (fm === "ativas" ? i.ativo && !juntada(i) : fm === "pend" ? pendente(i) : fm === "inativas" ? (!i.ativo || juntada(i)) : true);
+  const selG = v => `<select data-k="grupo">${GRUPOS.map(g=>`<option value="${g.id}" ${g.id===v?"selected":""}>${esc(g.nome)}</option>`).join("")}</select>`;
+  const linha = (i={}) => `<tr data-id="${i.id||""}"${pendente(i) ? ' style="background:#fff6e6"' : ""}>
+    <td><input data-k="nome" value="${esc(i.nome||"")}" placeholder="Nova instituição: nome padronizado" style="min-width:220px"></td>
+    <td>${selG(i.id ? grupoDe(i) : (fg || "out"))}</td>
+    <td><input data-k="municipio" value="${esc(i.municipio||"")}" style="max-width:130px"></td>
+    <td><input data-k="sigla" value="${esc(i.sigla||"")}" style="max-width:90px"></td>
+    <td><input data-k="variantes" value="${esc((i.variantes||[]).join("; "))}" title="${esc((i.variantes||[]).join("; "))}" style="min-width:180px"></td>
+    <td><input data-k="obs" value="${esc(i.obs||"")}" title="${esc(i.obs||"")}"></td>
     <td style="text-align:center"><input type="checkbox" data-k="ativo" ${i.id ? (i.ativo?"checked":"") : "checked"} style="width:auto"></td>
-    <td><button class="btn peq" data-salvar>${i.id ? "Salvar" : "Adicionar"}</button></td></tr>`;
-  $("#tabInst").innerHTML = `<thead><tr><th>Nome</th><th>Sigla</th><th>Categoria (ROI/BDG)</th><th>Órgão / grupo</th><th>Observações</th><th>Ativa</th><th></th></tr></thead><tbody>` +
-    [...INST].sort((a,b) => Object.keys(CATEG).indexOf(a.categoria) - Object.keys(CATEG).indexOf(b.categoria) || a.nome.localeCompare(b.nome,"pt-BR")).map(linha).join("") + linha() + "</tbody>";
-  $$("#tabInst [data-salvar]").forEach(b => b.onclick = async () => {
-    const tr = b.closest("tr"), g = k => tr.querySelector(`[data-k="${k}"]`);
-    const o = {nome: txt(g("nome").value), sigla: txt(g("sigla").value), categoria: g("categoria").value, orgao: txt(g("orgao").value), obs: txt(g("obs").value), ativo: g("ativo").checked};
+    <td style="white-space:nowrap"><button class="btn peq" data-salvar>${i.id ? "Salvar" : "Adicionar"}</button>${pendente(i) ? ` <button class="btn peq" data-conferir title="Tira a marca de pendente">Conferida</button>` : ""}</td></tr>`;
+  const ordem = Object.fromEntries(GRUPOS.map((g,k) => [g.id, k]));
+  const lista = INST.filter(ver).sort((a,b) => (ordem[grupoDe(a)] ?? 99) - (ordem[grupoDe(b)] ?? 99) || a.nome.localeCompare(b.nome,"pt-BR"));
+  const nPend = INST.filter(pendente).length;
+  $("#cInfo").innerHTML = `${lista.length} de ${INST.length} instituições${nPend ? ` · <b style="color:#a0620a">${nPend} pendente${nPend>1?"s":""} de conferência</b>` : ""}.`;
+  $("#tabInst").innerHTML = `<thead><tr><th>Nome</th><th>Categoria</th><th>Município</th><th>Sigla</th><th>Variantes (;)</th><th>Observações</th><th>Ativa</th><th></th></tr></thead><tbody>` +
+    lista.map(linha).join("") + linha() + "</tbody>";
+  const salvar = async (tr, extra={}) => {
+    const g = k => tr.querySelector(`[data-k="${k}"]`);
+    const o = {nome: txt(g("nome").value), grupo: g("grupo").value, municipio: txt(g("municipio").value), sigla: txt(g("sigla").value),
+      variantes: g("variantes").value.split(";").map(v => v.trim().toLowerCase()).filter(Boolean), obs: txt(g("obs").value), ativo: g("ativo").checked, ...extra};
     if (!o.nome) return msg("Informe o nome da instituição.", "erro");
+    if (!tr.dataset.id) o.categoria = "out";   // o gatilho do banco acerta a coluna pela categoria
     const {error} = tr.dataset.id ? await sb.from("instituicao").update(o).eq("id", +tr.dataset.id) : await sb.from("instituicao").insert(o);
     if (error) return msg(error.code === "23505" ? "Já existe uma instituição com esse nome." : error.message, "erro");
     msg("Catálogo atualizado.", "ok"); await carregarInst(); $("#aInst").innerHTML = opcoesInst(null, true); desenharCatalogo();
-  });
+  };
+  $$("#tabInst [data-salvar]").forEach(b => b.onclick = () => salvar(b.closest("tr")));
+  $$("#tabInst [data-conferir]").forEach(b => b.onclick = () => { const tr = b.closest("tr"), ob = tr.querySelector('[data-k="obs"]');
+    ob.value = ob.value.replace(/^PENDENTE:\s*/, "Conferida; "); salvar(tr); });
+  $("#tabCateg").innerHTML = `<thead><tr><th>Categoria</th><th>O que entra</th><th>Soma na coluna antiga do ROI/BDG</th><th>Instituições ativas</th></tr></thead><tbody>` +
+    GRUPOS.map(g => `<tr><td><b>${esc(g.nome)}</b></td><td>${esc(g.descricao||"")}</td><td>${esc(PESSOAS.find(([k]) => k === "comb_" + g.coluna)?.[1] || g.coluna)}</td>
+      <td class="n">${INST.filter(i => i.ativo && !juntada(i) && grupoDe(i) === g.id).length}</td></tr>`).join("") + "</tbody>";
 }
 
 function resumoRecursos(e){
