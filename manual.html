@@ -207,6 +207,7 @@
       <li><a href="#painel_uc">Painel da UC</a></li>
       <li><a href="#pipcif">Cadastro das UCs</a></li>
       <li><a href="#mapa-colibri">Geo Colibri</a></li>
+      <li><a href="#apoio-aereo">Apoio aéreo</a></li>
       <li><a href="#admin">Administração</a></li>
       <li><a href="#faq">Perguntas frequentes</a></li>
     </ol>
@@ -419,7 +420,22 @@
         <li>Use a busca para ir a uma UC (ela fica em foco) ou a um município.</li>
         <li><b>Exportar</b> baixa as camadas ligadas, da área visível, da UC em foco ou do estado, em GeoJSON (QGIS), KML (Google Earth) ou CSV (planilha).</li>
         <li><b>Vegetação › Inventário Florestal de MG</b> (desligada por padrão): fitofisionomias do IDE-Sisema em volta das UCs (UC, ZA e 5 km). Aparece a partir de uma aproximação de uns 40 km de largura; clicar num polígono mostra a classe e em que campo do ROI ela entra.</li>
+        <li><b>Rede de apoio › Apoio aéreo</b>: aeródromos, pistas não registradas, helipontos e áreas de pouso do cadastro único (substitui as antigas camadas de pistas e helipontos). Os quadradinhos abaixo do nome escolhem quais tipos aparecem. A ficha mostra as UCs que usam o lugar e leva ao cadastro.</li>
         <li><b>Copiar link</b> guarda a vista atual (camadas, anos, UC e mapa de fundo); quem abrir precisa ter login.</li>
+      </ol>
+    </section>
+
+    <section id="apoio-aereo">
+      <h2>Apoio aéreo</h2>
+      <p class="quem">Quem usa: todos com login veem; só o Previncêndio edita · <a href="apoio_aereo.html">abrir o cadastro</a> (também na página inicial, em Gestão do sistema)</p>
+      <p>Cadastro único de aeródromos, pistas, helipontos e áreas de pouso. Cada lugar existe uma vez só e as UCs se ligam a ele: a Pampulha, por exemplo, é um registro usado por várias UCs. A base são os aeródromos registrados na ANAC (IDE-Sisema); o que não está lá (pistas de terra e de fazenda, helipontos, campos usados para pouso) veio dos PIPCIFs ou é cadastrado aqui.</p>
+      <ol class="passos">
+        <li>Busque pelo nome, por outro nome usado nos PIPCIFs, pelo indicador ICAO ou pelo município. Filtre por tipo ou por UC.</li>
+        <li>Os botões de <b>revisão</b> mostram o que falta conferir: lugares “a conferir”, pistas usadas pelas UCs sem avaliação para o Air Tractor AT-802, sem informação de água ou sem dimensões.</li>
+        <li>Clique num lugar da lista ou do mapa para ver e editar. “O que os PIPCIFs dizem” guarda o que cada UC informou, para comparar. O histórico mostra quem alterou o quê.</li>
+        <li>Para mudar a posição, arraste o marcador no mapa ou digite a coordenada (decimal ou graus-minutos-segundos).</li>
+        <li><b>+ Novo lugar</b>: clique no mapa onde fica e preencha. Se já houver um lugar a menos de 1 km, o Colibri avisa — se for o mesmo, acrescente o nome em “Outros nomes” do existente em vez de criar outro.</li>
+        <li>Lugar que deixou de ser usado: mude a situação para <b>Inativo</b> (some do mapa e das listas). Excluir só é possível quando nenhuma UC aponta para ele.</li>
       </ol>
     </section>
 

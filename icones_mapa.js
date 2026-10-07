@@ -4,6 +4,7 @@
   const G = {  // glifos em viewBox 24 — traço branco (s) ou preenchimento branco (f)
     heliponto: {s:'<path d="M7.5 5.5v13M16.5 5.5v13M7.5 12h9" stroke-width="3"/>'},
     pista:     {f:'<path d="M21 15.5v-1.8l-7.5-4.6V4.2a1.5 1.5 0 0 0-3 0v4.9L3 13.7v1.8l7.5-2.3v4.9l-2 1.5V21l3.5-1 3.5 1v-1.4l-2-1.5v-4.9z"/>'},
+    pouso:     {s:'<circle cx="12" cy="12" r="8.2" stroke-dasharray="3 2.4"/><path d="M9 8v8M15 8v8M9 12h6" stroke-width="2.4"/>'},
     vigilancia:{s:'<path d="M12 6.5l-4.5 14M12 6.5l4.5 14M9 15.5h6M10.4 11h3.2"/><path d="M8.5 3.5h7l-1 3h-5z" fill="#fff"/>'},
     camera:    {s:'<rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3z" fill="#fff"/>'},
     estacao:   {s:'<path d="M14 14.8V4.5a2 2 0 0 0-4 0v10.3a4 4 0 1 0 4 0z"/><circle cx="12" cy="18" r="1.6" fill="#fff"/><path d="M17 6h3M17 9.5h3"/>'},
@@ -22,16 +23,19 @@
     acao:      {s:'<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15.2l2 2 4-4"/>'},
     fogo:      {f:'<path d="M12 2.5c.8 3.2 4.8 5.2 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.3 1.2-3.5 1.3-5.5 1.3 1 2 2.2 2.5 2.4.3-2.2 0-4.6 1-6.9z"/>'}
   };
-  const COR = {heliponto:"#ff7a1a", pista:"#2f7df6", vigilancia:"#e0b000", camera:"#e0b000", estacao:"#9b6bff", agua:"#12a9d8",
+  const COR = {heliponto:"#ff7a1a", pista:"#2f7df6", aerodromo:"#2f7df6", aerodromo_privado:"#5a6f93", aerodromo_militar:"#3b4a63", pista_terra:"#a0522d", pouso:"#c08a00", vigilancia:"#e0b000", camera:"#e0b000", estacao:"#9b6bff", agua:"#12a9d8",
                sede:"#2e5603", antena:"#d6336c", fogo:"#e0301e",
                radio:"#b83280", parceiro:"#1f5fd1", colaborador:"#8a5a2b", brigadista:"#c46f1a", alimentacao:"#e8590c", saude:"#0f9d58", abastecimento:"#495057", outro:"#868e96",
                projeto:"#2f9e44", acao:"#b7791f"};
-  const ROT = {heliponto:"Heliponto", pista:"Pista de pouso", vigilancia:"Torre / posto de observação", camera:"Câmera",
+  const ROT = {heliponto:"Heliponto", pista:"Pista de pouso", aerodromo:"Aeródromo público", aerodromo_privado:"Aeródromo privado", aerodromo_militar:"Aeródromo militar", pista_terra:"Pista não registrada", pouso:"Área de pouso eventual", vigilancia:"Torre / posto de observação", camera:"Câmera",
                estacao:"Estação meteorológica", agua:"Ponto de água", sede:"Sede da UC", antena:"Repetidora / antena", fogo:"Incêndio",
                radio:"Rádio fixo", parceiro:"Parceiro", colaborador:"Colaborador / morador", brigadista:"Brigadista voluntário", alimentacao:"Alimentação", saude:"Unidade de saúde", abastecimento:"Abastecimento", outro:"Outro prestador",
                projeto:"Projeto de sustentabilidade", acao:"Ação preventiva"};
+  const ALIAS = {aerodromo:"pista", aerodromo_privado:"pista", aerodromo_militar:"pista", pista_terra:"pista"};
+  // recurso_aereo.tipo → ícone
+  window.iconeAereo = t => ({aerodromo_publico:"aerodromo", aerodromo_privado:"aerodromo_privado", aerodromo_militar:"aerodromo_militar", pista_nao_registrada:"pista_terra", heliponto:"heliponto", area_pouso:"pouso"})[t] || "pista";
   function svg(tipo, tam){
-    const g = G[tipo] || G.vigilancia;
+    const g = G[tipo] || G[ALIAS[tipo]] || G.vigilancia;
     const corpo = g.f ? `<g fill="#fff">${g.f}</g>` : `<g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${g.s}</g>`;
     return `<svg viewBox="0 0 24 24" width="${tam}" height="${tam}" aria-hidden="true">${corpo}</svg>`;
   }

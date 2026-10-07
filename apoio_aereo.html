@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Apoio aéreo — Colibri</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="exige_login.js?v=20261007a"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="icones_mapa.js?v=20261007b"></script>
+<style>
+  :root{ --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --linha:#dcd8d0; --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --erro:#b3261e; --alerta:#9a5b00; --claro:#f6f7f1 }
+  *{box-sizing:border-box} [hidden]{display:none!important}
+  html,body{height:100%}
+  body{margin:0;background:var(--fundo);color:var(--tinta);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+  header{background:var(--verde);color:#fff;padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header .inst{font-size:12px;opacity:.9} header .inst a{color:#fff;text-decoration:none} header h1{margin:0;font-size:18px}
+  header .quem{margin-left:auto;font-size:12.5px;opacity:.9}
+  .corpo{flex:1;display:grid;grid-template-columns:minmax(340px,430px) 1fr;min-height:0}
+  #painel{background:var(--papel);border-right:1px solid var(--linha);display:flex;flex-direction:column;min-height:0}
+  #mapa{min-height:300px}
+  .filtros{padding:10px 12px;border-bottom:1px solid var(--linha);display:grid;gap:6px}
+  .filtros .lin{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  input,select,textarea{font:inherit;border:1px solid #c9c5bb;border-radius:7px;padding:6px 8px;background:#fff;color:inherit;min-width:0}
+  input:disabled,select:disabled,textarea:disabled{background:var(--claro);color:#333}
+  .filtros input[type=search]{flex:1}
+  .chips{display:flex;gap:5px;flex-wrap:wrap}
+  .chip{font:inherit;font-size:12.5px;border:1px solid #c9c5bb;background:#fff;border-radius:99px;padding:3px 10px;cursor:pointer}
+  .chip[aria-pressed=true]{background:var(--verde);border-color:var(--verde);color:#fff}
+  .chip b{font-weight:700}
+  .resumo{font-size:12.5px;color:var(--suave)}
+  #lista{overflow:auto;flex:1}
+  .item{display:flex;gap:9px;align-items:flex-start;padding:7px 12px;border-bottom:1px solid #eee;cursor:pointer}
+  .item:hover,.item.sel{background:#f2f7ea}
+  .item .t{font-weight:600} .item .s{font-size:12px;color:var(--suave)}
+  .tag{display:inline-block;font-size:11px;border-radius:99px;padding:0 7px;margin:2px 3px 0 0;background:#eceae3;color:#444}
+  .tag.uc{background:#e2efd5;color:var(--verde-esc)} .tag.conf{background:#fff1d6;color:var(--alerta)} .tag.ina{background:#f3dddd;color:var(--erro)}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--verde);background:#fff;color:var(--verde);padding:6px 12px;cursor:pointer}
+  .btn.primario{background:var(--verde);color:#fff} .btn.perigo{border-color:var(--erro);color:var(--erro)} .btn.peq{padding:3px 9px;font-size:12.5px}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  #ficha{overflow:auto;flex:1;padding:10px 14px 30px}
+  #ficha h2{font-size:17px;margin:4px 0 2px}
+  .voltar{font:inherit;background:none;border:0;color:var(--verde);cursor:pointer;padding:0;font-weight:600}
+  fieldset{border:1px solid var(--linha);border-radius:10px;margin:10px 0 0;padding:8px 10px 10px}
+  legend{font-weight:700;font-size:13px;padding:0 4px;color:var(--verde-esc)}
+  .grade{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+  .grade .todo{grid-column:1/-1}
+  label{display:block;font-size:12px;color:var(--suave);margin-bottom:1px}
+  .grade input,.grade select,.grade textarea{width:100%}
+  .dica{font-size:12.5px;color:var(--suave)}
+  .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  table.pip{border-collapse:collapse;width:100%;font-size:12px} table.pip td,table.pip th{border-bottom:1px solid #eee;padding:3px 4px;text-align:left;vertical-align:top}
+  .hist{font-size:12px;border-bottom:1px solid #eee;padding:4px 0} .hist b{font-weight:600}
+  #msg{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:8px;font-size:13.5px;z-index:2000;max-width:90vw}
+  #msg.erro{background:var(--erro)} #msg.ok{background:var(--ok)}
+  #aviso{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:900;background:#fff;border:2px solid var(--verde);border-radius:8px;padding:6px 12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  .mapwrap{position:relative;min-height:0}
+  .leg{position:absolute;right:10px;bottom:24px;z-index:800;background:#fffffff0;border-radius:8px;padding:6px 9px;font-size:12px;box-shadow:0 1px 5px rgba(0,0,0,.25)}
+  .leg div{margin:2px 0}
+  @media (max-width:820px){ .leg{display:none} .corpo{grid-template-columns:1fr;grid-template-rows:42vh auto} .mapwrap{order:-1} #painel{border-right:0} #lista,#ficha{max-height:none} }
+</style>
+</head>
+<body>
+<header>
+  <div><div class="inst"><a href="index.html">← Colibri</a> · Previncêndio</div><h1>Apoio aéreo</h1></div>
+  <span class="quem" id="quem"></span>
+</header>
+<div class="corpo">
+  <section id="painel">
+    <div id="vLista">
+      <div class="filtros">
+        <div class="lin"><input type="search" id="busca" placeholder="Nome, apelido, ICAO ou município" aria-label="Buscar">
+          <button class="btn peq" id="novo" hidden title="Cadastrar uma pista, heliponto ou área de pouso que não está na lista">+ Novo lugar</button></div>
+        <div class="lin">
+          <select id="fTipo" aria-label="Tipo"><option value="">Todos os tipos</option></select>
+          <select id="fUC" aria-label="UC"><option value="">Todas as UCs</option></select>
+          <label style="display:flex;gap:4px;align-items:center;margin:0;font-size:12.5px;color:inherit"><input type="checkbox" id="fInativos"> inativos</label>
+        </div>
+        <div class="chips" id="revisao" aria-label="Revisão"></div>
+        <div class="resumo" id="resumo"></div>
+      </div>
+      <div id="lista"></div>
+    </div>
+    <div id="ficha" hidden></div>
+  </section>
+  <div class="mapwrap"><div id="mapa" style="position:absolute;inset:0"></div><div id="aviso" hidden></div><div class="leg" id="leg"></div></div>
+</div>
+<div id="msg" hidden></div>
+<script>
+const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+const sem = s => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const fmtN = n => Number(n).toLocaleString("pt-BR");
+
+const TIPOS = {aerodromo_publico:"Aeródromo público", aerodromo_privado:"Aeródromo privado", aerodromo_militar:"Aeródromo militar",
+  pista_nao_registrada:"Pista não registrada", heliponto:"Heliponto", area_pouso:"Área de pouso eventual"};
+const TIPOS_DICA = {pista_nao_registrada:"terra, fazenda, cascalho… fora do cadastro da ANAC", area_pouso:"campo de futebol, pátio, pasto usado para pouso de helicóptero"};
+const SUP = {asfalto:"Asfalto", concreto:"Concreto", terra:"Terra", cascalho:"Cascalho", grama:"Grama", outro:"Outro"};
+const CONS = {boa:"Boa", regular:"Regular", ruim:"Ruim"};
+const AT = {nao_avaliado:"Não avaliado", sim:"Sim", com_restricao:"Com restrição", nao:"Não"};
+const SIT = {ativo:"Ativo", a_conferir:"A conferir", inativo:"Inativo"};
+const FONTE = {ide:"IDE-Sisema (cadastro da ANAC)", pipcif:"PIPCIF", campo:"Campo / Previncêndio"};
+const ASA = t => /^aerodromo|pista/.test(t);                       // onde pousa avião (AT-802)
+const REV = [
+  ["", "Todos"],
+  ["usados", "Usados por UCs", r => (USO.get(r.id) || []).length],
+  ["a_conferir", "A conferir", r => r.situacao === "a_conferir"],
+  ["at802", "AT-802 não avaliado", r => ASA(r.tipo) && (USO.get(r.id) || []).length && r.recebe_at802 === "nao_avaliado"],
+  ["agua", "Sem informação de água", r => ASA(r.tipo) && (USO.get(r.id) || []).length && !String(r.agua || "").trim()],
+  ["dim", "Pista sem dimensões", r => ASA(r.tipo) && (USO.get(r.id) || []).length && !r.comprimento_m]
+];
+
+let perfil = null, pode = false, R = [], USO = new Map(), mapa, camada, marcas = new Map(), sel = null, rev = "", modoNovo = false, temp = null;
+
+function msg(t, tipo = "", ms = 4000){ const m = $("#msg"); m.textContent = t; m.className = tipo; m.hidden = false; clearTimeout(msg._t); msg._t = setTimeout(() => m.hidden = true, ms); }
+
+// coordenada: -17.98 · 17,98 · 17°58'32,3"S (em MG, latitude S e longitude O)
+function lerCoord(v){
+  const s = String(v ?? "").trim(); if (!s) return null;
+  if (/^-?\d+([.,]\d+)?$/.test(s)){ const d = Number(s.replace(",", ".")); return d > 0 ? -d : d; }
+  const n = s.replace(/(\d),(\d)/g, "$1.$2").match(/\d+(?:\.\d+)?/g); if (!n) return NaN;
+  return -Math.abs(+n[0] + (+(n[1] || 0)) / 60 + (+(n[2] || 0)) / 3600);
+}
+const dentro = (la, lo) => la >= -23.5 && la <= -14 && lo >= -51.5 && lo <= -39.5;
+function km(a, b, c, d){ const r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r; return Math.sqrt(x * x + y * y) * 6371; }
+
+/* ======================= início ======================= */
+(async () => {
+  perfil = await window.COLIBRI_LOGIN; if (!perfil) return;
+  pode = ["gpcif", "admin"].includes(perfil.papel);
+  $("#quem").textContent = `${perfil.nome || perfil.email} · ${pode ? "pode editar" : "só leitura (edição: Previncêndio)"}`;
+  $("#novo").hidden = !pode;
+  $("#fTipo").innerHTML += Object.entries(TIPOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+  $("#leg").innerHTML = ["aerodromo_publico", "aerodromo_privado", "pista_nao_registrada", "heliponto", "area_pouso"].map(t => `<div>${iconeLegenda(iconeAereo(t), 16)}${TIPOS[t]}</div>`).join("");
+
+  mapa = L.map("mapa", {zoomSnap:.5}).setView([-18.6, -44.6], 6.5);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, attribution:"Imagem © Esri, Maxar"}).addTo(mapa);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, opacity:.8}).addTo(mapa);
+  mapa.createPane("ucs").style.zIndex = 380;
+  camada = L.layerGroup().addTo(mapa);
+  mapa.on("click", cliqueMapa);
+
+  await carregar();
+  sb.rpc("geo_limites", {p_tol: 0.001}).then(({data}) => {
+    const ucs = (data || []).filter(l => l.tipo === "uc");
+    L.geoJSON({type:"FeatureCollection", features: ucs.map(l => ({type:"Feature", geometry:l.geom, properties:{n:l.nome_uc}}))},
+      {pane:"ucs", interactive:false, style:{color:"#9bd46f", weight:1.3, fillColor:"#9bd46f", fillOpacity:.08}}).addTo(mapa);
+  });
+  ["busca", "fTipo", "fUC", "fInativos"].forEach(id => $("#" + id).addEventListener(id === "busca" ? "input" : "change", desenharLista));
+  $("#novo").onclick = iniciarNovo;
+  const id = +new URLSearchParams(location.search).get("id"); if (id && R.some(r => r.id === id)) abrir(id, true);
+})();
+
+async function carregar(){
+  const [a, b] = await Promise.all([
+    sb.from("recurso_aereo").select("*").order("nome").limit(5000),
+    sb.from("uc_ponto").select("id,nome_uc,tipo,nome,recurso_id").not("recurso_id", "is", null).limit(5000)
+  ]);
+  if (a.error) return msg("Não foi possível ler o cadastro: " + a.error.message, "erro", 9000);
+  R = a.data || []; USO = new Map();
+  (b.data || []).forEach(p => { if (!USO.has(p.recurso_id)) USO.set(p.recurso_id, []); USO.get(p.recurso_id).push(p); });
+  const ucs = [...new Set((b.data || []).map(p => p.nome_uc))].sort((x, y) => x.localeCompare(y, "pt"));
+  const f = $("#fUC").value; $("#fUC").innerHTML = `<option value="">Todas as UCs</option>` + ucs.map(u => `<option ${u === f ? "selected" : ""}>${esc(u)}</option>`).join("");
+  desenharLista();
+}
+
+/* ======================= lista e mapa ======================= */
+function filtrados(){
+  const q = sem($("#busca").value.trim()), t = $("#fTipo").value, u = $("#fUC").value, ina = $("#fInativos").checked, fr = REV.find(x => x[0] === rev)?.[2];
+  return R.filter(r => (ina || r.situacao !== "inativo") && (!t || r.tipo === t)
+    && (!u || (USO.get(r.id) || []).some(p => p.nome_uc === u)) && (!fr || fr(r))
+    && (!q || sem([r.nome, r.icao, r.ciad, r.municipio, ...(r.apelidos || [])].join(" ")).includes(q)));
+}
+function desenharLista(){
+  const base = R.filter(r => r.situacao !== "inativo");
+  $("#revisao").innerHTML = REV.map(([k, t, f]) => `<button class="chip" data-rev="${k}" aria-pressed="${k === rev}">${t}${f ? ` <b>${base.filter(f).length}</b>` : ""}</button>`).join("");
+  $$("[data-rev]").forEach(b => b.onclick = () => { rev = b.dataset.rev; desenharLista(); });
+  const fs = filtrados();
+  $("#resumo").textContent = `${fmtN(fs.length)} de ${fmtN(base.length)} lugares ativos` + (rev === "at802" || rev === "agua" || rev === "dim" ? " · só os usados por UCs" : "");
+  $("#lista").innerHTML = fs.slice(0, 600).map(r => {
+    const us = USO.get(r.id) || [], ucs = [...new Set(us.map(p => p.nome_uc))];
+    return `<div class="item ${sel?.id === r.id ? "sel" : ""}" data-id="${r.id}">${iconeLegenda(iconeAereo(r.tipo), 22)}
+      <div><div class="t">${esc(r.nome)}${r.icao ? ` <span class="s">${esc(r.icao)}</span>` : ""}</div>
+      <div class="s">${TIPOS[r.tipo]}${r.municipio ? " · " + esc(r.municipio) : ""}</div>
+      <div>${ucs.length ? `<span class="tag uc" title="${esc(ucs.join(", "))}">${ucs.length === 1 ? esc(ucs[0]) : ucs.length + " UCs"}</span>` : ""}${r.situacao === "a_conferir" ? `<span class="tag conf">a conferir</span>` : ""}${r.situacao === "inativo" ? `<span class="tag ina">inativo</span>` : ""}${ASA(r.tipo) && r.recebe_at802 !== "nao_avaliado" ? `<span class="tag">AT-802: ${AT[r.recebe_at802].toLowerCase()}</span>` : ""}</div></div></div>`;
+  }).join("") + (fs.length > 600 ? `<p class="dica" style="padding:8px 12px">Mostrando 600 de ${fmtN(fs.length)}. Use a busca ou os filtros.</p>` : "")
+    + (!fs.length ? `<p class="dica" style="padding:8px 12px">Nada encontrado com esses filtros.</p>` : "");
+  $$(".item").forEach(el => el.onclick = () => abrir(+el.dataset.id, true));
+  desenharMapa(fs);
+}
+function desenharMapa(fs){
+  camada.clearLayers(); marcas.clear();
+  const lista = sel && !fs.some(r => r.id === sel.id) ? [...fs, sel] : fs;
+  lista.forEach(r => {
+    const s = sel?.id === r.id;
+    const m = L.marker([+r.lat, +r.lon], {icon: iconeMapa(iconeAereo(r.tipo), {tam: s ? 30 : 22, sel: s, situacao: r.situacao === "inativo" ? "inoperante" : r.situacao === "a_conferir" ? "parcial" : ""}),
+      title: r.nome, zIndexOffset: s ? 1000 : (USO.get(r.id) ? 100 : 0), draggable: s && pode})
+      .on("click", ev => { L.DomEvent.stop(ev); abrir(r.id, false); })
+      .on("dragend", ev => { const p = ev.target.getLatLng(); mudarCoord(p.lat, p.lng); });
+    m.bindTooltip(esc(r.nome), {direction:"top"});
+    m.addTo(camada); marcas.set(r.id, m);
+  });
+}
+
+/* ======================= ficha / edição ======================= */
+function abrir(id, centrar){
+  const r = id === "novo" ? temp : R.find(x => x.id === id); if (!r) return;
+  sel = r; $("#vLista").hidden = true; $("#ficha").hidden = false;
+  history.replaceState(null, "", id === "novo" ? location.pathname : "?id=" + id);
+  desenharFicha(r);
+  desenharMapa(filtrados());
+  if (centrar) mapa.setView([+r.lat, +r.lon], Math.max(mapa.getZoom(), 13));
+}
+function fechar(){
+  sel = null; temp = null; modoNovo = false; $("#aviso").hidden = true;
+  $("#ficha").hidden = true; $("#vLista").hidden = false; history.replaceState(null, "", location.pathname); desenharLista();
+}
+const opc = (O, v, vazio) => (vazio !== undefined ? `<option value="">${vazio}</option>` : "") + Object.entries(O).map(([k, t]) => `<option value="${k}" ${k === (v ?? "") ? "selected" : ""}>${t}</option>`).join("");
+function campo(k, rot, v, o = {}){
+  const d = pode ? "" : "disabled";
+  const el = o.sel ? `<select data-k="${k}" ${d}>${opc(o.sel, v, o.vazio)}</select>`
+    : o.area ? `<textarea data-k="${k}" rows="${o.area}" ${d}>${esc(v ?? "")}</textarea>`
+    : `<input data-k="${k}" value="${esc(v ?? "")}" ${o.num ? 'inputmode="decimal"' : ""} placeholder="${esc(o.ph || "")}" ${d}>`;
+  return `<div class="${o.todo ? "todo" : ""}"><label>${rot}</label>${el}${o.dica ? `<div class="dica">${o.dica}</div>` : ""}</div>`;
+}
+function desenharFicha(r){
+  const novo = !r.id, us = USO.get(r.id) || [], asa = ASA(r.tipo);
+  const ucs = [...new Map(us.map(p => [p.nome_uc, p])).values()];
+  const pip = (r.atributos || {}).pipcif || [];
+  $("#ficha").innerHTML = `<button class="voltar" id="voltar">← lista</button>
+    <h2>${novo ? "Novo lugar" : esc(r.nome)}</h2>
+    <div class="dica">${novo ? "Confira a posição no mapa (arraste o marcador) e preencha os dados." : `Fonte: ${FONTE[r.fonte]}${r.atualizado_por ? ` · última alteração por ${esc(r.atualizado_por)} em ${new Date(r.atualizado_em).toLocaleString("pt-BR")}` : ""}`}</div>
+    ${novo ? "" : `<fieldset><legend>Usado por</legend>${ucs.length ? ucs.map(p => `<div><a href="ucs.html?uc=${encodeURIComponent(p.nome_uc)}&mod=infraestrutura">${esc(p.nome_uc)}</a> <span class="dica">— no PIPCIF como “${esc(p.nome)}”</span></div>`).join("")
+      : `<div class="dica">Nenhuma UC aponta para este lugar ainda.</div>`}</fieldset>`}
+    <fieldset><legend>Identificação</legend><div class="grade">
+      ${campo("tipo", "Tipo", r.tipo, {sel: TIPOS, todo: true, dica: TIPOS_DICA[r.tipo] || ""})}
+      ${campo("nome", "Nome", r.nome, {todo: true})}
+      ${campo("apelidos", "Outros nomes (um por linha)", (r.apelidos || []).join("\n"), {area: 2, todo: true, dica: "Nomes usados nos PIPCIFs ou pela equipe; a busca encontra por eles."})}
+      ${campo("municipio", "Município", r.municipio)}
+      ${campo("situacao", "Situação", r.situacao, {sel: SIT})}
+      ${r.tipo.startsWith("aerodromo") || r.icao || r.ciad ? campo("icao", "Indicador ICAO", r.icao, {ph: "ex.: SBBH"}) + campo("ciad", "Código ANAC (CIAD)", r.ciad) : ""}
+    </div></fieldset>
+    <fieldset><legend>Localização</legend><div class="grade">
+      ${campo("lat", "Latitude", r.lat, {num: true, ph: "-19.85 ou 19°51'07\"S"})}
+      ${campo("lon", "Longitude", r.lon, {num: true, ph: "-43.95 ou 43°57'02\"O"})}
+      ${campo("elevacao_m", "Elevação (m)", r.elevacao_m, {num: true})}
+      ${r.tipo.startsWith("aerodromo") ? campo("operacao", "Operação (ANAC)", r.operacao, {ph: "VFR, IFR…"}) : ""}
+      ${pode ? `<div class="todo dica">Para mudar a posição, arraste o marcador no mapa ou digite a coordenada.</div>` : ""}
+    </div></fieldset>
+    <fieldset><legend>${asa ? "Pista" : "Área de pouso"}</legend><div class="grade">
+      ${campo("superficie", "Superfície", r.superficie, {sel: SUP, vazio: "não informada"})}
+      ${campo("conservacao", "Conservação", r.conservacao, {sel: CONS, vazio: "não informada"})}
+      ${campo("comprimento_m", asa ? "Comprimento (m)" : "Comprimento da área (m)", r.comprimento_m, {num: true})}
+      ${campo("largura_m", "Largura (m)", r.largura_m, {num: true})}
+    </div></fieldset>
+    <fieldset><legend>Operação no combate</legend><div class="grade">
+      ${asa ? campo("recebe_at802", "Recebe o Air Tractor AT-802?", r.recebe_at802, {sel: AT, todo: true}) : ""}
+      ${campo("agua", "Água para reabastecer", r.agua, {area: 2, todo: true, dica: "Reservatório, caminhão-pipa, hidrante, açude próximo… e de quem é."})}
+      ${campo("combustivel", "Combustível disponível", r.combustivel, {ph: "QAV, AvGas, nenhum…"})}
+      ${campo("noturno", "Operação noturna", r.noturno == null ? "" : String(r.noturno), {sel: {"true": "Sim", "false": "Não"}, vazio: "não informada"})}
+      ${campo("obs", "Observações", r.obs, {area: 3, todo: true})}
+    </div></fieldset>
+    ${pode ? `<div class="acoes"><button class="btn primario" id="salvar">${novo ? "Cadastrar" : "Salvar"}</button>
+      <button class="btn" id="cancelar">${novo ? "Cancelar" : "Desfazer"}</button>
+      ${novo ? "" : `<button class="btn perigo" id="excluir" style="margin-left:auto" ${us.length ? `disabled title="Há UCs usando este lugar: troque a ligação no módulo da UC antes de excluir"` : ""}>Excluir</button>`}</div>` : ""}
+    ${pip.length ? `<fieldset><legend>O que os PIPCIFs dizem</legend><table class="pip"><tr><th>UC</th><th>Nome</th><th>Dados</th></tr>
+      ${pip.map(p => `<tr><td>${esc(p.uc)}</td><td>${esc(p.nome)}</td><td>${esc([p.pavimentacao || p.piso, p.comprimento_m && p.comprimento_m + " m", p.largura_m && "larg. " + p.largura_m + " m", p.dimensoes, p.conservacao, p.reservatorio && "água: " + p.reservatorio].filter(Boolean).join(" · "))}</td></tr>`).join("")}</table>
+      <div class="dica">Registro do que veio de cada PIPCIF (não muda quando você edita acima).</div></fieldset>` : ""}
+    ${novo ? "" : `<fieldset><legend>Histórico</legend><div id="hist" class="dica">carregando…</div></fieldset>`}`;
+  $("#voltar").onclick = fechar;
+  if (pode){
+    $("#salvar").onclick = () => salvar(r);
+    $("#cancelar").onclick = () => novo ? fechar() : abrir(r.id, false);
+    $("#excluir") && ($("#excluir").onclick = () => excluir(r));
+    $("[data-k=tipo]").onchange = e => { let v; try{ v = coletar(); }catch(_){ v = {tipo: e.target.value}; } desenharFicha({...r, ...v, lat: v.lat ?? r.lat, lon: v.lon ?? r.lon}); };
+    ["lat", "lon"].forEach(k => $(`[data-k=${k}]`).onchange = () => { const la = lerCoord($("[data-k=lat]").value), lo = lerCoord($("[data-k=lon]").value);
+      if (la != null && lo != null && dentro(la, lo)) marcas.get(sel?.id)?.setLatLng([la, lo]); });
+  }
+  if (!novo) carregarHist(r.id);
+}
+function mudarCoord(la, lo){ const a = $("[data-k=lat]"), b = $("[data-k=lon]"); if (a && b){ a.value = la.toFixed(6); b.value = lo.toFixed(6); } }
+
+function coletar(){
+  const v = k => $(`[data-k=${k}]`)?.value;
+  const num = (k, int) => { let s = String(v(k) ?? "").trim(); if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, ""); s = s.replace(",", "."); if (!s) return null; const n = Number(s); if (!isFinite(n) || n < 0 && k !== "elevacao_m") throw new Error(`Valor inválido em ${k.replace("_m", "")}.`); return int ? Math.round(n) : n; };
+  const o = {};
+  const tem = k => $(`[data-k=${k}]`) != null;
+  o.tipo = v("tipo"); o.nome = String(v("nome") || "").trim();
+  o.apelidos = String(v("apelidos") || "").split("\n").map(s => s.trim()).filter(Boolean);
+  o.municipio = String(v("municipio") || "").trim() || null; o.situacao = v("situacao");
+  if (tem("icao")){ o.icao = String(v("icao") || "").trim().toUpperCase() || null; o.ciad = String(v("ciad") || "").trim().toUpperCase() || null; }
+  o.lat = lerCoord(v("lat")); o.lon = lerCoord(v("lon"));
+  o.elevacao_m = num("elevacao_m");
+  if (tem("operacao")) o.operacao = String(v("operacao") || "").trim() || null;
+  o.superficie = v("superficie") || null; o.conservacao = v("conservacao") || null;
+  o.comprimento_m = num("comprimento_m", true); o.largura_m = num("largura_m", true);
+  if (tem("recebe_at802")) o.recebe_at802 = v("recebe_at802");
+  o.agua = String(v("agua") || "").trim() || null; o.combustivel = String(v("combustivel") || "").trim() || null;
+  o.noturno = v("noturno") === "" ? null : v("noturno") === "true";
+  o.obs = String(v("obs") || "").trim() || null;
+  return o;
+}
+async function salvar(r){
+  let o;
+  try{ o = coletar(); }catch(e){ return msg(e.message, "erro"); }
+  if (!o.nome) return msg("Informe o nome.", "erro");
+  if (o.lat == null || o.lon == null || isNaN(o.lat) || isNaN(o.lon)) return msg("Coordenada inválida.", "erro");
+  if (!dentro(o.lat, o.lon)) return msg("A coordenada está fora de Minas Gerais.", "erro");
+  // mesmo lugar já cadastrado? (novo ou movido)
+  const moveu = !r.id || km(+r.lat, +r.lon, o.lat, o.lon) > 0.05;
+  if (moveu){
+    const perto = R.filter(x => x.id !== r.id && x.situacao !== "inativo").map(x => [x, km(o.lat, o.lon, +x.lat, +x.lon)]).filter(([, d]) => d < 1).sort((a, b) => a[1] - b[1]);
+    if (perto.length && !confirm(`Já existe “${perto[0][0].nome}” (${TIPOS[perto[0][0].tipo]}) a ${Math.round(perto[0][1] * 1000)} m daqui.\n\nSe for o mesmo lugar, cancele e acrescente o nome como apelido no cadastro existente.\n\nCadastrar mesmo assim?`)) return;
+  }
+  $("#salvar").disabled = true;
+  const res = r.id ? await sb.from("recurso_aereo").update(o).eq("id", r.id).select().single()
+                   : await sb.from("recurso_aereo").insert({...o, fonte: "campo"}).select().single();
+  $("#salvar") && ($("#salvar").disabled = false);
+  if (res.error) return msg("Não salvou: " + (res.error.message || JSON.stringify(res.error)), "erro", 9000);
+  const i = R.findIndex(x => x.id === res.data.id); if (i >= 0) R[i] = res.data; else R.push(res.data);
+  R.sort((a, b) => a.nome.localeCompare(b.nome, "pt"));
+  temp = null; modoNovo = false; $("#aviso").hidden = true;
+  msg(r.id ? "Salvo." : "Cadastrado.", "ok"); abrir(res.data.id, false);
+}
+async function excluir(r){
+  if ((USO.get(r.id) || []).length) return;
+  if (!confirm(`Excluir “${r.nome}” do cadastro?\n\nFica registrado no histórico. Se o lugar só deixou de ser usado, prefira mudar a situação para “Inativo”.`)) return;
+  const {error} = await sb.from("recurso_aereo").delete().eq("id", r.id);
+  if (error) return msg("Não excluiu: " + error.message, "erro", 9000);
+  R = R.filter(x => x.id !== r.id); msg("Excluído.", "ok"); fechar();
+}
+async function carregarHist(id){
+  const {data, error} = await sb.from("auditoria").select("quem,quando,operacao,campos,antes,depois").eq("tabela", "recurso_aereo").eq("chave", String(id)).order("quando", {ascending:false}).limit(40);
+  const el = $("#hist"); if (!el || sel?.id !== id) return;
+  if (error) return el.textContent = "Não foi possível ler o histórico.";
+  const fv = v => v == null || v === "" ? "—" : Array.isArray(v) ? v.join(", ") : typeof v === "object" ? JSON.stringify(v) : String(v);
+  el.innerHTML = (data || []).map(h => `<div class="hist"><b>${new Date(h.quando).toLocaleString("pt-BR")}</b> · ${esc(h.quem)} · ${esc(h.operacao)}
+    ${h.operacao === "alterar" ? `<br>${(h.campos || []).filter(c => c !== "atributos").map(c => `${esc(c)}: ${esc(fv(h.antes?.[c]))} → ${esc(fv(h.depois?.[c]))}`).join("<br>")}` : ""}</div>`).join("") || "Sem alterações registradas.";
+}
+
+/* ======================= novo lugar ======================= */
+function iniciarNovo(){
+  modoNovo = true; $("#aviso").textContent = "Clique no mapa onde fica o lugar (aproxime bem)"; $("#aviso").hidden = false;
+}
+function cliqueMapa(e){
+  if (!modoNovo || temp) return;
+  if (!dentro(e.latlng.lat, e.latlng.lng)) return msg("Fora de Minas Gerais.", "erro");
+  $("#aviso").hidden = true;
+  temp = {id: null, tipo: "pista_nao_registrada", nome: "", apelidos: [], lat: +e.latlng.lat.toFixed(6), lon: +e.latlng.lng.toFixed(6),
+          situacao: "ativo", recebe_at802: "nao_avaliado", fonte: "campo", atributos: {}};
+  abrir("novo", false);
+  marcas.get(null)?.dragging?.enable();
+}
+</script>
+</body>
+</html>

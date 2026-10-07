@@ -36,7 +36,8 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | `painel_uc.html` | Painel da UC (indicadores, mapa; inclui a camada de risco) |
 | `ucs.html` + `pipcif_modulos.js` + `modulos_uc.js` | Cadastro da UC em módulos (1 Cadastro, 2 Infraestrutura, 3 Recursos, 4 Rede de apoio, 5 Atividades preventivas, 6 Mapa de risco, 7 Plano operacional — em breve) |
 | `risco_mapa.js` + `modulo_risco.js` | Módulo 6: mapa de risco, conferência do gerente, seção 14 do PIPCIF |
-| `mapa.html` | **Geo Colibri**: visualizador de todas as camadas do banco (só logados), filtro por ano, fichas, exportação GeoJSON/KML/CSV; camada do Inventário Florestal (desligada por padrão, por caixa a partir do zoom 11) |
+| `apoio_aereo.html` | Cadastro único de apoio aéreo (`recurso_aereo`: aeródromos do IDE-Sisema + pistas/helipontos/áreas de pouso dos PIPCIFs; `uc_ponto.recurso_id` liga a UC). Lista com revisão, mapa, edição só Previncêndio, histórico. Carga inicial no pacote privado |
+| `mapa.html` | **Geo Colibri**: visualizador de todas as camadas do banco (só logados), filtro por ano, fichas, exportação GeoJSON/KML/CSV; camada do Inventário Florestal (desligada por padrão, por caixa a partir do zoom 11); camada única "Apoio aéreo" (recurso_aereo) no lugar de pistas/helipontos |
 | `pipcif_importar.html` | Importa PIPCIFs convertidos (JSON) e mapas de risco (`formato: "colibri-risco-1"`) |
 | `manual.html` | Manual do usuário (atualize junto com cada função nova) |
 | `icones_mapa.js` | Ícones SVG dos mapas (`iconeMapa`, `iconeLegenda`, `ICONES_ROTULO`) |
@@ -73,7 +74,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 
 ## Estado atual e próximos passos (atualizado em 07/10/2026)
 
-Feito: ROI/RI/Sala/Técnica/BDG/SMC; cadastro das UCs módulos 1–5 com PIPCIF 2026 de ~30 UCs; importador de ROIs em PDF; módulo 6 (mapa de risco — protótipo só da Serra do Cabral, com conferência do gerente e seção 14); Geo Colibri (visualizador, sem IDE-Sisema por decisão do Rodolfo); empenho padronizado (catálogo de 140 instituições em 13 categorias; Sala por dia sem turnos; ROI 2.2 nova pré-preenchida pela Sala; pacote do BDG com colunas-resumo emp_*, CSV do empenho e GeoPackage).
+Feito: ROI/RI/Sala/Técnica/BDG/SMC; cadastro das UCs módulos 1–5 com PIPCIF 2026 de ~30 UCs; importador de ROIs em PDF; módulo 6 (mapa de risco — protótipo só da Serra do Cabral, com conferência do gerente e seção 14); Geo Colibri (visualizador, sem IDE-Sisema por decisão do Rodolfo); empenho padronizado (catálogo de 140 instituições em 13 categorias; Sala por dia sem turnos; ROI 2.2 nova pré-preenchida pela Sala; pacote do BDG com colunas-resumo emp_*, CSV do empenho e GeoPackage); vegetação do ROI pelo Inventário Florestal; cadastro único de apoio aéreo (tela + camada no Geo Colibri).
 
 Próximos (sem ordem fixa):
 - Mapa de risco das demais UCs (mesma receita; atualização anual).
@@ -83,6 +84,7 @@ Próximos (sem ordem fixa):
 - Módulo 7 (Plano operacional); PIPCIF como relatório gerado dos módulos.
 - Empenho: revisão/migração dos textos de 2026 no fim da temporada; exportação em lote do BDG com o empenho (hoje é por ROI); favoritas da UC também a partir dos parceiros do PIPCIF; conferir as pendentes no catálogo.
 - Carregar os PIPCIFs restantes (~53 UCs) e depois o catálogo único de recursos compartilhados (Pampulha, mirantes entre UCs). Corrigir `pipcif_ano` de Pau Furado.
+- Apoio aéreo: revisar as 99 áreas de pouso "a conferir" e a pista de Itamarandiba; excluir de vez os 52 aeródromos fora de MG (hoje inativos; o MCP não executa DELETE); módulo 2 da UC mostrando os pontos próximos (`recursos_aereos_perto`) e ligando novos pontos ao cadastro.
 - Geo Colibri: Shapefile/GeoPackage, desenhar área para exportar, régua, exportar risco.
 
 ## Backup (responsabilidade do Rodolfo)

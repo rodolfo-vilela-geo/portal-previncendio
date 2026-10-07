@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="icones_mapa.js?v=20261001d"></script>
+<script src="icones_mapa.js?v=20261007b"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
 <style>
   :root{
@@ -110,6 +110,7 @@
   .base button span{position:absolute;inset:auto 0 0 0;font-size:11px;font-weight:600;background:#000a;color:#fff;padding:1px 0}
   .base button[aria-pressed=true]{border-color:var(--bf)}
   #coord{position:absolute;right:10px;bottom:48px;z-index:1000;background:#0e2219e6;border:1px solid var(--trilha);border-radius:8px;padding:4px 9px;font-size:12px;color:var(--liquen);font-variant-numeric:tabular-nums;pointer-events:none}
+  .leg-aereo label{display:flex;align-items:center;gap:4px;font-size:12px;margin:2px 0;cursor:pointer} .extra .leg-aereo input{width:auto;margin:0 3px 0 0}
   .leg-veg{display:flex;flex-wrap:wrap;gap:3px 10px;padding:2px 8px 8px 34px;font-size:11.5px;opacity:.9}
   .leg-veg span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap} .leg-veg i{width:10px;height:10px;border-radius:2px;display:inline-block}
   #aviso{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:#2a1a0e;border:1px solid #6b3d16;color:#ffd7ad;border-radius:99px;padding:5px 14px;font-size:13px}
@@ -285,6 +286,13 @@ const GRUPOS = [
   {id:"prevencao", nome:"Prevenção"},
   {id:"apoio", nome:"Rede de apoio"}
 ];
+/* apoio aéreo (recurso_aereo): grupos do filtro e rótulos */
+const AEREO_GR = [["aero", "Aeródromos públicos e militares", "aerodromo"], ["priv", "Aeródromos privados", "aerodromo_privado"], ["pista", "Pistas não registradas", "pista_terra"], ["heli", "Helipontos", "heliponto"], ["pouso", "Áreas de pouso eventuais", "pouso"]];
+const AEREO_K = t => ({aerodromo_publico:"aero", aerodromo_militar:"aero", aerodromo_privado:"priv", pista_nao_registrada:"pista", heliponto:"heli", area_pouso:"pouso"})[t];
+const AEREO_ON = new Set(AEREO_GR.map(g => g[0]));
+const AEREO_TIPO = {aerodromo_publico:"Aeródromo público", aerodromo_privado:"Aeródromo privado", aerodromo_militar:"Aeródromo militar", pista_nao_registrada:"Pista não registrada", heliponto:"Heliponto", area_pouso:"Área de pouso eventual"};
+const AEREO_CAP = v => v ? v[0].toUpperCase() + v.slice(1) : "";
+const AEREO_AT = {nao_avaliado:"não avaliado", sim:"sim", com_restricao:"com restrição", nao:"não"};
 const CAMADAS = [
   {id:"mg", g:"limites", nome:"Minas Gerais", nota:"limite do estado", sb: sbArea("#f4f1e6", null), ligada:true, tipo:"poli",
    carregar: async () => { const d = await fetch("dados/mg.geojson").then(r => r.json()); const fs = d.type === "FeatureCollection" ? d.features : [d];
@@ -317,7 +325,7 @@ const CAMADAS = [
    carregar: async () => (await tabela("uc_cadastro", "nome_uc,sede_lat,sede_lon,sede_municipio", q => q.not("sede_lat", "is", null)))
      .map(r => pt(r.sede_lon, r.sede_lat, {_t:"Sede · " + r.nome_uc, nome_uc:r.nome_uc, municipio:r.sede_municipio})),
    ficha: p => ({linhas:[["Município", p.municipio]], links:[["Cadastro", linkMod(p.nome_uc, "cadastro")]]})},
-  ...[["vigilancia","Torres e postos de observação"],["pista","Pistas de pouso"],["heliponto","Helipontos"],["estacao","Estações meteorológicas"],["agua","Pontos de água"]].map(([t, nome]) => (
+  ...[["vigilancia","Torres e postos de observação"],["estacao","Estações meteorológicas"],["agua","Pontos de água"]].map(([t, nome]) => (
   {id:t, g:"estrutura", nome, sb: sbIcone(t), tipo:"ponto", icone:t, fonte:"pontos",
    carregar: async () => (await pontosUC()).filter(r => r.tipo === t)
      .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, situacao:r.situacao, altitude_m:r.altitude_m, ponto_ref:r.ponto_ref, obs:r.obs, _icone: tipoIcone(r.tipo, r.atributos)})),
@@ -325,7 +333,7 @@ const CAMADAS = [
   {id:"radios", g:"estrutura", nome:"Repetidoras e rádios fixos", sb: sbIcone("antena"), tipo:"ponto", icone:"antena",
    carregar: async () => (await tabela("uc_radio", "nome_uc,origem,tipo,nome,quantidade,conservacao,lat,lon,obs", q => q.not("lat", "is", null)))
      .map(r => pt(r.lon, r.lat, {_t:r.nome || "Rádio", nome_uc:r.nome_uc, tipo:r.tipo, origem:r.origem, quantidade:r.quantidade, conservacao:r.conservacao, obs:r.obs, _icone: r.tipo === "repetidora" ? "antena" : "radio"})),
-   ficha: p => ({linhas:[["Tipo", p.tipo], ["De", p.origem === "uc" ? "UC" : "parceiro"], ["Conservação", p.conservacao], ["Observação", p.obs]], links:[["Recursos", linkMod(p.nome_uc, "recursos")]]})},
+   ficha: p => ({linhas:[["Tipo", p.tipo], ["De", p.origem === "uc" ? "UC" : "parceiro"], ["Conservação", AEREO_CAP(p.conservacao)], ["Observação", p.obs]], links:[["Recursos", linkMod(p.nome_uc, "recursos")]]})},
 
   ...[["aceiro","Aceiros","#ff9f1c"],["estrada","Estradas","#ffe066"],["trilha","Trilhas","#5ce1e6"]].map(([t, nome, cor]) => (
   {id:t, g:"prevencao", nome, sb: sbLinha(cor), tipo:"linha", cor,
@@ -345,6 +353,19 @@ const CAMADAS = [
      .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, tipo:r.tipo, propriedade:r.propriedade, municipio:r.municipio, area_ha:r.area_ha, situacao:r.situacao})),
    ficha: p => ({linhas:[["Tipo", p.tipo], ["Propriedade", p.propriedade], ["Município", p.municipio], ["Área", fmtHa(p.area_ha)], ["Situação", p.situacao]], links:[["Atividades preventivas", linkMod(p.nome_uc, "prevencao")]]})},
 
+  {id:"aereo", g:"apoio", nome:"Apoio aéreo", nota:"aeródromos, pistas, helipontos e áreas de pouso · cadastro único", sb: sbIcone("aerodromo"), tipo:"ponto", icone:"aerodromo",
+   extra: `<div class="leg-aereo" data-legaereo hidden>${AEREO_GR.map(([k, t, ic]) => `<label><input type="checkbox" data-aereo="${k}" checked>${iconeLegenda(ic, 15)}${t}</label>`).join("")}</div>`,
+   filtro: f => AEREO_ON.has(AEREO_K(f.properties.tipo)),
+   carregar: async () => {
+     const [rs, ps] = await Promise.all([tabela("recurso_aereo", "id,tipo,nome,apelidos,icao,municipio,lat,lon,superficie,comprimento_m,largura_m,conservacao,recebe_at802,agua,combustivel,situacao", q => q.neq("situacao", "inativo")), pontosUC()]);
+     const uso = new Map(); ps.forEach(p => { if (p.recurso_id){ const s = uso.get(p.recurso_id) || new Set(); s.add(p.nome_uc); uso.set(p.recurso_id, s); } });
+     return rs.map(r => pt(r.lon, r.lat, {...r, _t: r.nome, ucs: [...(uso.get(r.id) || [])].sort().join(", "), _icone: iconeAereo(r.tipo)})); },
+   ficha: p => ({linhas:[["Tipo", AEREO_TIPO[p.tipo]], ["ICAO", p.icao], ["Município", p.municipio], ["Outros nomes", (p.apelidos || []).join("; ")],
+       ["Superfície", AEREO_CAP(p.superficie)], ["Dimensões", p.comprimento_m ? `${fmtN(p.comprimento_m)} m${p.largura_m ? " × " + p.largura_m + " m" : ""}` : ""], ["Conservação", AEREO_CAP(p.conservacao)],
+       ["Recebe AT-802", /^aerodromo|pista/.test(p.tipo) ? AEREO_AT[p.recebe_at802] : ""], ["Água", p.agua], ["Combustível", p.combustivel],
+       ["Situação", p.situacao === "a_conferir" ? "a conferir" : ""], ["Usado pelas UCs", p.ucs]],
+     links:[["Abrir no cadastro de apoio aéreo", "apoio_aereo.html?id=" + p.id]]})},
+
   {id:"parceiros", g:"apoio", nome:"Parceiros", sb: sbIcone("parceiro"), tipo:"ponto", icone:"parceiro",
    carregar: async () => (await tabela("uc_parceiro", "nome_uc,tipo,nome,municipio,ponto_ref,apoios,lat,lon", q => q.not("lat", "is", null)))
      .map(r => pt(r.lon, r.lat, {_t:r.nome, nome_uc:r.nome_uc, tipo:r.tipo, municipio:r.municipio, ponto_ref:r.ponto_ref, apoios: Array.isArray(r.apoios) ? r.apoios.join(", ") : r.apoios})),
@@ -360,11 +381,12 @@ const CAMADAS = [
 
 ];
 const C = Object.fromEntries(CAMADAS.map(c => [c.id, c]));
+$("#grupos")?.addEventListener("change", e => { const k = e.target.dataset?.aereo; if (!k) return; e.target.checked ? AEREO_ON.add(k) : AEREO_ON.delete(k); if (C.aereo.ativa && C.aereo.feats) desenhar(C.aereo); });
 
 /* ======================= dados compartilhados ======================= */
 let _lim, _pontos, _vias;
 const limites = () => _lim ||= sb.rpc("geo_limites", {p_tol: 0.0006}).then(r => { if (r.error) throw r.error; return LIM = r.data || []; });
-const pontosUC = () => _pontos ||= tabela("uc_ponto", "nome_uc,tipo,nome,lat,lon,altitude_m,ponto_ref,situacao,atributos,obs", q => q.not("lat", "is", null));
+const pontosUC = () => _pontos ||= tabela("uc_ponto", "nome_uc,tipo,nome,lat,lon,altitude_m,ponto_ref,situacao,atributos,obs,recurso_id", q => q.not("lat", "is", null));
 const vias = () => _vias ||= tabela("uc_via", "nome_uc,tipo,nome,condicao,comprimento_m,compr_mapa_m,largura_m,manutencao,tracado_origem,geojson,obs");
 
 /* ======================= login ======================= */
@@ -443,6 +465,7 @@ function desligar(id){ const c = C[id]; if (c.layer) mapa.removeLayer(c.layer); 
 async function ligar(id, on){
   const c = C[id], row = $(`[data-c="${id}"]`);
   if (id === "vegetacao") $("[data-legveg]").hidden = !on;
+  if (id === "aereo") $("[data-legaereo]").hidden = !on;
   if (!on){ desligar(id); contarGrupos(); salvarHash(); if (id === "queimadas" || id === "vegetacao") $("#aviso").hidden = true; return; }
   c.ativa = true; contarGrupos(); salvarHash();
   try{
@@ -461,6 +484,7 @@ function desenhar(c){
   if (c.layer) mapa.removeLayer(c.layer);
   let fs = c.feats;
   if (c.filtroAno) fs = fs.filter(f => f.properties.ano >= ANOS[0] && f.properties.ano <= ANOS[1]);
+  if (c.filtro) fs = fs.filter(c.filtro);
   if (ucFoco && c.tipo !== "poli") {} // foco só enquadra; não esconde o restante
   let layer;
   if (c.tipo === "ocorr"){
