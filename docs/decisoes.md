@@ -39,7 +39,7 @@ Registro das escolhas feitas com o Rodolfo, para não serem rediscutidas nem des
 - pdf.js hospedado no próprio site (o cdnjs é bloqueado em computadores do Estado).
 
 ## Empenho de recursos (pessoas, veículos, aeronaves) — decisões de 07/10/2026
-- Cadastro único de empenho (categorias → instituições → tipos de recurso), usado pelo RI e pelo ROI; o ROI registra por dia e turno, como o RI, e o PDF segue essa lógica.
+- Cadastro único de empenho (categorias → instituições → tipos de recurso), usado pelo RI e pelo ROI; o ROI registra por dia (hora de início e fim), como o RI, e o PDF segue essa lógica.
 - Vale a partir de 2027; 2026 só para testes; migração/revisão dos textos de 2026 no fim da temporada.
 - Histórico 2013–2025 fica no nível de categoria (as colunas antigas do ROI); não se tenta inferir instituição.
 - Categorias novas podem ser separadas (municípios, empresas, órgãos públicos etc.), mas cada uma soma numa coluna antiga para manter a série.
@@ -50,3 +50,4 @@ Registro das escolhas feitas com o Rodolfo, para não serem rediscutidas nem des
 - Respostas do quadro (07/10/2026): Gerente da UC em categoria própria (separado dos funcionários); FTP mantém o nome "Brigada Previncêndio (FTP)" (hoje contratada via CBMMG); IEF de outras UCs/URFBio em categoria própria; COMAVE na Polícia Militar; só a Brigada CFM AMDA/Previncêndio é CFM — bases AMDA que atendem empresas contam como da empresa (AMDA como operadora, em observação); brigada de empresa operada por terceira = empresa como instituição, operadora em observação; estatais = Empresas; uma prefeitura por município; voluntário avulso = "Voluntários sem organização"; veículos e aeronaves sempre ligados à instituição; pessoas só por quantidade; empenho por dia com hora de início e fim (sem turnos); comunidade e particulares em categoria própria.
 - Aeronaves: desde 2024 há dois contratos — aeronaves CFM (contratadas pelo IEF via Vale) e aeronaves FTP (contratadas pelo CBMMG); registrar o contrato da aeronave.
 - Catálogo consolidado: 189 nomes viraram ~140 instituições. EPAMIG = Empresa. Brigada AMDA (Arêdes) e AMDA – UOpSV = CFM. AMDA Congonhas, Metropolitana, Barão de Cocais e AMDA/Voluntários = brigadas vinculadas a empresas contratantes (Empresas). AMDA como associação = parceiro (ONG).
+- Catálogo carregado no Supabase em 07/10/2026: 139 instituições ativas; antigas bases AMDA/Vale, AMDA/Gerdau e AMDA Congonhas foram juntadas (ficam inativas com "(juntada)" no nome).
