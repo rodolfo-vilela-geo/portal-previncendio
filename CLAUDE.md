@@ -36,7 +36,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | `painel_uc.html` | Painel da UC (indicadores, mapa; inclui a camada de risco) |
 | `ucs.html` + `pipcif_modulos.js` + `modulos_uc.js` | Cadastro da UC em módulos (1 Cadastro, 2 Infraestrutura, 3 Recursos, 4 Rede de apoio, 5 Atividades preventivas, 6 Mapa de risco, 7 Plano operacional — em breve) |
 | `risco_mapa.js` + `modulo_risco.js` | Módulo 6: mapa de risco, conferência do gerente, seção 14 do PIPCIF |
-| `mapa.html` | **Geo Colibri**: visualizador de todas as camadas do banco (só logados), filtro por ano, fichas, exportação GeoJSON/KML/CSV |
+| `mapa.html` | **Geo Colibri**: visualizador de todas as camadas do banco (só logados), filtro por ano, fichas, exportação GeoJSON/KML/CSV; camada do Inventário Florestal (desligada por padrão, por caixa a partir do zoom 11) |
 | `pipcif_importar.html` | Importa PIPCIFs convertidos (JSON) e mapas de risco (`formato: "colibri-risco-1"`) |
 | `manual.html` | Manual do usuário (atualize junto com cada função nova) |
 | `icones_mapa.js` | Ícones SVG dos mapas (`iconeMapa`, `iconeLegenda`, `ICONES_ROTULO`) |

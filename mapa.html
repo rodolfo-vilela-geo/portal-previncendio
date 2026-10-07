@@ -110,6 +110,8 @@
   .base button span{position:absolute;inset:auto 0 0 0;font-size:11px;font-weight:600;background:#000a;color:#fff;padding:1px 0}
   .base button[aria-pressed=true]{border-color:var(--bf)}
   #coord{position:absolute;right:10px;bottom:48px;z-index:1000;background:#0e2219e6;border:1px solid var(--trilha);border-radius:8px;padding:4px 9px;font-size:12px;color:var(--liquen);font-variant-numeric:tabular-nums;pointer-events:none}
+  .leg-veg{display:flex;flex-wrap:wrap;gap:3px 10px;padding:2px 8px 8px 34px;font-size:11.5px;opacity:.9}
+  .leg-veg span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap} .leg-veg i{width:10px;height:10px;border-radius:2px;display:inline-block}
   #aviso{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:#2a1a0e;border:1px solid #6b3d16;color:#ffd7ad;border-radius:99px;padding:5px 14px;font-size:13px}
   #abrirPainel{display:none;position:absolute;left:12px;top:12px;z-index:1000}
 
@@ -263,9 +265,22 @@ const pt = (lon, lat, props) => ({type:"Feature", geometry:{type:"Point", coordi
 async function tabela(tab, campos, filtro = q => q){ const {data, error} = await filtro(sb.from(tab).select(campos)).limit(5000); if (error) throw error; return data || []; }
 const linkMod = (uc, mod) => uc ? `ucs.html?uc=${encodeURIComponent(uc)}&mod=${mod}` : null;
 
+/* Inventário Florestal: cor por classe (class_id 1–17) */
+const VEG_COR = {1:"#0b5d2a", 2:"#0b5d2a", 3:"#0b5d2a", 4:"#2f8f3a", 5:"#2f8f3a", 6:"#8a9a2b", 7:"#8a9a2b", 8:"#e8d77a", 9:"#c9a4d9",
+  10:"#d8c25a", 11:"#b5a33a", 12:"#6f7d1f", 13:"#43b3a6", 14:"#9e6b4a", 15:"#9e6b4a", 16:"#3d7fd1", 17:"#8d8d8d"};
+const VEG_NOME = {1:"Floresta ombrófila submontana", 2:"Floresta ombrófila montana", 3:"Floresta ombrófila alto-montana", 4:"Floresta estacional semidecidual submontana",
+  5:"Floresta estacional semidecidual montana", 6:"Floresta estacional decidual submontana", 7:"Floresta estacional decidual montana", 8:"Campo", 9:"Campo rupestre",
+  10:"Campo cerrado", 11:"Cerrado", 12:"Cerradão", 13:"Vereda", 14:"Eucalipto", 15:"Pinus", 16:"Água", 17:"Urbanização"};
+const VEG_LEG = [["#0b5d2a","Fl. ombrófila"],["#2f8f3a","Fl. semidecidual"],["#8a9a2b","Fl. decidual"],["#6f7d1f","Cerradão"],["#b5a33a","Cerrado"],
+  ["#d8c25a","Campo cerrado"],["#e8d77a","Campo"],["#c9a4d9","Campo rupestre"],["#43b3a6","Vereda"],["#9e6b4a","Eucalipto / pinus"],["#3d7fd1","Água"],["#8d8d8d","Urbanização"]];
+function sbVeg(){ return `<svg viewBox="0 0 18 18" width="18" height="18"><rect x="1" y="1" width="8" height="8" fill="#2f8f3a"/><rect x="9" y="1" width="8" height="8" fill="#d8c25a"/><rect x="1" y="9" width="8" height="8" fill="#c9a4d9"/><rect x="9" y="9" width="8" height="8" fill="#b5a33a"/></svg>`; }
+const VEG_ROI = {1:"Floresta Ombrófila", 2:"Floresta Ombrófila", 3:"Floresta Ombrófila", 4:"Floresta Estacional Semidecidual", 5:"Floresta Estacional Semidecidual",
+  6:"Floresta Estacional Decidual", 7:"Floresta Estacional Decidual", 8:"Campo", 9:"Campo Rupestre", 10:"Campo cerrado", 11:"Cerrado sensu stricto", 12:"Cerradão",
+  13:"Vereda", 14:"Área antrópica", 15:"Área antrópica", 16:"Outros (água)", 17:"Área antrópica"};
 const GRUPOS = [
   {id:"limites", nome:"Limites", aberto:true},
   {id:"fogo", nome:"Fogo e risco", aberto:true},
+  {id:"ambiente", nome:"Vegetação"},
   {id:"estrutura", nome:"Estrutura das UCs"},
   {id:"prevencao", nome:"Prevenção"},
   {id:"apoio", nome:"Rede de apoio"}
@@ -294,6 +309,8 @@ const CAMADAS = [
    carregar: async () => OCORR.map(o => pt(o[0], o[1], {_t: o[3] ? "Ocorrência " + o[3] : `RI ${o[8]}/${o[2]}`, cod_bdp:o[3], ano:o[2], nome_uc:o[4], area_ha:o[5], poligono:o[6] ? "sim" : "não", origem:o[7], ri:o[8]})),
    filtroAno: true},
   {id:"queimadas", g:"fogo", nome:"Áreas queimadas (BDG)", nota:"aparecem ao aproximar o mapa", sb: sbArea("#ff5a1f", "#ff5a1f"), tipo:"queimadas", filtroAno:true},
+  {id:"vegetacao", g:"ambiente", nome:"Inventário Florestal de MG", nota:"IDE-Sisema · UCs, ZAs e 5 km · aparece ao aproximar", sb: sbVeg(), tipo:"vegetacao",
+   extra: `<div class="leg-veg" data-legveg hidden>${VEG_LEG.map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join("")}</div>`},
   {id:"risco", g:"fogo", nome:"Mapa de risco", nota:"protótipo · UCs com mapa gerado", sb: sbRisco(), tipo:"risco"},
 
   {id:"sede", g:"estrutura", nome:"Sedes", sb: sbIcone("sede"), tipo:"ponto", icone:"sede",
@@ -383,13 +400,13 @@ async function iniciar(){
   mapa = L.map("mapa", {zoomControl:false, preferCanvas:false, zoomSnap:.5, minZoom:5}).setView(h.v ? [h.v[1], h.v[2]] : [-18.6, -44.6], h.v ? h.v[0] : 6.5);
   L.control.zoom({position:"topright"}).addTo(mapa);
   L.control.scale({imperial:false, position:"bottomright"}).addTo(mapa);
-  mapa.createPane("limites").style.zIndex = 410; mapa.createPane("queim").style.zIndex = 420; mapa.createPane("linhas").style.zIndex = 430; mapa.createPane("pontos").style.zIndex = 440;
+  mapa.createPane("veg").style.zIndex = 405; mapa.createPane("limites").style.zIndex = 410; mapa.createPane("queim").style.zIndex = 420; mapa.createPane("linhas").style.zIndex = 430; mapa.createPane("pontos").style.zIndex = 440;
   $("#bases").innerHTML = Object.entries(BASES).map(([k, b]) => `<button type="button" data-k="${k}" aria-pressed="false" style="background-image:url('${b.amostra}')" title="Mapa de fundo: ${b.nome}"><span>${b.nome}</span></button>`).join("");
   $$("#bases button").forEach(b => b.onclick = () => trocarBase(b.dataset.k));
   trocarBase(h.b && BASES[h.b] ? h.b : "sat");
   mapa.on("mousemove", e => { const z = Math.floor((e.latlng.lng + 180) / 6) + 1, [x, y] = RiscoMapa.llParaUTM(e.latlng.lat, e.latlng.lng, z);
     $("#coord").textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}  ·  UTM ${z}S ${Math.round(x).toLocaleString("pt-BR")} E ${Math.round(y).toLocaleString("pt-BR")} N`; });
-  mapa.on("moveend", () => { salvarHash(); if (ligada("queimadas")) queimadasAtualizar(); });
+  mapa.on("moveend", () => { salvarHash(); if (ligada("queimadas")) queimadasAtualizar(); if (ligada("vegetacao")) vegetacaoAtualizar(); });
   mapa.on("click", e => cliqueMapa(e));
 
   montarPainel(h.c);
@@ -425,11 +442,13 @@ function desligar(id){ const c = C[id]; if (c.layer) mapa.removeLayer(c.layer); 
 
 async function ligar(id, on){
   const c = C[id], row = $(`[data-c="${id}"]`);
-  if (!on){ desligar(id); contarGrupos(); salvarHash(); if (id === "queimadas") $("#aviso").hidden = true; return; }
+  if (id === "vegetacao") $("[data-legveg]").hidden = !on;
+  if (!on){ desligar(id); contarGrupos(); salvarHash(); if (id === "queimadas" || id === "vegetacao") $("#aviso").hidden = true; return; }
   c.ativa = true; contarGrupos(); salvarHash();
   try{
     row?.classList.add("carregando");
     if (c.tipo === "queimadas"){ c.layer ||= L.layerGroup(); c.layer.addTo(mapa); queimadasAtualizar(); return; }
+    if (c.tipo === "vegetacao"){ c.layer ||= L.layerGroup(); c.layer.addTo(mapa); vegetacaoAtualizar(); return; }
     if (c.tipo === "risco"){ await riscoLigar(c); return; }
     if (!c.feats) c.feats = await c.carregar();
     desenhar(c);
@@ -464,7 +483,7 @@ function desenhar(c){
 /* polígonos e limites não capturam clique (ficam por baixo dos pontos): o clique no mapa procura o polígono */
 function cliqueMapa(e){
   if (window._riscoClique && window._riscoClique(e)) return;
-  for (const id of ["queimadas", "ucs", "za", "municipios"]){
+  for (const id of ["queimadas", "vegetacao", "ucs", "za", "municipios"]){
     const c = C[id]; if (!c.ativa) continue;
     const fs = id === "queimadas" ? c.vis || [] : c.vis || [];
     const f = fs.find(f => contem(f.geometry, e.latlng.lng, e.latlng.lat));
@@ -501,6 +520,30 @@ function queimadasAtualizar(){
   }, 250);
 }
 
+/* ======================= Inventário Florestal (por caixa, a partir do zoom 11) ======================= */
+let tV = null, reqV = 0, rendV = null;
+function vegetacaoAtualizar(){
+  clearTimeout(tV);
+  tV = setTimeout(async () => {
+    const c = C.vegetacao, z = mapa.getZoom();
+    if (!c.ativa) return;
+    if (z < 11){ c.layer.clearLayers(); c.vis = []; $("#aviso").textContent = "Aproxime o mapa para ver o Inventário Florestal"; $("#aviso").hidden = false; $(`[data-qt="vegetacao"]`).textContent = ""; return; }
+    if (!ligada("queimadas") || mapa.getZoom() >= 10) $("#aviso").hidden = true;
+    const b = mapa.getBounds().pad(.1), meu = ++reqV, tol = 0.00004 * Math.pow(2, 14 - z);
+    $(`[data-c="vegetacao"]`)?.classList.add("carregando");
+    const {data, error} = await sb.rpc("geo_vegetacao", {x0:b.getWest(), y0:b.getSouth(), x1:b.getEast(), y1:b.getNorth(), p_tol:tol, p_lim:6000});
+    $(`[data-c="vegetacao"]`)?.classList.remove("carregando");
+    if (meu !== reqV || !c.ativa) return;
+    if (error) return msg("Inventário Florestal: " + error.message, "erro");
+    const fs = (data || []).filter(r => r.g).map(r => ({type:"Feature", geometry:r.g, properties:{_t: VEG_NOME[r.c] || "Classe " + r.c, classe:r.c, ha:r.ha}}));
+    rendV ||= L.canvas({pane:"veg"});
+    c.layer.clearLayers();
+    L.geoJSON({type:"FeatureCollection", features: fs}, {pane:"veg", renderer: rendV, interactive:false,
+      style: f => ({color: VEG_COR[f.properties.classe] || "#999", weight:.4, opacity:.9, fillColor: VEG_COR[f.properties.classe] || "#999", fillOpacity:.55})}).addTo(c.layer);
+    c.vis = fs; $(`[data-qt="vegetacao"]`).textContent = fmtN(fs.length) + (fs.length >= 6000 ? "+" : "");
+  }, 300);
+}
+
 /* ======================= mapa de risco ======================= */
 async function riscoLigar(c){
   if (!c.layer){
@@ -527,6 +570,8 @@ function abrirFicha(c, f){
   const p = f.properties, d = c.ficha ? c.ficha(p) : {linhas:[]};
   const sub = [c.nome, p.nome_uc && c.id !== "ucs" ? p.nome_uc : ""].filter(Boolean).join(" · ");
   if (c.id === "ocorr" || c.id === "queimadas") return fichaOcorrencia(c, p);
+  if (c.id === "vegetacao") return mostrarFicha({sb: `<svg viewBox="0 0 18 18" width="18" height="18"><rect x="1" y="1" width="16" height="16" rx="3" fill="${VEG_COR[p.classe]}"/></svg>`,
+    titulo: p._t, sub: "Inventário Florestal de MG (IDE-Sisema)", linhas: [["Área do polígono", fmtHa(p.ha)], ["No ROI entra como", VEG_ROI[p.classe] || "—"]]});
   mostrarFicha({sb: p._icone ? sbIcone(p._icone) : c.sb, titulo: p._t, sub, linhas: d.linhas, links: d.links});
 }
 async function fichaOcorrencia(c, p){
