@@ -74,7 +74,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 
 ## Estado atual e próximos passos (atualizado em 07/10/2026)
 
-Feito: ROI/RI/Sala/Técnica/BDG/SMC; cadastro das UCs módulos 1–5 com PIPCIF 2026 de ~30 UCs; importador de ROIs em PDF; módulo 6 (mapa de risco — protótipo só da Serra do Cabral, com conferência do gerente e seção 14); Geo Colibri (visualizador, sem IDE-Sisema por decisão do Rodolfo); empenho padronizado (catálogo de 140 instituições em 13 categorias; Sala por dia sem turnos; ROI 2.2 nova pré-preenchida pela Sala; pacote do BDG com colunas-resumo emp_*, CSV do empenho e GeoPackage); vegetação do ROI pelo Inventário Florestal; cadastro único de apoio aéreo (tela + camada no Geo Colibri).
+Feito: ROI/RI/Sala/Técnica/BDG/SMC; cadastro das UCs módulos 1–5 com PIPCIF 2026 de ~30 UCs (+5 PIPCIFs 2025 da Zona da Mata convertidos em 07/10/2026: Ibitipoca, Serra do Brigadeiro, Serra Negra da Mantiqueira, Água Limpa, Mar de Espanha); importador de ROIs em PDF; módulo 6 (mapa de risco — protótipo só da Serra do Cabral, com conferência do gerente e seção 14); Geo Colibri (visualizador, sem IDE-Sisema por decisão do Rodolfo); empenho padronizado (catálogo de 140 instituições em 13 categorias; Sala por dia sem turnos; ROI 2.2 nova pré-preenchida pela Sala; pacote do BDG com colunas-resumo emp_*, CSV do empenho e GeoPackage); vegetação do ROI pelo Inventário Florestal; cadastro único de apoio aéreo (tela + camada no Geo Colibri).
 
 Próximos (sem ordem fixa):
 - Mapa de risco das demais UCs (mesma receita; atualização anual).
@@ -83,7 +83,7 @@ Próximos (sem ordem fixa):
 - Camada de risco na Sala de Situação; visão estadual do risco.
 - Módulo 7 (Plano operacional); PIPCIF como relatório gerado dos módulos.
 - Empenho: revisão/migração dos textos de 2026 no fim da temporada; exportação em lote do BDG com o empenho (hoje é por ROI); favoritas da UC também a partir dos parceiros do PIPCIF; conferir as pendentes no catálogo.
-- Carregar os PIPCIFs restantes (~53 UCs) e depois o catálogo único de recursos compartilhados (Pampulha, mirantes entre UCs). Corrigir `pipcif_ano` de Pau Furado.
+- Carregar os PIPCIFs restantes (~48 UCs) e depois o catálogo único de recursos compartilhados (Pampulha, mirantes entre UCs). Corrigir `pipcif_ano` de Pau Furado.
 - Apoio aéreo: revisar as 99 áreas de pouso "a conferir" e a pista de Itamarandiba; excluir de vez os 52 aeródromos fora de MG (hoje inativos; o MCP não executa DELETE); módulo 2 da UC mostrando os pontos próximos (`recursos_aereos_perto`). Novos pontos de PIPCIF/módulo 2 já se ligam sozinhos (gatilho da migração 40).
 - Geo Colibri: Shapefile/GeoPackage, desenhar área para exportar, régua, exportar risco.
 

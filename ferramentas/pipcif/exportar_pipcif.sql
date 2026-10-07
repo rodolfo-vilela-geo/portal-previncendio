@@ -7,7 +7,7 @@ select jsonb_build_object(
  'regional',(select to_jsonb(r) - array['atualizado_por','atualizado_em','endereco','sigla'] from regional r join uc u on u.ufbio=r.nome where u.nome_uc=p),
  'infra',(select to_jsonb(i) - array['atualizado_por','atualizado_em'] from uc_infra i where nome_uc=p),
  'tabelas', jsonb_build_object(
-   'uc_ponto',(select coalesce(jsonb_agg(to_jsonb(t) - array['id','geom','atualizado_por','atualizado_em'] order by id),'[]') from uc_ponto t where nome_uc=p),
+   'uc_ponto',(select coalesce(jsonb_agg(to_jsonb(t) - array['id','geom','recurso_id','atualizado_por','atualizado_em'] order by id),'[]') from uc_ponto t where nome_uc=p),
    'uc_veiculo',(select coalesce(jsonb_agg(to_jsonb(t) - array['id','atualizado_por','atualizado_em'] order by id),'[]') from uc_veiculo t where nome_uc=p),
    'uc_radio',(select coalesce(jsonb_agg(to_jsonb(t) - array['id','geom','atualizado_por','atualizado_em'] order by id),'[]') from uc_radio t where nome_uc=p),
    'uc_material',(select coalesce(jsonb_agg(to_jsonb(t) - array['id','atualizado_por','atualizado_em'] order by id),'[]') from uc_material t where nome_uc=p),

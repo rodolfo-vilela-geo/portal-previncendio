@@ -15,7 +15,8 @@ Convenções que já valem:
 - Documento conjunto de duas UCs (ex.: São José + Libélulas): dados duplicados nas duas. Rola-Moça/Fechos/Cercadinho: separados por UC quando o documento permite, itens comuns repetidos.
 - Pontos de água da seção 14/15 não entram (exceção: Gambá, 2 pontos).
 - Seções 14, 15 e 17 do PIPCIF não entram (a 14 agora é gerada pelo módulo 6).
-- `uc_cadastro.pipcif_ano = 2026` marca a UC como carregada.
+- `uc_cadastro.pipcif_ano` = ano do documento (2026 na maioria; os PIPCIFs 2025 de Ibitipoca, Serra do Brigadeiro, Serra Negra da Mantiqueira, Água Limpa e Mar de Espanha entraram com 2025 — o selo da UC mostra que está desatualizado) marca a UC como carregada.
+- Pistas e helipontos se ligam sozinhos ao cadastro de apoio aéreo na importação (gatilho da migração 40); o exportador não leva `recurso_id` (os números do banco local não valem em produção).
 
 ## Roteiro entregue a cada conversor (um PIPCIF por vez)
 
