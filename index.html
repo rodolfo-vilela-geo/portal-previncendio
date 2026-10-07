@@ -68,24 +68,34 @@
   main,footer{max-width:1040px;margin:0 auto}
   main{padding:8px 16px 10px}
   section{margin-top:26px}
-  /* abas por setor */
-  .abas{scroll-margin-top:64px;max-width:1040px;margin:18px auto 0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--linha);padding:0 2px}
-  .abas::-webkit-scrollbar{display:none}
-  .abas button{font:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;padding:9px 14px 9px;cursor:pointer;color:var(--suave);white-space:nowrap;border-radius:10px 10px 0 0;text-align:left}
-  .abas button b{font-size:14.5px;font-weight:650;display:flex;align-items:center;gap:7px;color:var(--tinta)}
-  .abas button small{font-size:11.5px;color:var(--suave);padding-left:15px}
-  .abas button .pt{display:none}
-  .abas button b::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,#8a8a84);flex:none}
-  .abas button:hover{background:color-mix(in srgb,var(--c,#8a8a84) 7%,transparent)}
-  .abas button[aria-selected=true]{border-bottom-color:var(--c,#555);background:color-mix(in srgb,var(--c,#8a8a84) 9%,transparent)}
-  .abas button[aria-selected=true] b{color:var(--c,var(--tinta))}
-  .abas button:focus-visible{outline:2px solid var(--marca-2);outline-offset:-2px}
-  .abas .t-cinza{--c:var(--suave)}
-  section[data-aba]:not(.ativa){display:none}
-  section[data-aba]{margin-top:18px}
-  section[data-aba] .tit h2{display:none}
-  section[data-aba] .tit:not(:has(> :not(h2))){display:none}
-  @media (max-width:600px){ .abas button small{display:none} .abas button{padding:8px 11px} }
+  /* seções recolhíveis */
+  section[data-rec] > .tit{cursor:pointer;user-select:none}
+  .tit .rec{font:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;color:inherit}
+  .tit .rec:focus-visible{outline:2px solid var(--marca-2);outline-offset:3px;border-radius:4px}
+  .tit .rec svg{width:13px;height:13px;transition:transform .15s;color:var(--suave)}
+  section.fechada .tit .rec svg{transform:rotate(-90deg)}
+  section.fechada > :not(.tit){display:none!important}
+  section.fechada{margin-top:14px}
+  .tit .resumo{display:none;font-size:12.5px;color:var(--suave)}
+  section.fechada .tit .resumo{display:inline}
+  /* Para você */
+  #paraVoce{margin-top:18px}
+  .pv{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .pv-cab{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .pv-cab b{font-size:15px;color:var(--marca-2)} .pv-cab span{font-size:12.5px;color:var(--suave)}
+  .pv-atalhos{display:flex;flex-wrap:wrap;gap:8px}
+  .pv-atalhos a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tinta);font-weight:600;font-size:14px;border:1px solid var(--linha);border-left:4px solid var(--c,var(--marca-2));border-radius:10px;padding:8px 13px;background:var(--papel)}
+  .pv-atalhos a:hover{background:color-mix(in srgb,var(--c,var(--marca-2)) 8%,var(--papel))}
+  .pv-atalhos a small{font-weight:500;color:var(--suave);font-size:12px}
+  /* módulos em faixa */
+  .mods-faixa{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .mods-rot{font-size:13px;color:var(--suave);margin-right:4px;width:100%}
+  .modc{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--linha);background:var(--papel);border-radius:99px;padding:5px 12px 5px 5px;font-size:13.5px;font-weight:600;color:var(--tinta);text-decoration:none}
+  a.modc:hover{border-color:var(--marca-2);background:var(--realce)}
+  .modc .num{width:26px;height:26px;border-radius:50%;background:var(--realce);color:var(--marca-2);display:grid;place-items:center}
+  .modc .num svg{width:15px;height:15px}
+  .modc.breve{color:var(--suave);border-style:dashed} .modc.breve .num{background:#eee;color:var(--suave)}
+  .modc small{font-weight:500;font-size:11px;color:var(--suave)}
   .tit{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
   .tit h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--suave);margin:0}
   .sub{margin:0 0 12px;color:var(--suave);font-size:14px}
@@ -247,15 +257,11 @@
 <div class="faixa" aria-hidden="true"></div>
 
 <main>
-  <div class="abas" role="tablist" aria-label="Setores do Colibri">
-    <button type="button" role="tab" id="aba-ocorrencias" data-ir="ocorrencias" class="t-fogo" aria-controls="ocorrencias" aria-selected="false" tabindex="-1"><span class="pt"></span><b>Ocorrências</b><small>1 RI · 2 SMC · 3 ROI</small></button>
-    <button type="button" role="tab" id="aba-acompanhamento" data-ir="acompanhamento" class="t-azul" aria-controls="acompanhamento" aria-selected="false" tabindex="-1"><span class="pt"></span><b>Acompanhamento</b><small>boletim, painel, Sala Técnica</small></button>
-    <button type="button" role="tab" id="aba-ucs" data-ir="ucs" class="t-verde" aria-controls="ucs" aria-selected="false" tabindex="-1"><span class="pt"></span><b>Unidades de Conservação</b><small>painel, mapa e cadastro</small></button>
-    <button type="button" role="tab" id="aba-manejo" data-ir="manejo" class="t-fogo2" aria-controls="manejo" aria-selected="false" tabindex="-1"><span class="pt"></span><b>Manejo do Fogo</b><small>queima prescrita</small></button>
-    <button type="button" role="tab" id="aba-equipe" data-ir="equipe" class="t-cinza" aria-controls="secGestao" aria-selected="false" tabindex="-1"><span class="pt"></span><b>Área da equipe</b><small>gestão e importações</small></button>
-  </div>
+  <section id="paraVoce" hidden>
+    <div class="pv"><div class="pv-cab"><b>Para você</b><span id="pvQuem"></span></div><div class="pv-atalhos" id="pvAtalhos"></div></div>
+  </section>
   <!-- 1. OCORRÊNCIA -->
-  <section class="t-fogo" data-aba="ocorrencias" id="ocorrencias" role="tabpanel" aria-labelledby="aba-ocorrencias">
+  <section class="t-fogo" data-rec="ocorrencias">
     <div class="tit"><h2>Ocorrência de incêndio</h2></div>
     <p class="sub">Todo incêndio segue estes três passos, do primeiro chamado ao relatório final.</p>
     <div class="fluxo">
@@ -287,7 +293,7 @@
   </section>
 
   <!-- 2. ACOMPANHAMENTO -->
-  <section class="t-azul" data-aba="acompanhamento" id="acompanhamento" role="tabpanel" aria-labelledby="aba-acompanhamento">
+  <section class="t-azul" data-rec="acompanhamento">
     <div class="tit"><h2>Acompanhamento</h2></div>
     <div class="cards">
       <a class="card t-fogo" href="boletim.html">
@@ -312,7 +318,7 @@
   </section>
 
   <!-- 3. UNIDADES DE CONSERVAÇÃO -->
-  <section class="t-verde" data-aba="ucs" id="ucs" role="tabpanel" aria-labelledby="aba-ucs">
+  <section class="t-verde" data-rec="ucs">
     <div class="tit"><h2>Unidades de Conservação</h2>
       <span class="cadeado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>login · gerentes e Previncêndio</span></div>
     <p class="sub">Painel de indicadores, o mapa geográfico do Colibri e o cadastro de cada UC, em módulos.</p>
@@ -330,13 +336,13 @@
         <span class="ir">Abrir o mapa →</span>
       </a>
     </div>
-    <div class="pip-grade" id="pipGrade"></div>
+    <div class="mods-faixa" id="pipGrade"></div>
   </section>
 
 
   <!-- AJUDA -->
   <!-- MANEJO DO FOGO (queima prescrita) -->
-  <section class="t-fogo2" id="manejo" data-aba="manejo" role="tabpanel" aria-labelledby="aba-manejo">
+  <section class="t-fogo2" id="manejo" data-rec="manejo" data-fechada="1" data-resumo="em breve · planejamento, requisição, análise e relatório de queima">
     <div class="tit"><h2>Manejo do Fogo</h2></div>
     <p class="sub">Queima prescrita nas UCs, do planejamento ao relatório. Cada queima precisa da aprovação do Previncêndio e da análise de documentos, como a comprovação de posse da área.</p>
     <div class="card largo t-teal breve" style="margin-bottom:12px">
@@ -376,12 +382,12 @@
   </section>
 
   <!-- GESTÃO: só aparece para quem está logado como equipe -->
-  <section id="secConvite" data-aba="equipe" role="tabpanel" aria-labelledby="aba-equipe">
+  <section id="secConvite">
     <div class="tit"><h2>Área da equipe e dos gerentes</h2></div>
     <div class="entrar-convite">Entre com seu e-mail para ver as ferramentas do seu perfil (cadastro das UCs, Sala de Situação, Sala Técnica, importações).
       <button type="button" class="btn-pip" data-entrar>Entrar</button></div>
   </section>
-  <section id="secGestao" data-aba="equipe" role="tabpanel" aria-labelledby="aba-equipe" hidden>
+  <section id="secGestao" data-rec="gestao" data-fechada="1" hidden>
     <div class="tit"><h2>Gestão do sistema</h2><span class="cadeado" id="gQuem"></span></div>
     <div class="gestao">
       <a href="sala.html?aba=apoios" data-papeis="sala gpcif admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11a3 3 0 1 0 0-6M21 20c0-2.8-1.8-5.2-4.4-5.8"/></svg>Apoios e atuações <small>instituições e efetivo por dia</small></a>
@@ -427,28 +433,20 @@
   <a href="ucs.html" style="font-size:12.5px;color:var(--suave)">Esqueceu a senha ou é o primeiro acesso? Abra a página de entrada completa</a>
 </form></dialog>
 <script>
-/* abas por setor: #aba no endereço > última aba aberta neste navegador > padrão do papel */
+/* seções recolhíveis: clique no título; a escolha fica guardada neste navegador */
 (function(){
-  const bts = [...document.querySelectorAll(".abas [data-ir]")], ids = bts.map(b => b.dataset.ir);
-  const ler = () => { try{ return localStorage.getItem("colibri_aba"); }catch(e){ return null; } };
-  const guardar = k => { try{ localStorage.setItem("colibri_aba", k); }catch(e){} };
-  function mostrar(k, foco){
-    if (!ids.includes(k)) k = ids[0];
-    bts.forEach(b => { const on = b.dataset.ir === k; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; if (on && foco) b.focus(); });
-    document.querySelectorAll("section[data-aba]").forEach(sct => sct.classList.toggle("ativa", sct.dataset.aba === k));
-    window.ABA_ATUAL = k;
-  }
-  bts.forEach((b, i) => {
-    b.onclick = () => { mostrar(b.dataset.ir); guardar(b.dataset.ir); history.replaceState(null, "", "#" + b.dataset.ir); };
-    b.onkeydown = ev => { const d = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0; if (!d) return; ev.preventDefault();
-      const n = bts[(i + d + bts.length) % bts.length]; n.click(); n.focus(); };
+  const chave = "colibri_recolhidas", seta = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  let est = {}; try{ est = JSON.parse(localStorage.getItem(chave) || "{}"); }catch(e){}
+  const salvar = () => { try{ localStorage.setItem(chave, JSON.stringify(est)); }catch(e){} };
+  document.querySelectorAll("section[data-rec]").forEach(sec => {
+    const k = sec.dataset.rec, tit = sec.querySelector(".tit"), h2 = tit.querySelector("h2");
+    const bt = document.createElement("button"); bt.type = "button"; bt.className = "rec"; bt.innerHTML = seta; h2.parentNode.insertBefore(bt, h2); bt.appendChild(h2);
+    const rs = document.createElement("span"); rs.className = "resumo"; rs.textContent = sec.dataset.resumo || ""; tit.appendChild(rs);
+    const aplicar = f => { sec.classList.toggle("fechada", f); bt.setAttribute("aria-expanded", !f); bt.title = f ? "Mostrar" : "Recolher"; };
+    aplicar(k in est ? est[k] : sec.dataset.fechada === "1");
+    tit.addEventListener("click", ev => { if (ev.target.closest("a")) return; const f = !sec.classList.contains("fechada"); aplicar(f); est[k] = f; salvar(); });
   });
-  const hash = location.hash.slice(1), logado = (() => { try{ return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); }catch(e){ return false; } })();
-  window.ABA_ESCOLHIDA = ids.includes(hash) || !!ler();
-  mostrar(ids.includes(hash) ? hash : ler() || (logado ? "ocorrencias" : "acompanhamento"));
-  if (ids.includes(hash)) addEventListener("load", () => setTimeout(() => document.querySelector(".abas").scrollIntoView({block:"start"}), 0));
-  window.mostrarAba = mostrar;
-  addEventListener("hashchange", () => { const h = location.hash.slice(1); if (ids.includes(h)){ mostrar(h); document.querySelector(".abas").scrollIntoView({block:"start"}); } });
+  if (location.hash === "#manejo"){ const m = document.getElementById("manejo"); m.classList.remove("fechada"); }
 })();
 </script>
 <script>
@@ -457,15 +455,10 @@ const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 (() => {
   const M = window.PIPCIF_MODULOS || [];
   const nb = M.reduce((t,m) => t + m.blocos.length, 0), ng = M.reduce((t,m) => t + m.blocos.filter(b => b.mapa).length, 0);
-  document.getElementById("pipGrade").innerHTML = M.map(m => `<div class="mod ${m.pronto ? "" : "breve"} ${m.tom ? "t-" + m.tom : ""}">
-    <div class="cab"><span class="num" title="Módulo ${m.n}">${iconeModulo(m)}</span><h3>${esc(m.nome)}</h3><span class="st ${m.pronto ? "ok" : "em"}">${m.pronto ? "disponível" : "em breve"}</span></div>
-    ${m.sintese ? `<p class="sint">${esc(m.sintese)}</p>`
-    : `<ul>${m.blocos.map(b => `<li><span class="s">${esc(b.s)}</span><span>${esc(b.t)}${b.mapa ? `<span class="geo" title="dados georreferenciados">◉ mapa</span>` : ""}</span>${b.d ? `<small>${esc(b.d)}</small>` : ""}</li>`).join("")}</ul>`}
-    <div class="rod"><span>${m.blocos.length} ${m.blocos.length === 1 ? "bloco" : "blocos"}${(n => n ? ` · ${n} com mapa` : "")(m.blocos.filter(b => b.mapa).length)}</span>${m.pronto ? `<a href="ucs.html?mod=${m.id}">Abrir →</a>` : ""}</div>
-  </div>`).join("") + (window.PIPCIF_RELATORIO ? `<div class="mod relatorio">
-    <div class="cab"><span class="num">${iconeModulo(window.PIPCIF_RELATORIO)}</span><h3>PIPCIF · relatório da UC</h3><span class="st em">design a definir</span></div>
-    <p style="margin:0;font-size:13.5px;color:var(--suave)">${esc(window.PIPCIF_RELATORIO.d)}</p>
-    <div class="rod"><span>reúne os módulos 1 a ${M.length}</span></div></div>` : "");
+  document.getElementById("pipGrade").innerHTML = `<span class="mods-rot">Cadastro da UC, por módulo:</span>` + M.map(m => m.pronto
+    ? `<a class="modc" href="ucs.html?mod=${m.id}" title="${esc(m.sintese || m.blocos.map(b => b.t).join(", "))}"><span class="num">${iconeModulo(m)}</span>${esc(m.nome)}</a>`
+    : `<span class="modc breve" title="${esc(m.sintese || "")}"><span class="num">${iconeModulo(m)}</span>${esc(m.nome)}<small>em breve</small></span>`).join("")
+    + (window.PIPCIF_RELATORIO ? `<span class="modc breve" title="${esc(window.PIPCIF_RELATORIO.d)}"><span class="num">${iconeModulo(window.PIPCIF_RELATORIO)}</span>PIPCIF · relatório da UC<small>a definir</small></span>` : "");
 })();
 (async () => {
   let sb; try{ sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39"); }catch(e){ return; }
@@ -495,13 +488,24 @@ const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
     const {data: p} = await sb.rpc("meu_perfil"); if (!p) return;
     if (volta && !p.trocar_senha){ location.replace(volta); return; }
     document.getElementById("secConvite").hidden = true;
-    if (!window.ABA_ESCOLHIDA) window.mostrarAba(({gerente:"ucs", tecnica:"acompanhamento"})[p.papel] || "ocorrencias");
     document.getElementById("conta").innerHTML = `<span>${esc(p.nome)}</span><a href="#" id="sairConta">Sair</a>`;
     document.getElementById("sairConta").onclick = async ev => { ev.preventDefault(); await sb.auth.signOut(); location.reload(); };
+    const PAPEL = {gerente:"gerente da UC", sala:"Sala de Situação", tecnica:"Sala Técnica", gpcif:"Previncêndio", admin:"administrador"};
+    const AT = {
+      ri:["sala.html","Sala de Situação","novo RI","fogo"], roi:["roi.html","Novo ROI","relatório da ocorrência","verde"], smc:["smc.html","SMC","mapear a área queimada","azul"],
+      tecnica:["tecnica.html","Sala Técnica","prazos e cobranças","ambar"], boletim:["boletim.html","Boletim da FTP","","fogo"], painel:["painel.html","Painel histórico","","azul"],
+      uc:["painel_uc.html","Painel da UC","","teal"], cad:["ucs.html","Cadastro da UC","módulos","verde"], mapa:["mapa.html","Geo Colibri","","azul"],
+      apoios:["sala.html?aba=apoios","Apoios e atuações","","fogo"], importar:["roi_importar.html","Importar ROIs","","ambar"], aereo:["apoio_aereo.html","Apoio aéreo","","azul"]};
+    const ESC = {gerente:["roi","smc","uc","cad","mapa"], sala:["ri","apoios","boletim","mapa"], tecnica:["tecnica","importar","painel","mapa"],
+                 gpcif:["ri","roi","tecnica","cad","mapa","aereo"], admin:["ri","roi","tecnica","cad","mapa","aereo"]}[p.papel] || ["mapa","painel"];
+    document.getElementById("pvQuem").textContent = `${p.nome} · ${PAPEL[p.papel] || p.papel}`;
+    document.getElementById("pvAtalhos").innerHTML = ESC.map(k => { const [h, t, d, c] = AT[k]; return `<a href="${h}" class="t-${c}">${esc(t)}${d ? `<small>${esc(d)}</small>` : ""}</a>`; }).join("");
+    document.getElementById("paraVoce").hidden = false;
     let n = 0;
     document.querySelectorAll("#secGestao [data-papeis]").forEach(a => { const ok = a.dataset.papeis.split(" ").includes(p.papel); a.hidden = !ok; n += ok; });
-    if (!n){ document.getElementById("aba-equipe").hidden = true; if (window.ABA_ATUAL === "equipe") window.mostrarAba("ocorrencias"); return; }
+    if (!n) return;
     document.getElementById("gQuem").textContent = `${p.nome} · ${({gerente:"gerente",sala:"Sala de Situação",tecnica:"Sala Técnica",gpcif:"Previncêndio",admin:"administrador"})[p.papel] || p.papel}`;
+    document.getElementById("secGestao").querySelector(".resumo").textContent = `${n} ${n === 1 ? "item" : "itens"} do seu perfil`;
     document.getElementById("secGestao").hidden = false;
   }catch(e){}
 })();
