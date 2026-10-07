@@ -712,7 +712,8 @@ function resumoDia(d){
     .filter(([k])=>d[k]).map(([k,t])=>`${t} ${d[k]}`).join(" · ");
   return `Total do dia: ${d.total_pessoas} pessoas (${cats})${d.horas_homem ? ` · ${String(d.horas_homem).replace(".",",")} h·homem` : ""}`;
 }
-const CONTRATOS = {CFM:"CFM (IEF via Vale)", FTP:"FTP (CBMMG)", "CBMMG/COMAVE":"CBMMG / COMAVE (próprio)", Outro:"Outro"};
+const CONTRATOS = {CFM:"CFM (IEF via Vale)", FTP:"FTP (CBMMG)"};   // Air Tractor AT-802: contratado
+const HELIS = {Pegasus:"Pegasus (PMMG)", Arcanjo:"Arcanjo (CBMMG)", "Carcará":"Carcará (Polícia Civil)", "Guará":"Guará (IEF · pilotado pela PMMG)"};   // helicópteros: próprios, pelo codinome
 const AERO = ["a_helicop","a_air_tr","a_drone"];
 let FAV_UC = {}, ATU_DATA = {};   // ATU_DATA: última data usada em cada RI (o formulário volta nela)   // nome_uc -> ids de instituição mais usados
 async function favoritasUC(nome){
@@ -739,7 +740,7 @@ async function carregarAtuacoes(r){
   let corpo = "";
   D.forEach(d => {
     corpo += L.filter(a => a.data === d.data).map(a => { const i = instPorId(a.instituicao_id) || {};
-      const aer = a.a_contrato && AERO.some(k => a[k]) ? ` · contrato ${a.a_contrato}` : "";
+      const aer = (a.a_air_tr && a.a_contrato ? ` · AT-802 ${a.a_contrato}` : "") + (a.a_helicop && a.a_heli ? ` · helicóptero ${a.a_heli}` : "");
       return `<tr><td>${fmtD(a.data)}</td><td>${esc(horario(a))}</td>
         <td>${esc(i.nome||"?")}${pendente(i) ? ` <span class="cat" style="background:#fde8c8">pendente</span>` : ""} ${semAcento(i.nome).startsWith(semAcento(nomeGrupo(grupoDe(i)))) ? "" : `<span class="cat">${esc(nomeGrupo(grupoDe(i)))}</span>`}</td><td class="n">${a.pessoas}</td>
         <td>${esc(txtVeic(a) + aer)}</td><td>${esc(a.obs||"")}</td>
@@ -773,7 +774,8 @@ async function carregarAtuacoes(r){
         </div>
       </div>
       <div class="veic">${VEICULOS.map(([k,t])=>`<div><label>${t}</label><input type="number" min="0" name="${k}"></div>`).join("")}
-        <div id="atContr" hidden style="grid-column:span 2"><label>Contrato da aeronave</label><select name="a_contrato"><option value="">—</option>${Object.entries(CONTRATOS).map(([k,t])=>`<option value="${k}">${esc(t)}</option>`).join("")}</select></div></div>
+        <div id="atHeli" hidden style="grid-column:span 2"><label>Qual helicóptero</label><select name="a_heli"><option value="">—</option>${Object.entries(HELIS).map(([k,t])=>`<option value="${k}">${esc(t)}</option>`).join("")}</select></div>
+        <div id="atContr" hidden style="grid-column:span 2"><label>Contrato do Air Tractor</label><select name="a_contrato"><option value="">—</option>${Object.entries(CONTRATOS).map(([k,t])=>`<option value="${k}">${esc(t)}</option>`).join("")}</select></div></div>
       <div style="margin-top:8px"><label>Observações (empresa atendida pela brigada, propriedade, UC de origem…)</label><input name="obs"></div>
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button class="btn primario" id="atSalvar">Adicionar</button>
@@ -784,7 +786,8 @@ async function carregarAtuacoes(r){
     </div>`;
   const f = $("#atForm"), g = n => f.querySelector(`[name="${n}"]`);
   let editId = null;
-  const verContrato = () => { const tem = AERO.some(k => num(g(k).value)); $("#atContr").hidden = !tem; if (!tem) g("a_contrato").value = ""; };
+  const verContrato = () => { const at = !!num(g("a_air_tr").value), he = !!num(g("a_helicop").value);
+    $("#atContr").hidden = !at; if (!at) g("a_contrato").value = ""; $("#atHeli").hidden = !he; if (!he) g("a_heli").value = ""; };
   AERO.forEach(k => g(k).addEventListener("input", verContrato));
   // busca: refaz a lista só com as que casam (nome, sigla ou variantes) e seleciona a primeira
   g("busca").addEventListener("input", () => {
@@ -808,18 +811,19 @@ async function carregarAtuacoes(r){
     await carregarInst(); g("busca").value = ""; g("instituicao_id").innerHTML = opcoesInst(data.id, false, fav);
     $("#atNova").hidden = true; msg(`“${nome}” incluída (pendente de conferência).`, "ok");
   };
-  const limpar = () => { editId = null; ["hr_inicio","hr_fim","instituicao_id","pessoas","obs","busca","a_contrato",...VEICULOS.map(v=>v[0])].forEach(n => g(n).value = "");
+  const limpar = () => { editId = null; ["hr_inicio","hr_fim","instituicao_id","pessoas","obs","busca","a_contrato","a_heli",...VEICULOS.map(v=>v[0])].forEach(n => g(n).value = "");
     g("instituicao_id").innerHTML = opcoesInst(null, false, fav); verContrato();
     $("#atSalvar").textContent = "Adicionar"; $("#atCancelar").hidden = true; };
   const erroAmigavel = e => e.code === "23505" ? "Esta instituição já tem registro nesse dia — edite a linha existente." : e.message;
   $("#atSalvar").onclick = async () => {
     const o = {data: g("data").value, hr_inicio: txt(g("hr_inicio").value), hr_fim: txt(g("hr_fim").value),
-               instituicao_id: +g("instituicao_id").value || null, pessoas: num(g("pessoas").value) ?? 0, obs: txt(g("obs").value), a_contrato: txt(g("a_contrato").value)};
+               instituicao_id: +g("instituicao_id").value || null, pessoas: num(g("pessoas").value) ?? 0, obs: txt(g("obs").value), a_contrato: txt(g("a_contrato").value), a_heli: txt(g("a_heli").value)};
     VEICULOS.forEach(([k]) => o[k] = num(g(k).value));
     if (!o.data) return msg("Informe a data.", "erro");
     if (!o.instituicao_id) return msg("Escolha a instituição.", "erro");
     if (!o.pessoas && !VEICULOS.some(([k]) => o[k])) return msg("Informe pessoas, veículos ou aeronaves.", "erro");
-    if (AERO.some(k => o[k]) && !o.a_contrato) return msg("Informe o contrato da aeronave (CFM, FTP…).", "erro");
+    if (o.a_air_tr && !o.a_contrato) return msg("Informe o contrato do Air Tractor (CFM ou FTP).", "erro");
+    if (o.a_helicop && !o.a_heli) return msg("Informe qual helicóptero (Pegasus, Arcanjo, Carcará ou Guará).", "erro");
     if (r.dat_detec && o.data < r.dat_detec) return msg("A data é anterior à detecção do incêndio.", "erro");
     const b = $("#atSalvar"); b.disabled = true;
     const {error} = editId ? await sb.from("atuacao").update(o).eq("id", editId) : await sb.from("atuacao").insert({ano: r.ano, ri: r.ri, ...o});
@@ -834,7 +838,7 @@ async function carregarAtuacoes(r){
     const a = L.find(x => x.id === +el.dataset.ed); editId = a.id;
     ["data","obs","a_contrato"].forEach(n => g(n).value = a[n] ?? ""); g("hr_inicio").value = fmtH(a.hr_inicio); g("hr_fim").value = fmtH(a.hr_fim);
     g("busca").value = ""; g("instituicao_id").innerHTML = opcoesInst(a.instituicao_id, false, fav); g("pessoas").value = a.pessoas; VEICULOS.forEach(([k]) => g(k).value = a[k] ?? "");
-    verContrato(); g("a_contrato").value = a.a_contrato ?? "";
+    verContrato(); g("a_contrato").value = a.a_contrato ?? ""; g("a_heli").value = a.a_heli ?? "";
     $("#atSalvar").textContent = "Salvar alteração"; $("#atCancelar").hidden = false; f.scrollIntoView({behavior:"smooth", block:"center"});
   });
   $$("[data-del]", box).forEach(el => el.onclick = async () => {
@@ -891,7 +895,7 @@ async function carregarApoios(){
 $("#aCsv").onclick = () => {
   const cols = [["data",a=>a.data],["turno",a=>a.turno],["hr_inicio",a=>a.hr_inicio],["hr_fim",a=>a.hr_fim],["ano",a=>a.ano],["ri",a=>a.ri],
     ["nome_uc",a=>a.rif?.nome_uc],["instituicao",a=>a.inst.nome],["sigla",a=>a.inst.sigla],["categoria_empenho",a=>grupoDe(a.inst)],["coluna_roi",a=>a.inst.categoria],["pessoas",a=>a.pessoas],
-    ...VEICULOS.map(([k])=>[k,a=>a[k]]),["a_contrato",a=>a.a_contrato],["obs",a=>a.obs],["registrado_por",a=>a.criado_por]];
+    ...VEICULOS.map(([k])=>[k,a=>a[k]]),["a_contrato",a=>a.a_contrato],["a_heli",a=>a.a_heli],["obs",a=>a.obs],["registrado_por",a=>a.criado_por]];
   const q = v => v==null ? "" : /[";\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v);
   const csv = "﻿" + cols.map(c=>c[0]).join(";") + "\n" + apoios.map(a => cols.map(c=>q(c[1](a))).join(";")).join("\n");
   const el = document.createElement("a"); el.href = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));

@@ -7,7 +7,8 @@
 (function(){
 const VEIC = [["vc_4x4","4x4"],["vc_4x2","4x2"],["vc_pipa","Pipa/ABT"],["vc_moto","Moto"],["vc_trator","Trator"],["vc_out","Outros"]];
 const AERO = [["a_helicop","Helicóptero"],["a_air_tr","Air Tractor"],["a_drone","Drone"]];
-const CONTRATOS = {CFM:"CFM (IEF via Vale)", FTP:"FTP (CBMMG)", "CBMMG/COMAVE":"CBMMG / COMAVE", Outro:"Outro"};
+const CONTRATOS = {CFM:"CFM (IEF via Vale)", FTP:"FTP (CBMMG)"};   // Air Tractor AT-802
+const HELIS = {Pegasus:"Pegasus (PMMG)", Arcanjo:"Arcanjo (CBMMG)", "Carcará":"Carcará (Polícia Civil)", "Guará":"Guará (IEF · pilotado pela PMMG)"};
 const DA_UC = ["ger","uc"];                       // "da UC" na seção 3; o resto é "Outros"
 const COL_ROI = {uc:"comb_uc", ftp:"comb_ftp", sm:"comb_sm", par:"comb_par", vol:"comb_vol", pm:"comb_pm", bm:"comb_bm", out:"comb_par"};  // o ROI não tem coluna "outros": soma em Parceiros, como na Sala
 let INST = [], GRUPOS = [];
@@ -77,9 +78,11 @@ EMP.linha = function(d = {}){
       <button type="button" class="btn peq emp-x" title="Remover a linha">×</button></div>
     <div class="emp-b">${VEIC.map(([k, t]) => `<div><label>${t}</label>${n(k, d[k])}</div>`).join("")}
       ${AERO.map(([k, t]) => `<div><label>${t}</label>${n(k, d[k])}</div>`).join("")}
-      <div class="emp-c" hidden><label>Contrato da aeronave</label><select data-k="a_contrato"><option value="">—</option>${Object.entries(CONTRATOS).map(([k, t]) => `<option value="${k}" ${d.a_contrato === k ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
+      <div class="emp-c emp-heli" hidden><label>Qual helicóptero</label><select data-k="a_heli"><option value="">—</option>${Object.entries(HELIS).map(([k, t]) => `<option value="${k}" ${d.a_heli === k ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
+      <div class="emp-c emp-at" hidden><label>Contrato do Air Tractor</label><select data-k="a_contrato"><option value="">—</option>${Object.entries(CONTRATOS).map(([k, t]) => `<option value="${k}" ${d.a_contrato === k ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
       <div class="emp-o"><label>Observação</label><input data-k="obs" placeholder="empresa atendida, UC de origem… (em “Outra instituição”, o nome dela)" value="${esc(d.obs || "")}"></div></div>`;
-  const verC = () => { const tem = AERO.some(([k]) => num(el.querySelector(`[data-k=${k}]`).value)); el.querySelector(".emp-c").hidden = !tem; };
+  const verC = () => { const q = k => num(el.querySelector(`[data-k=${k}]`).value);
+    el.querySelector(".emp-at").hidden = !q("a_air_tr"); el.querySelector(".emp-heli").hidden = !q("a_helicop"); };
   AERO.forEach(([k]) => el.querySelector(`[data-k=${k}]`).addEventListener("input", verC)); verC();
   el.querySelector(".emp-x").onclick = () => { el.remove(); EMP.derivar(); mudou(); };
   const s = el.querySelector("select[data-k=instituicao_id]");
@@ -101,7 +104,7 @@ EMP.doRI = L => { $("#empLinhas").innerHTML = ""; L.forEach(l => EMP.linha(Objec
 function validas(){
   return EMP.ler().filter(l => l.data && l.instituicao_id).map(l => {
     const o = {data: l.data, hr_inicio: txt(l.hr_inicio), hr_fim: txt(l.hr_fim), instituicao_id: +l.instituicao_id, pessoas: num(l.pessoas) || 0,
-               a_contrato: txt(l.a_contrato), obs: txt(l.obs)};
+               a_contrato: num(l.a_air_tr) ? txt(l.a_contrato) : null, a_heli: num(l.a_helicop) ? txt(l.a_heli) : null, obs: txt(l.obs)};
     [...VEIC, ...AERO].forEach(([k]) => o[k] = num(l[k]) || null);
     return o; });
 }
@@ -156,7 +159,8 @@ EMP.validar = function(){
     else if ((det && v("data") < det) || (fim && v("data") > fim)) m("data", "a data está fora do período do incêndio.");
     if (!v("instituicao_id")) m("instituicao_id", "escolha a instituição.");
     if (!algo) m("pessoas", "informe pessoas, veículos ou aeronaves.");
-    if (AERO.some(([k]) => num(v(k))) && !v("a_contrato")) m("a_contrato", "informe o contrato da aeronave.");
+    if (num(v("a_air_tr")) && !v("a_contrato")) m("a_contrato", "informe o contrato do Air Tractor (CFM ou FTP).");
+    if (num(v("a_helicop")) && !v("a_heli")) m("a_heli", "informe qual helicóptero.");
     if (+v("instituicao_id") === OUTRA()?.id && !txt(v("obs"))) m("obs", "escreva o nome da instituição na observação.");
   });
   if (!validas().length) erros.push("2.2: registre ao menos uma linha de recursos empenhados (ou marque “Não houve combate”).");
@@ -168,7 +172,7 @@ EMP.linhas = cod => EMP.ativo && !F("sem_combate").checked ? validas().map(l => 
 // texto do PDF (seção 2.2)
 EMP.html = function(v, fmtData){
   const L = EMP.linhas("x"); if (!L.length) return "";
-  const rv = l => [...VEIC, ...AERO].filter(([k]) => l[k]).map(([k, t]) => `${l[k]} ${t}`).join(", ") + (l.a_contrato && AERO.some(([k]) => l[k]) ? ` (contrato ${l.a_contrato})` : "");
+  const rv = l => [...VEIC, ...AERO].filter(([k]) => l[k]).map(([k, t]) => `${l[k]} ${t}`).join(", ") + (l.a_air_tr && l.a_contrato ? ` (AT-802 ${l.a_contrato})` : "") + (l.a_helicop && l.a_heli ? ` (${l.a_heli})` : "");
   return `<table><tr><th>Data</th><th>Horário</th><th>Instituição</th><th>Categoria</th><th>Pessoas</th><th>Veículos / aeronaves</th><th>Obs.</th></tr>` +
     L.map(l => { const i = inst(l.instituicao_id) || {};
       return `<tr><td>${fmtData(l.data)}</td><td>${v(l.hr_inicio)}${l.hr_fim ? "–" + v(l.hr_fim) : ""}</td><td>${v(i.nome)}</td><td>${v(GRUPOS.find(g => g.id === grupo(i))?.nome)}</td>
@@ -189,7 +193,7 @@ EMP.tabela = function(cod){
   return EMP.linhas(cod).map(l => { const i = inst(l.instituicao_id) || {};
     const o = {cod_bdp: cod, data: l.data, hr_inicio: l.hr_inicio, hr_fim: l.hr_fim, instituicao: i.nome, categoria: GRUPOS.find(g => g.id === grupo(i))?.nome,
                coluna_bdg: (COL_ROI[i.categoria] || "comb_par"), pessoas: l.pessoas};
-    [...VEIC, ...AERO].forEach(([k]) => o[k] = l[k] || 0); o.a_contrato = l.a_contrato; o.obs = l.obs; return o; });
+    [...VEIC, ...AERO].forEach(([k]) => o[k] = l[k] || 0); o.a_contrato = l.a_contrato; o.a_heli = l.a_heli; o.obs = l.obs; return o; });
 };
 EMP.csv = function(cod){
   const T = EMP.tabela(cod); if (!T.length) return "";
