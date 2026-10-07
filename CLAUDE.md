@@ -26,6 +26,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | `exige_login.js` | Guarda das páginas restritas sem tela de login própria (ROI, SMC) |
 | `index.html` | Página inicial (cabeçalho institucional IEF/DIUC/Previncêndio, login em diálogo, cards por público, seção Gestão por papel) |
 | `roi.html` + `roi_empenho.js` + `gpkg.js` | Formulário do ROI (Relatório de Ocorrência de Incêndio). `?importar=1` = modo usado dentro do importador de PDFs (aí vale a tabela antiga de evolução). `roi_empenho.js`: seção 2.2 nova (recursos empenhados por dia e instituição) que calcula a evolução antiga e a seção 3. `gpkg.js` + `lib/sqljs/`: GeoPackage no pacote do BDG |
+| `roi_vegetacao.js` + `vegetacao_importar.html` | Seção 4 do ROI calculada pelo Inventário Florestal de MG (`vegetacao_poligono`); página de carga do inventário (só Previncêndio, em lotes, retoma de onde parou). O shapefile recortado (UCs + ZAs + 5 km) fica no pacote privado/IDE-Sisema, não no repositório |
 | `roi_importar.html` + `roi_pdf.js` | Importa ROIs em PDF (modelo Word da DIUC) lendo o PDF no navegador (pdf.js em `lib/pdfjs/`, hospedado aqui porque o cdnjs é bloqueado em máquinas do Estado) |
 | `sala.html` | Sala de Situação (RI, recursos empenhados por dia sem turnos, apoios, catálogo de instituições com categorias e pendentes, listas suspensas) |
 | `tecnica.html` | Sala Técnica (prazos, cobranças, SEI/PC/CAINF) |

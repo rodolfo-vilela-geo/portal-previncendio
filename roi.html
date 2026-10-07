@@ -344,11 +344,12 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.2</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.3</div>
 <div id="relatorio"></div>
 
 <script src="roi_empenho.js?v=20261007b"></script>
 <script src="gpkg.js?v=20261007a"></script>
+<script src="roi_vegetacao.js?v=20261007a"></script>
 <script>
 /* ================================================================
    CONFIGURAÇÃO
@@ -373,7 +374,7 @@ const VEICULOS = [
 const VEGETACAO = [
   ["veg_f_e_d","Floresta Estacional Decidual"],["veg_f_e_s","Floresta Estacional Semidecidual"],
   ["veg_f_o","Floresta Ombrófila"],["veg_c_r","Campo Rupestre"],["veg_ant","Área antrópica"],
-  ["veg_c_c","Campo cerrado"],["veg_c_a","Campo de altitude"],["veg_c_s_s","Cerrado sensu stricto"],
+  ["veg_c_c","Campo cerrado"],["veg_campo","Campo"],["veg_c_a","Campo de altitude"],["veg_c_s_s","Cerrado sensu stricto"],
   ["veg_c_d","Cerradão"],["veg_ver","Vereda"]
 ];
 const CATEGORIAS = {PAR:"Parque Estadual", APA:"Área de Proteção Ambiental", MONA:"Monumento Natural",
@@ -671,7 +672,7 @@ function estado(){
     else if (el.type==="checkbox") s[el.name]=el.checked;
     else s[el.name]=el.value;
   });
-  s._evol = lerTabela("tabEvol"); s._fauna = lerFauna().map(({_tr, ...f}) => f); if (window.EMP?.ativo) s._emp = EMP.ler();
+  s._evol = lerTabela("tabEvol"); s._fauna = lerFauna().map(({_tr, ...f}) => f); if (window.VEG?.ativo) s._veg = VEG.estado(); if (window.EMP?.ativo) s._emp = EMP.ler();
   return s;
 }
 function aplicar(s){
@@ -686,6 +687,7 @@ function aplicar(s){
   $("#tabEvol tbody").innerHTML=""; (s._evol||[]).forEach(linhaEvol);
   $("#tabFauna tbody").innerHTML=""; (s._fauna||[]).forEach(linhaFauna);
   if (window.EMP?.ativo) EMP.aplicar(s._emp);
+  if (window.VEG?.ativo) VEG.aplicar(s._veg);
 }
 let timer=null;
 function mudou(){
@@ -1042,6 +1044,7 @@ async function buscarLimitesAgora(nome, ext, chave){
 }
 
 function mostrarPoligono(){
+  window.VEG?.aoMudarPoligono();
   if (!poligonos.length){ $("#poliInfo").innerHTML=""; return; }
   const ha = areaHa(poligonos), tot=(num(F("area_int").value)||0)+(num(F("area_ent").value)||0);
   const dif = tot>0 ? Math.abs(ha-tot)/tot : 0;
@@ -1216,7 +1219,8 @@ function registro(){
   const linhasEmp = window.EMP?.ativo ? EMP.linhas(r.cod_bdp) : [];
   const linhasFauna = fauna.map((f, i) => ({cod_bdp: r.cod_bdp, ordem: i + 1, especie: f.nome.trim(), qtd: num(f.qtd), condicao: txt(f.condicao),
     lat: f.latDec != null ? +f.latDec.toFixed(6) : null, lon: f.lonDec != null ? +f.lonDec.toFixed(6) : null}));
-  return {r, linhasEvol, linhasEmp, linhasFauna, fauna};
+  const linhasVeg = window.VEG?.ativo ? VEG.linhas(r.cod_bdp) : [];
+  return {r, linhasEvol, linhasEmp, linhasFauna, linhasVeg, fauna};
 }
 
 /* ================================================================
@@ -1227,8 +1231,8 @@ $("#btnEnviar").onclick = async () => {
   const erros = validar();
   if (erros.length){ status(erros[0] + (erros.length>1 ? ` (+${erros.length-1} pendência(s))` : ""), "erro"); $(".invalido")?.scrollIntoView({behavior:"smooth", block:"center"}); return; }
   if (!sb){ status("Sem conexão com o banco (biblioteca não carregou). Verifique a internet.", "erro"); return; }
-  const {r, linhasEvol, linhasEmp, linhasFauna} = registro();
-  if (progresso.cod !== r.cod_bdp) progresso = {cod:r.cod_bdp, roi:false, evol:false, emp:false, fauna:false, fotos:[], poli:false};
+  const {r, linhasEvol, linhasEmp, linhasFauna, linhasVeg} = registro();
+  if (progresso.cod !== r.cod_bdp) progresso = {cod:r.cod_bdp, roi:false, evol:false, emp:false, fauna:false, veg:false, fotos:[], poli:false};
   const btn = $("#btnEnviar"); btn.disabled = true;
   try{
     if (!progresso.roi){
@@ -1259,6 +1263,12 @@ $("#btnEnviar").onclick = async () => {
       if (error) throw new Error("Fauna atingida: " + error.message);
     }
     progresso.fauna = true;
+    if (!progresso.veg && linhasVeg.length){
+      status("Enviando o detalhe da vegetação…");
+      const {error} = await sb.from("roi_vegetacao").insert(linhasVeg);
+      if (error) throw new Error("Vegetação: " + error.message);
+    }
+    progresso.veg = true;
     if (!progresso.poli && poligonos.length){
       status("Enviando o polígono da área queimada…");
       const {error} = await sb.from("area_queimada").insert({cod_bdp:r.cod_bdp, geom:paraWKT(poligonos), fonte: fontePoligono === "campo" ? "campo" : "SMC"});
@@ -1446,7 +1456,7 @@ function montarRelatorio(){
 
     <div class="sec">4. Vegetação e área atingida pelo incêndio</div>
     <table><tr><th>Hectares</th><th>Tipo</th><th>Hectares</th><th>Tipo</th></tr>
-      ${vegLinha(G[0],G[5])}${vegLinha(G[1],G[6])}${vegLinha(G[2],G[7])}${vegLinha(G[3],G[8])}${vegLinha(G[4],G[9])}
+      ${Array.from({length: Math.ceil(G.length / 2)}, (_, i) => G[i + Math.ceil(G.length / 2)] ? vegLinha(G[i], G[i + Math.ceil(G.length / 2)]) : `<tr><td style="width:14%">${ha(r[G[i][0]])}</td><td>${G[i][1]}</td><td></td><td></td></tr>`).join("")}
       <tr><td colspan="4">Outros: ${v(r.veg_outro)}</td></tr>
       <tr><td colspan="4"><b>Área interna:</b> ${ha(r.area_int)} · <b>Entorno/Z.A.:</b> ${ha(r.area_ent)} · <b>Total de área queimada:</b> ${ha((r.area_int||0)+(r.area_ent||0))}</td></tr></table>
     <div class="kv">4.1. Fonte da informação: <b>${v(r.fonte_area)}</b></div>
@@ -1551,7 +1561,7 @@ function iniciarImportacao(){
 
 (async function iniciar(){
   $("#maxFotos").textContent = MAX_FOTOS;
-  montarVeiculos(); montarVegetacao();
+  montarVeiculos(); montarVegetacao(); window.VEG?.iniciar();
   $("#listaFauna").innerHTML = ["Tamanduá-bandeira","Tamanduá-mirim","Tatu-galinha","Tatu-peba","Tatu-canastra","Lobo-guará","Cachorro-do-mato","Raposa-do-campo",
     "Veado-campeiro","Veado-catingueiro","Onça-parda","Jaguatirica","Gato-do-mato","Capivara","Paca","Cutia","Quati","Mão-pelada","Ouriço-cacheiro","Gambá",
     "Mico-estrela","Sagui","Macaco-prego","Bugio","Ema","Seriema","Coruja-buraqueira","Jabuti","Teiú","Jiboia","Jararaca","Cascavel","Cobra-coral",

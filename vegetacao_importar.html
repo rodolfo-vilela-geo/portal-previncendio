@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<title>Carregar Inventário Florestal — Colibri</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="exige_login.js?v=20261007a"></script>
+<style>
+  :root{ --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --linha:#dcd8d0; --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --erro:#b3261e; --alerta:#9a5b00 }
+  *{box-sizing:border-box} [hidden]{display:none!important}
+  body{margin:0;background:var(--fundo);color:var(--tinta);font:14.5px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--verde);color:#fff;padding:10px 16px}
+  header .inst{font-size:12px;opacity:.9} header .inst a{color:#fff;text-decoration:none} header h1{margin:2px 0 0;font-size:18px}
+  main{max-width:820px;margin:0 auto;padding:16px}
+  .bloco{background:var(--papel);border:1px solid var(--linha);border-radius:12px;padding:14px 16px;margin-top:14px}
+  .bloco h2{font-size:16px;margin:0 0 8px}
+  .dica{font-size:13px;color:var(--suave)}
+  .btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--verde);background:#fff;color:var(--verde);padding:8px 14px;cursor:pointer}
+  .btn.primario{background:var(--verde);color:#fff} .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .barra{height:14px;background:#e5e8dc;border-radius:99px;overflow:hidden;margin:10px 0 4px} .barra i{display:block;height:100%;width:0;background:var(--verde);transition:width .3s}
+  table{border-collapse:collapse;width:100%;font-size:13px} td,th{border-bottom:1px solid #eee;padding:4px 6px;text-align:left} td.n{text-align:right}
+  #msg.erro{color:var(--erro)} #msg.ok{color:var(--ok)}
+</style>
+</head>
+<body>
+<header><div class="inst"><a href="index.html">← Colibri</a> · Previncêndio</div><h1>Carregar o Inventário Florestal de MG</h1></header>
+<main>
+  <div class="bloco">
+    <h2>O que é</h2>
+    <p class="dica" style="margin:0">O inventário (IDE-Sisema, recortado pelas UCs, zonas de amortecimento e mais 5 km) é usado pelo ROI para calcular a
+      <b>vegetação atingida</b> a partir do polígono da área queimada. A carga é feita uma vez (e repetida só quando o inventário for atualizado).
+      Só a equipe do Previncêndio carrega.</p>
+    <p class="dica">Situação no banco: <b id="situacao">conferindo…</b></p>
+  </div>
+  <div class="bloco">
+    <h2>1. Escolha o arquivo</h2>
+    <p class="dica" style="margin-top:0">O .zip do shapefile recortado (com .shp, .dbf e .prj), em graus (WGS 84 ou SIRGAS 2000). Precisa ter a coluna <code>class_id</code> (1 a 17).</p>
+    <input type="file" id="arq" accept=".zip,.shp,.dbf,.prj,.cpg" multiple>
+    <p class="dica" id="info"></p>
+    <div id="classes"></div>
+  </div>
+  <div class="bloco">
+    <h2>2. Carregue</h2>
+    <p class="dica" style="margin-top:0">Vai em lotes de 300 polígonos. Pode levar de 10 a 20 minutos — deixe esta aba aberta. Se cair a internet,
+      escolha o arquivo de novo e clique em carregar: continua de onde parou.</p>
+    <button class="btn primario" id="carregar" disabled>Carregar</button>
+    <div class="barra"><i id="prog"></i></div>
+    <p class="dica" id="estado"></p>
+    <p id="msg"></p>
+  </div>
+</main>
+<script>
+const sb = window.supabase.createClient("https://nhsjsttvxixgfqnweqos.supabase.co", "sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39");
+const $ = s => document.querySelector(s);
+const fmt = n => Number(n).toLocaleString("pt-BR");
+const LOTE = 300;
+let fonte = null, perfil = null;
+
+// ---- leitura do zip / shapefile (sem bibliotecas; o shapefile é lido registro a registro para não estourar a memória)
+function listarZip(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), td = new TextDecoder();
+  let e = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50){ e = i; break; }
+  if (e < 0) throw new Error("Arquivo .zip inválido.");
+  const out = {}; let p = dv.getUint32(e + 16, true);
+  for (let k = 0, n = dv.getUint16(e + 10, true); k < n; k++){
+    const met = dv.getUint16(p + 10, true), tam = dv.getUint32(p + 20, true), ln = dv.getUint16(p + 28, true), off = dv.getUint32(p + 42, true);
+    const nome = td.decode(u8.subarray(p + 46, p + 46 + ln)); p += 46 + ln + dv.getUint16(p + 30, true) + dv.getUint16(p + 32, true);
+    if (nome.endsWith("/") || /(^|\/)(__MACOSX|\.)/.test(nome)) continue;
+    out[nome] = async () => {
+      const ini = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true), dados = u8.subarray(ini, ini + tam);
+      if (met === 0) return dados.slice().buffer;
+      if (met !== 8 || !window.DecompressionStream) throw new Error("Este navegador não abre o .zip. Use os arquivos soltos (.shp, .dbf e .prj).");
+      return await new Response(new Blob([dados]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer();
+    };
+  }
+  return out;
+}
+const horario = r => { let s = 0; for (let i = 0; i < r.length - 1; i++) s += (r[i + 1][0] - r[i][0]) * (r[i + 1][1] + r[i][1]); return s > 0; };
+function indiceShp(buf){
+  const dv = new DataView(buf), offs = []; let p = 100;
+  if (![5, 15, 25].includes(dv.getInt32(32, true))) throw new Error("O shapefile não é de polígonos.");
+  while (p + 8 <= buf.byteLength){ offs.push(p); p += 8 + dv.getInt32(p + 4) * 2; }
+  return {n: offs.length, geom: i => {
+    const c = offs[i] + 8; if (dv.getInt32(c, true) === 0) return null;
+    const np = dv.getInt32(c + 36, true), npt = dv.getInt32(c + 40, true), pts = c + 44 + 4 * np, polis = [];
+    for (let k = 0; k < np; k++){
+      const a = dv.getInt32(c + 44 + 4 * k, true), b = k + 1 < np ? dv.getInt32(c + 48 + 4 * k, true) : npt, anel = [];
+      for (let j = a; j < b; j++) anel.push([Math.round(dv.getFloat64(pts + 16 * j, true) * 1e6) / 1e6, Math.round(dv.getFloat64(pts + 16 * j + 8, true) * 1e6) / 1e6]);
+      if (anel.length < 4) continue;
+      if (horario(anel) || !polis.length) polis.push([anel]); else polis[polis.length - 1].push(anel);
+    }
+    return polis.length ? {type: "MultiPolygon", coordinates: polis} : null; }};
+}
+function lerDbf(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf), n = dv.getUint32(4, true), hl = dv.getUint16(8, true), rl = dv.getUint16(10, true), td = new TextDecoder();
+  const campos = []; let off = 1;
+  for (let p = 32; p < hl - 1 && u8[p] !== 0x0D; p += 32){ let nome = ""; for (let i = 0; i < 11 && u8[p + i]; i++) nome += String.fromCharCode(u8[p + i]); campos.push({nome, off, tam: u8[p + 16]}); off += u8[p + 16]; }
+  return {n, campos: campos.map(c => c.nome), valor: (i, nome) => { const c = campos.find(x => x.nome.toLowerCase() === nome.toLowerCase()); if (!c) return null; const a = hl + i * rl + c.off; return td.decode(u8.subarray(a, a + c.tam)).trim(); }};
+}
+
+async function situacao(){
+  const {count, error} = await sb.from("veg_inventario").select("id", {count: "exact", head: true});
+  if (error){ $("#situacao").textContent = "não foi possível conferir (" + error.message + ")"; return null; }
+  $("#situacao").textContent = count ? `${fmt(count)} polígonos já carregados.` : "vazio (ainda não carregado).";
+  return count;
+}
+
+$("#arq").onchange = async () => {
+  $("#msg").textContent = ""; $("#classes").innerHTML = ""; $("#carregar").disabled = true; fonte = null;
+  try{
+    const files = [...$("#arq").files]; let arqs = {};
+    $("#info").textContent = "Lendo o arquivo…";
+    for (const f of files){ if (/\.zip$/i.test(f.name)) Object.assign(arqs, listarZip(await f.arrayBuffer())); else arqs[f.name] = () => f.arrayBuffer(); }
+    const nomes = Object.keys(arqs), ach = re => nomes.find(n => re.test(n));
+    const shp = ach(/\.shp$/i), dbf = ach(/\.dbf$/i), prj = ach(/\.prj$/i);
+    if (!shp || !dbf) throw new Error("Faltam o .shp ou o .dbf.");
+    const prjTxt = prj ? new TextDecoder().decode(await arqs[prj]()) : "";
+    if (/PROJCS/i.test(prjTxt)) throw new Error("O shapefile está em coordenadas projetadas (UTM). Reprojete para WGS 84 ou SIRGAS 2000 em graus.");
+    const geo = indiceShp(await arqs[shp]()), tab = lerDbf(await arqs[dbf]());
+    if (!tab.campos.some(c => c.toLowerCase() === "class_id")) throw new Error("Não achei a coluna class_id no .dbf.");
+    if (geo.n !== tab.n) throw new Error(`O .shp tem ${geo.n} registros e o .dbf ${tab.n}.`);
+    const cont = {}; for (let i = 0; i < tab.n; i++){ const k = (tab.valor(i, "class_id") || "?") + "|" + (tab.valor(i, "class_name") || ""); cont[k] = (cont[k] || 0) + 1; }
+    $("#classes").innerHTML = `<table><tr><th>class_id</th><th>Classe</th><th style="text-align:right">Polígonos</th></tr>${Object.entries(cont).sort((a, b) => parseInt(a[0]) - parseInt(b[0])).map(([k, n]) => `<tr><td>${k.split("|")[0]}</td><td>${k.split("|")[1]}</td><td class="n">${fmt(n)}</td></tr>`).join("")}</table>`;
+    fonte = {n: tab.n, geom: geo.geom, classe: i => parseInt(tab.valor(i, "class_id"))};
+    $("#info").textContent = `${fmt(tab.n)} polígonos em ${shp.split("/").pop()}.`;
+    $("#carregar").disabled = !["gpcif", "admin"].includes(perfil?.papel);
+  }catch(e){ $("#info").textContent = ""; $("#msg").className = "erro"; $("#msg").textContent = e.message; }
+};
+
+$("#carregar").onclick = async () => {
+  if (!fonte) return;
+  const ja = await situacao(); if (ja == null) return;
+  if (ja >= fonte.n){ $("#msg").className = "ok"; $("#msg").textContent = "O inventário já está todo carregado."; return; }
+  if (ja && !confirm(`Já há ${fmt(ja)} polígonos no banco. Continuar a partir do polígono ${fmt(ja + 1)}?`)) return;
+  $("#carregar").disabled = true; $("#msg").textContent = "";
+  const t0 = Date.now(); let i = ja;
+  while (i < fonte.n){
+    const lote = [];
+    for (let k = i; k < Math.min(i + LOTE, fonte.n); k++){ const g = fonte.geom(k); if (g) lote.push({c: fonte.classe(k), g}); else lote.push({c: fonte.classe(k), g: {type: "MultiPolygon", coordinates: []}}); }
+    let tent = 0, erro = null;
+    do { const {error} = await sb.rpc("veg_inventario_carregar", {p_lote: lote}); erro = error; if (erro) await new Promise(r => setTimeout(r, 2000 * ++tent)); } while (erro && tent < 4);
+    if (erro){ $("#msg").className = "erro"; $("#msg").textContent = `Parou no polígono ${fmt(i + 1)}: ${erro.message}. Clique em carregar de novo para continuar.`; $("#carregar").disabled = false; situacao(); return; }
+    i += lote.length;
+    const pct = i / fonte.n, min = (Date.now() - t0) / 6e4, falta = pct > 0 ? min / ((i - ja) / (fonte.n - ja)) - min : 0;
+    $("#prog").style.width = (pct * 100).toFixed(1) + "%";
+    $("#estado").textContent = `${fmt(i)} de ${fmt(fonte.n)} polígonos (${(pct * 100).toFixed(1)}%) · falta cerca de ${Math.max(1, Math.round(falta))} min`;
+  }
+  await situacao();
+  $("#msg").className = "ok"; $("#msg").textContent = "Inventário carregado. O ROI já calcula a vegetação atingida a partir do polígono.";
+};
+
+window.COLIBRI_LOGIN?.then(p => {
+  perfil = p; if (!p) return;
+  if (!["gpcif", "admin"].includes(p.papel)){ $("#msg").className = "erro"; $("#msg").textContent = "A carga do inventário é feita pela equipe do Previncêndio."; }
+  situacao();
+});
+</script>
+</body>
+</html>
