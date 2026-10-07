@@ -58,6 +58,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 35_geo_vegetacao.sql         Geo Colibri: geo_vegetacao(caixa, tolerância) — inventário recortado pela tela e simplificado pelo zoom (o mapa pede a partir do zoom 11)
 36_ris_da_uc.sql             ris_da_uc(nome_uc): RIs da UC (últimos ~13 meses) com situação, prazo e nº de ROIs — o ROI começa escolhendo o RI
 37_aeronaves_codinome.sql    Aeronaves no empenho: a_contrato = contrato do Air Tractor AT-802 (CFM/FTP); a_heli = helicóptero pelo codinome (Pegasus PMMG, Arcanjo CBMMG, Carcará PCMG, Guará IEF/PMMG); ri_para_roi leva a_heli
+38_recurso_aereo.sql        Cadastro único de pontos de apoio aéreo (recurso_aereo: aeródromos do IDE-Sisema/ANAC + pistas não registradas, helipontos e áreas de pouso dos PIPCIFs, com atributos operacionais: água, AT-802 etc.); uc_ponto.recurso_id liga o ponto da UC ao cadastro; recursos_aereos_perto(uc, km). Carga dos dados no pacote privado
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
