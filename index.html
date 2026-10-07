@@ -78,15 +78,6 @@
   section.fechada{margin-top:14px}
   .tit .resumo{display:none;font-size:12.5px;color:var(--suave)}
   section.fechada .tit .resumo{display:inline}
-  /* Para você */
-  #paraVoce{margin-top:18px}
-  .pv{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-  .pv-cab{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-  .pv-cab b{font-size:15px;color:var(--marca-2)} .pv-cab span{font-size:12.5px;color:var(--suave)}
-  .pv-atalhos{display:flex;flex-wrap:wrap;gap:8px}
-  .pv-atalhos a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tinta);font-weight:600;font-size:14px;border:1px solid var(--linha);border-left:4px solid var(--c,var(--marca-2));border-radius:10px;padding:8px 13px;background:var(--papel)}
-  .pv-atalhos a:hover{background:color-mix(in srgb,var(--c,var(--marca-2)) 8%,var(--papel))}
-  .pv-atalhos a small{font-weight:500;color:var(--suave);font-size:12px}
   /* módulos em faixa */
   .mods-faixa{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .mods-rot{font-size:13px;color:var(--suave);margin-right:4px;width:100%}
@@ -257,9 +248,6 @@
 <div class="faixa" aria-hidden="true"></div>
 
 <main>
-  <section id="paraVoce" hidden>
-    <div class="pv"><div class="pv-cab"><b>Para você</b><span id="pvQuem"></span></div><div class="pv-atalhos" id="pvAtalhos"></div></div>
-  </section>
   <!-- 1. OCORRÊNCIA -->
   <section class="t-fogo" data-rec="ocorrencias">
     <div class="tit"><h2>Ocorrência de incêndio</h2></div>
@@ -490,17 +478,6 @@ const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
     document.getElementById("secConvite").hidden = true;
     document.getElementById("conta").innerHTML = `<span>${esc(p.nome)}</span><a href="#" id="sairConta">Sair</a>`;
     document.getElementById("sairConta").onclick = async ev => { ev.preventDefault(); await sb.auth.signOut(); location.reload(); };
-    const PAPEL = {gerente:"gerente da UC", sala:"Sala de Situação", tecnica:"Sala Técnica", gpcif:"Previncêndio", admin:"administrador"};
-    const AT = {
-      ri:["sala.html","Sala de Situação","novo RI","fogo"], roi:["roi.html","Novo ROI","relatório da ocorrência","verde"], smc:["smc.html","SMC","mapear a área queimada","azul"],
-      tecnica:["tecnica.html","Sala Técnica","prazos e cobranças","ambar"], boletim:["boletim.html","Boletim da FTP","","fogo"], painel:["painel.html","Painel histórico","","azul"],
-      uc:["painel_uc.html","Painel da UC","","teal"], cad:["ucs.html","Cadastro da UC","módulos","verde"], mapa:["mapa.html","Geo Colibri","","azul"],
-      apoios:["sala.html?aba=apoios","Apoios e atuações","","fogo"], importar:["roi_importar.html","Importar ROIs","","ambar"], aereo:["apoio_aereo.html","Apoio aéreo","","azul"]};
-    const ESC = {gerente:["roi","smc","uc","cad","mapa"], sala:["ri","apoios","boletim","mapa"], tecnica:["tecnica","importar","painel","mapa"],
-                 gpcif:["ri","roi","tecnica","cad","mapa","aereo"], admin:["ri","roi","tecnica","cad","mapa","aereo"]}[p.papel] || ["mapa","painel"];
-    document.getElementById("pvQuem").textContent = `${p.nome} · ${PAPEL[p.papel] || p.papel}`;
-    document.getElementById("pvAtalhos").innerHTML = ESC.map(k => { const [h, t, d, c] = AT[k]; return `<a href="${h}" class="t-${c}">${esc(t)}${d ? `<small>${esc(d)}</small>` : ""}</a>`; }).join("");
-    document.getElementById("paraVoce").hidden = false;
     let n = 0;
     document.querySelectorAll("#secGestao [data-papeis]").forEach(a => { const ok = a.dataset.papeis.split(" ").includes(p.papel); a.hidden = !ok; n += ok; });
     if (!n) return;
