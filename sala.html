@@ -450,11 +450,10 @@ function htmlEvento(ultimo, primeiro=false){
       <div class="largo" style="grid-column:span 2"><label>Quem informou</label><input name="informante" list="sugInformante" placeholder="ex.: Gerente da UC, Sr. José"></div>
       <div class="largo"><label>Descrição *</label><textarea name="descricao" required placeholder="O que foi informado na ligação: situação do incêndio, local, horários, pedidos de apoio…"></textarea></div>
     </div>
-    <fieldset><legend>Pessoas empenhadas agora <span class="total" data-total="p"></span></legend><div class="recursos">
-      ${PESSOAS.map(([k,t])=>`<div><label>${t}</label><input type="number" min="0" name="${k}" value="${v(k)}"></div>`).join("")}</div></fieldset>
-    <fieldset><legend>Veículos e aeronaves</legend><div class="recursos">
-      ${VEICULOS.map(([k,t])=>`<div><label>${t}</label><input type="number" min="0" name="${k}" value="${v(k)}"></div>`).join("")}</div></fieldset>
-    <label>Detalhamento dos recursos (instituições, outros)</label><textarea name="recursos_txt" style="min-height:60px">${esc(v("recursos_txt"))}</textarea>
+    <div class="dica" style="margin:8px 0 0;padding:8px 10px;background:#f3f6ec;border-radius:8px">
+      Pessoas, veículos e aeronaves <b>não</b> se registram aqui: vão na aba <b>Recursos empenhados</b>, por instituição e por dia — assim não há registro em dobro.
+      ${primeiro ? `<label style="display:flex;gap:6px;align-items:center;margin-top:6px;font-weight:600;color:var(--tinta)"><input type="checkbox" name="ir_recursos" style="width:auto"> Já há equipes no combate: abrir os recursos empenhados depois de registrar</label>`
+                 : `<button type="button" class="lnk" data-ir-recursos style="margin-left:4px">ir para Recursos empenhados →</button>`}</div>
     <div class="grade marcoEv" style="margin-top:8px" hidden>
       <div><label data-rot>Data</label><input type="date" name="ev_dat_marco"></div>
       <div><label>Hora</label><input type="time" name="ev_hr_marco"></div>
@@ -462,8 +461,7 @@ function htmlEvento(ultimo, primeiro=false){
     </div>`;
 }
 function ligarEvento(el){
-  const tot = () => { const t = PESSOAS.reduce((s,[k])=>s+(num(el.querySelector(`[name=${k}]`).value)||0),0); el.querySelector('[data-total="p"]').textContent = t ? `· total ${t}` : ""; };
-  el.addEventListener("input", tot); tot();
+  el.querySelector("[data-ir-recursos]")?.addEventListener("click", () => document.querySelector('.abas-ri button[data-aba="recursos"]')?.click());
   const tipo = el.querySelector('[name="tipo"]'), m = el.querySelector(".marcoEv");
   const f = () => { const t = tipo.value; m.hidden = !["debelado","inicio_combate"].includes(t);
     m.querySelector("[data-rot]").textContent = t === "debelado" ? "Fim (debelado) — data" : "Início do combate — data";
@@ -477,8 +475,7 @@ function lerEvento(el){
   const g = n => el.querySelector(`[name="${n}"]`);
   if (!txt(g("descricao").value)) throw new Error("Escreva a descrição do evento.");
   const e = {data_hora: g("data_hora").value ? g("data_hora").value.replace("T"," ")+":00" : null, tipo: g("tipo").value,
-    informante: txt(g("informante").value), descricao: txt(g("descricao").value), recursos_txt: txt(g("recursos_txt").value), atendente: perfil.nome};
-  [...PESSOAS, ...VEICULOS].forEach(([k]) => e[k] = num(g(k).value));
+    informante: txt(g("informante").value), descricao: txt(g("descricao").value), atendente: perfil.nome};
   return e;
 }
 
@@ -494,14 +491,14 @@ $("#novoRI").onclick = () => {
   $("#salvarNovo").onclick = async () => {
     const b = $("#salvarNovo"); b.disabled = true;
     try{
-      const cab = lerCabecalho($("#cab")), ev = lerEvento($("#ev1"));
+      const cab = lerCabecalho($("#cab")), ev = lerEvento($("#ev1")), irRec = $('#ev1 [name="ir_recursos"]')?.checked;
       const ano = +(cab.dat_detec||"").slice(0,4) || new Date().getFullYear();
       const {data, error} = await sb.from("ri").insert({ano, ...cab}).select("ano,ri").single();
       if (error) throw new Error(error.message);
       const {error: e2} = await sb.from("ri_evento").insert({ano: data.ano, ri: data.ri, ...ev});
       if (e2) throw new Error("RI criado, mas o evento falhou: " + e2.message);
       msg(`RI ${data.ri}/${data.ano} registrado.`, "ok");
-      await carregarLista(); abrirRI(data.ano, data.ri);
+      await carregarLista(); if (irRec){ abaRI = "recursos"; window._ultimoRI = `${data.ano}/${data.ri}`; } abrirRI(data.ano, data.ri);
     }catch(err){ msg(err.message, "erro"); b.disabled = false; }
   };
 };
@@ -536,9 +533,7 @@ async function abrirRI(ano, ri){
     <div class="aba-ri" data-aba="andamento">
       <div class="bloco nao-imprime" id="formEvento"><h3>Registrar nova ligação ou atualização</h3>
         ${htmlEvento(ultimo)}
-        <div class="dica" style="margin:6px 0">Os recursos vêm preenchidos com a última atualização — altere só o que mudou.
-          Quando o RI tem atuações registradas (aba Recursos empenhados), o boletim e o ROI usam as atuações.</div>
-        <button class="btn primario" id="salvarEvento">Registrar evento</button></div>
+        <button class="btn primario" id="salvarEvento" style="margin-top:8px">Registrar evento</button></div>
       <div class="bloco"><h3>Linha do tempo · ${(evs||[]).length} ${(evs||[]).length === 1 ? "registro" : "registros"} <span style="text-transform:none;letter-spacing:0;font-weight:400">(mais recente primeiro)</span></h3>
         <ul class="linha-tempo">${[...(evs||[])].reverse().map(e => `<li>
           <span class="quando">${e.data_hora ? fmtDH(e.data_hora) : esc(e.data_hora_txt||"sem data")}</span><span class="tipo">${TIPOS[e.tipo]||e.tipo}</span>
