@@ -37,3 +37,13 @@ Registro das escolhas feitas com o Rodolfo, para não serem rediscutidas nem des
 - Repositório público: só código, estrutura do banco e dados públicos.
 - Dados internos só no Supabase, com RLS.
 - pdf.js hospedado no próprio site (o cdnjs é bloqueado em computadores do Estado).
+
+## Empenho de recursos (pessoas, veículos, aeronaves) — decisões de 07/10/2026
+- Cadastro único de empenho (categorias → instituições → tipos de recurso), usado pelo RI e pelo ROI; o ROI registra por dia e turno, como o RI, e o PDF segue essa lógica.
+- Vale a partir de 2027; 2026 só para testes; migração/revisão dos textos de 2026 no fim da temporada.
+- Histórico 2013–2025 fica no nível de categoria (as colunas antigas do ROI); não se tenta inferir instituição.
+- Categorias novas podem ser separadas (municípios, empresas, órgãos públicos etc.), mas cada uma soma numa coluna antiga para manter a série.
+- CFM = Compensação Florestal Minerária; a AMDA opera o contrato de serviços com a Vale via CFM.
+- PM e CBMMG sem detalhar pelotão. Brigada municipal = parceiro (categoria Municípios).
+- A classificação é decidida no "Quadro de classificação do empenho" (artefato privado do Rodolfo) antes de gravar no banco.
+- Shapefile do BDG: hoje leva só o empenho do maior dia (limite de colunas). Proposta: polígono com colunas-resumo + tabela de empenho à parte ligada por cod_bdp (CSV/DBF) e GeoPackage com as duas tabelas.
