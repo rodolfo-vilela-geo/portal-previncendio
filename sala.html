@@ -200,8 +200,12 @@
     </div>
     <p class="dica" id="cInfo"></p>
     <div class="tab-wrap" style="max-height:640px"><table class="tab" id="tabInst"></table></div>
+    <div id="cJuntar" class="at-form" hidden style="margin:10px 0"></div>
     <h3 class="sec">Categorias do empenho</h3>
     <div class="tab-wrap" style="max-height:none"><table class="tab" id="tabCateg"></table></div>
+    <h3 class="sec" id="cHistTit">Histórico de alterações do catálogo</h3>
+    <p class="dica" id="cHistInfo"></p>
+    <div class="tab-wrap" style="max-height:360px"><table class="tab" id="tabCatHist"></table></div>
   </section>
 
   <!-- LISTAS (admin) -->
@@ -896,6 +900,7 @@ function desenharCatalogo(){
     $("#cGrupo").innerHTML = `<option value="">Todas</option>` + GRUPOS.map(g=>`<option value="${g.id}">${esc(g.nome)}</option>`).join("");
     ["#cGrupo","#cMostrar"].forEach(x => $(x).addEventListener("change", desenharCatalogo));
     let t; $("#cBusca").addEventListener("input", () => { clearTimeout(t); t = setTimeout(desenharCatalogo, 250); });
+    carregarHistCatalogo();
   }
   const fg = $("#cGrupo").value, fm = $("#cMostrar").value, q = $("#cBusca").value.trim();
   const ver = i => (!fg || grupoDe(i) === fg) && casaBusca(i, q) &&
@@ -909,7 +914,8 @@ function desenharCatalogo(){
     <td><input data-k="variantes" value="${esc((i.variantes||[]).join("; "))}" title="${esc((i.variantes||[]).join("; "))}" style="min-width:180px"></td>
     <td><input data-k="obs" value="${esc(i.obs||"")}" title="${esc(i.obs||"")}"></td>
     <td style="text-align:center"><input type="checkbox" data-k="ativo" ${i.id ? (i.ativo?"checked":"") : "checked"} style="width:auto"></td>
-    <td style="white-space:nowrap"><button class="btn peq" data-salvar>${i.id ? "Salvar" : "Adicionar"}</button>${pendente(i) ? ` <button class="btn peq" data-conferir title="Tira a marca de pendente">Conferida</button>` : ""}</td></tr>`;
+    <td style="white-space:nowrap"><button class="btn peq" data-salvar>${i.id ? "Salvar" : "Adicionar"}</button>${pendente(i) ? ` <button class="btn peq" data-conferir title="Tira a marca de pendente">Conferida</button>` : ""}
+      ${i.id ? `<br><button class="lnk" data-hist="${i.id}">histórico</button>${podeJuntar() && !juntada(i) ? ` <button class="lnk" data-juntar="${i.id}" title="Esta é a mesma que outra do catálogo">juntar…</button>` : ""}` : ""}</td></tr>`;
   const ordem = Object.fromEntries(GRUPOS.map((g,k) => [g.id, k]));
   const lista = INST.filter(ver).sort((a,b) => (ordem[grupoDe(a)] ?? 99) - (ordem[grupoDe(b)] ?? 99) || a.nome.localeCompare(b.nome,"pt-BR"));
   const nPend = INST.filter(pendente).length;
@@ -922,16 +928,61 @@ function desenharCatalogo(){
       variantes: g("variantes").value.split(";").map(v => v.trim().toLowerCase()).filter(Boolean), obs: txt(g("obs").value), ativo: g("ativo").checked, ...extra};
     if (!o.nome) return msg("Informe o nome da instituição.", "erro");
     if (!tr.dataset.id) o.categoria = "out";   // o gatilho do banco acerta a coluna pela categoria
+    const antes = tr.dataset.id && instPorId(+tr.dataset.id);
+    if (antes && grupoDe(antes) !== o.grupo && !confirm(`Mudar “${antes.nome}” de ${nomeGrupo(grupoDe(antes))} para ${nomeGrupo(o.grupo)}?\n\nA mudança vale também para o passado: os resumos da Sala e os ROIs com a tabela nova de empenho são recalculados. O histórico 2013–2025 não muda.`)) return;
     const {error} = tr.dataset.id ? await sb.from("instituicao").update(o).eq("id", +tr.dataset.id) : await sb.from("instituicao").insert(o);
     if (error) return msg(error.code === "23505" ? "Já existe uma instituição com esse nome." : error.message, "erro");
-    msg("Catálogo atualizado.", "ok"); await carregarInst(); $("#aInst").innerHTML = opcoesInst(null, true); desenharCatalogo();
+    msg("Catálogo atualizado.", "ok"); await carregarInst(); $("#aInst").innerHTML = opcoesInst(null, true); desenharCatalogo(); carregarHistCatalogo();
   };
   $$("#tabInst [data-salvar]").forEach(b => b.onclick = () => salvar(b.closest("tr")));
+  $$("#tabInst [data-hist]").forEach(b => b.onclick = () => { histInst = +b.dataset.hist; carregarHistCatalogo(); $("#cHistTit").scrollIntoView({behavior:"smooth"}); });
+  $$("#tabInst [data-juntar]").forEach(b => b.onclick = () => abrirJuntar(+b.dataset.juntar));
   $$("#tabInst [data-conferir]").forEach(b => b.onclick = () => { const tr = b.closest("tr"), ob = tr.querySelector('[data-k="obs"]');
     ob.value = ob.value.replace(/^PENDENTE:\s*/, "Conferida; "); salvar(tr); });
   $("#tabCateg").innerHTML = `<thead><tr><th>Categoria</th><th>O que entra</th><th>Soma na coluna antiga do ROI/BDG</th><th>Instituições ativas</th></tr></thead><tbody>` +
     GRUPOS.map(g => `<tr><td><b>${esc(g.nome)}</b></td><td>${esc(g.descricao||"")}</td><td>${esc(PESSOAS.find(([k]) => k === "comb_" + g.coluna)?.[1] || g.coluna)}</td>
       <td class="n">${INST.filter(i => i.ativo && !juntada(i) && grupoDe(i) === g.id).length}</td></tr>`).join("") + "</tbody>";
+}
+
+const podeJuntar = () => ["gpcif", "admin"].includes(perfil?.papel);
+function abrirJuntar(id){
+  const de = instPorId(id), box = $("#cJuntar"); if (!de) return;
+  box.hidden = false;
+  box.innerHTML = `<b>Juntar “${esc(de.nome)}” com outra instituição</b>
+    <p class="dica" style="margin:4px 0 8px">Use quando as duas são a mesma. Todos os registros da Sala e dos ROIs passam para a instituição escolhida,
+      o nome “${esc(de.nome)}” vira apelido dela (continua achando na busca) e esta fica inativa. Os ROIs afetados são recalculados. Não dá para desfazer pela tela.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="jPara" style="flex:1 1 320px;min-width:0">${opcoesInst(null)}</select>
+      <button class="btn primario" id="jOk">Juntar</button><button class="btn" id="jX">Cancelar</button></div>`;
+  $("#jPara").querySelector(`option[value="${id}"]`)?.remove();
+  box.scrollIntoView({behavior:"smooth", block:"center"});
+  $("#jX").onclick = () => { box.hidden = true; };
+  $("#jOk").onclick = async () => {
+    const para = instPorId(+$("#jPara").value); if (!para) return msg("Escolha a instituição que fica.", "erro");
+    if (!confirm(`Juntar “${de.nome}” em “${para.nome}”?\n\nOs registros passam para “${para.nome}” e “${de.nome}” fica inativa. Não dá para desfazer pela tela.`)) return;
+    const {data, error} = await sb.rpc("juntar_instituicao", {p_de: de.id, p_para: para.id});
+    if (error) return msg(error.message, "erro");
+    box.hidden = true;
+    msg(`Juntada em ${data.para}: ${data.atuacoes} registro(s) da Sala e ${data.roi_empenho} linha(s) de ROI passaram para ela.`, "ok");
+    await carregarInst(); $("#aInst").innerHTML = opcoesInst(null, true); desenharCatalogo(); histInst = null; carregarHistCatalogo();
+  };
+}
+let histInst = null;
+async function carregarHistCatalogo(){
+  let q = sb.from("auditoria").select("quando,quem,tabela,chave,operacao,campos,antes,depois,ref").in("tabela", ["instituicao","empenho_categoria"]).order("quando", {ascending:false}).limit(200);
+  if (histInst) q = q.eq("tabela", "instituicao").eq("chave", String(histInst));
+  const {data, error} = await q; if (error){ $("#cHistInfo").textContent = error.message; return; }
+  const ROT = {grupo:"categoria", categoria:"coluna do ROI/BDG", variantes:"variantes", nome:"nome", municipio:"município", sigla:"sigla", obs:"observação", ativo:"ativa", coluna:"coluna do ROI/BDG", descricao:"descrição"};
+  const fv = (k, v) => v == null || v === "" ? "—" : k === "grupo" ? nomeGrupo(v) : k === "ativo" ? (v ? "sim" : "não") : Array.isArray(v) ? v.join("; ") : String(v);
+  const nomeDe = h => h.ref?.replace(/^:\s*/, "") || (h.tabela === "instituicao" ? instPorId(+h.chave)?.nome : nomeGrupo(h.chave)) || h.chave;
+  $("#cHistInfo").innerHTML = histInst ? `Mostrando só <b>${esc(instPorId(histInst)?.nome || "")}</b> · <button class="lnk" id="cHistTodas">ver tudo</button>` : `Últimas ${data.length} alterações de instituições e categorias.`;
+  $("#cHistTodas")?.addEventListener("click", () => { histInst = null; carregarHistCatalogo(); });
+  $("#tabCatHist").innerHTML = `<thead><tr><th>Quando</th><th>Quem</th><th>Instituição / categoria</th><th>O que mudou</th></tr></thead><tbody>` +
+    (data.map(h => `<tr><td style="white-space:nowrap">${fmtDH(new Date(new Date(h.quando) - new Date().getTimezoneOffset()*6e4).toISOString())}</td><td>${esc(h.quem||"")}</td>
+      <td>${esc(nomeDe(h))}${h.tabela === "empenho_categoria" ? ' <span class="cat">categoria</span>' : ""}</td>
+      <td>${h.operacao === "incluir" ? "incluída" : h.operacao === "excluir" ? "excluída" :
+        (h.campos||[]).filter(k => !["categoria"].includes(k) || !(h.campos||[]).includes("grupo")).map(k => `<b>${esc(ROT[k]||k)}</b>: ${esc(fv(k, h.antes?.[k]))} → ${esc(fv(k, h.depois?.[k]))}`).join("<br>")}</td></tr>`).join("")
+     || `<tr><td colspan="4" class="dica">Nenhuma alteração registrada ainda.</td></tr>`) + "</tbody>";
 }
 
 function resumoRecursos(e){
