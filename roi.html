@@ -162,7 +162,7 @@
         <div><label>Telefone de contato</label><input name="telefone" inputmode="tel"></div>
         <div class="largo"><label>Nome do local do início do incêndio</label><input name="nome_local"></div>
         <div><label>Localização provável do início <span class="req">*</span></label><select name="local" data-lista="local" required></select></div>
-        <div><label>Distância (se Entorno/ZA)</label><input name="distancia" placeholder="ex.: 2 km"></div>
+        <input type="hidden" name="distancia"><!-- distância da UC: calculada pelo polígono (SMC/banco), sem campo na tela -->
       </div>
     </div>
   </section>
@@ -344,7 +344,7 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.3</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.4</div>
 <div id="relatorio"></div>
 
 <script src="roi_empenho.js?v=20261007b"></script>
@@ -1436,7 +1436,7 @@ function montarRelatorio(){
     <div class="kv">Responsável pelo preenchimento: <b>${v(r.responsavel)}</b></div>
     <div class="kv">Telefone de contato: <b>${v(r.telefone)}</b></div>
     <div class="kv">Nome do local do início do incêndio: <b>${v(r.nome_local)}</b></div>
-    <div class="kv">Localização provável do início do incêndio: <b>${v(r.local)}</b>${r.distancia ? ` · Distância: ${v(r.distancia)}` : ""}</div>
+    <div class="kv">Localização provável do início do incêndio: <b>${v(r.local)}</b></div>
 
     <div class="sec">1. Forma de detecção</div>
     <table><tr><th>Quem?</th><th>Forma</th><th>Data</th><th>Hora</th></tr>
