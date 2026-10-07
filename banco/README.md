@@ -53,7 +53,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 30_ri_para_roi_empenho.sql   ri_para_roi devolve o empenho da Sala linha a linha (sem observação) para pré-preencher a 2.2 nova do ROI; instituição genérica "Outra instituição (ver observação)"
 31_catalogo_historico_juntar.sql  Catálogo: auditoria em instituicao/empenho_categoria; juntar_instituicao(de, para) (só Previncêndio, sem apagar registros); trocar a categoria recalcula os ROIs com empenho novo (roi_evolucao_calculada, roi_recalcular_empenho). No Supabase: 31a/31b/31c
 32_roi_gerente_fauna.sql     gerentes_uc() (gerente do cadastro, para o ROI); roi.fn_condicao e roi_fauna (fauna estruturada); envio do ROI por usuário logado (gerente) com as mesmas regras do envio aberto; roi_empenho: edição só da equipe. No Supabase: 32a/32b
-33_acesso_restrito.sql       Só Painel (painel_dados) e Boletim (boletim_publico) são públicos: envio anônimo desligado (with check false), leituras abertas passam a só logados, funções revogadas do anon (inclusive o padrão para funções novas)
+33_acesso_restrito.sql       Só Painel (painel_dados) e Boletim (boletim_publico) são públicos: envio anônimo desligado (with check false), leituras abertas passam a só logados, funções revogadas do anon (inclusive o padrão para funções novas); "logado" passa a exigir usuário da equipe (is_usuario). No Supabase: 33, 33b, 33c
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
