@@ -174,4 +174,26 @@ EMP.html = function(v, fmtData){
       return `<tr><td>${fmtData(l.data)}</td><td>${v(l.hr_inicio)}${l.hr_fim ? "–" + v(l.hr_fim) : ""}</td><td>${v(i.nome)}</td><td>${v(GRUPOS.find(g => g.id === grupo(i))?.nome)}</td>
         <td style="text-align:center">${l.pessoas || "-"}</td><td>${v(rv(l))}</td><td>${v(l.obs)}</td></tr>`; }).join("") + `</table>`;
 };
+// resumo para o BDG (mesma regra da visão vw_roi_empenho_resumo do banco)
+EMP.resumo = function(){
+  const L = EMP.linhas("x"); if (!L.length) return null;
+  const dia = {};
+  L.forEach(l => { const d = dia[l.data] ||= {}; const x = d[l.instituicao_id] ||= {p: 0, v: 0, a: 0};
+    x.p = Math.max(x.p, l.pessoas); x.v = Math.max(x.v, VEIC.reduce((s, [k]) => s + (l[k] || 0), 0)); x.a = Math.max(x.a, AERO.reduce((s, [k]) => s + (l[k] || 0), 0)); });
+  const tot = Object.values(dia).map(d => Object.values(d).reduce((t, x) => ({p: t.p + x.p, v: t.v + x.v, a: t.a + x.a}), {p: 0, v: 0, a: 0}));
+  return {emp_pico: Math.max(...tot.map(t => t.p)), emp_pesdia: tot.reduce((s, t) => s + t.p, 0), emp_dias: tot.length,
+          emp_inst: new Set(L.map(l => l.instituicao_id)).size, emp_veic: Math.max(...tot.map(t => t.v)), emp_aero: Math.max(...tot.map(t => t.a))};
+};
+// tabela de empenho para CSV e GeoPackage (liga ao polígono por cod_bdp)
+EMP.tabela = function(cod){
+  return EMP.linhas(cod).map(l => { const i = inst(l.instituicao_id) || {};
+    const o = {cod_bdp: cod, data: l.data, hr_inicio: l.hr_inicio, hr_fim: l.hr_fim, instituicao: i.nome, categoria: GRUPOS.find(g => g.id === grupo(i))?.nome,
+               coluna_bdg: (COL_ROI[i.categoria] || "comb_par"), pessoas: l.pessoas};
+    [...VEIC, ...AERO].forEach(([k]) => o[k] = l[k] || 0); o.a_contrato = l.a_contrato; o.obs = l.obs; return o; });
+};
+EMP.csv = function(cod){
+  const T = EMP.tabela(cod); if (!T.length) return "";
+  const cols = Object.keys(T[0]), qv = v => v == null ? "" : /[";\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+  return "﻿" + cols.join(";") + "\n" + T.map(o => cols.map(c => qv(o[c])).join(";")).join("\n") + "\n";
+};
 })();

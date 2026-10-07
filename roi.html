@@ -343,7 +343,8 @@
 <div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.1</div>
 <div id="relatorio"></div>
 
-<script src="roi_empenho.js?v=20261007a"></script>
+<script src="roi_empenho.js?v=20261007b"></script>
+<script src="gpkg.js?v=20261007a"></script>
 <script>
 /* ================================================================
    CONFIGURAÇÃO
@@ -1214,7 +1215,7 @@ $("#btnEnviar").onclick = async () => {
    ================================================================ */
 const PRJ_SIRGAS = 'GEOGCS["GCS_SIRGAS_2000",DATUM["D_SIRGAS_2000",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
 const NOMES_SHP = {vc_trator_d:"vc_tratord"};           // nomes com mais de 10 caracteres
-const CAMPOS_INT = /^(id|ano|comb_.*|total_comb|vc_(?!outro).*|a_air_tr|a_helicop)$/;
+const CAMPOS_INT = /^(id|ano|comb_.*|total_comb|vc_(?!outro).*|a_air_tr|a_helicop|emp_.*)$/;
 const CAMPOS_DEC = /^(veg_(?!outro).*|area_int|area_ent|soma_area)$/;
 const dataBR = v => v ? v.slice(0,10).split("-").reverse().join("/") : "";
 function intervaloHMS(v){                                 // "6 days 19:55:00" -> "163:55:00"
@@ -1296,13 +1297,24 @@ $("#btnShp").onclick = async () => {
     if (error) throw new Error(error.message);
     if (!data) throw new Error("o banco só libera o shapefile nas 24 h seguintes ao envio.");
     const {shp, shx, n} = montarSHP(poligonos);
+    // empenho (a partir de 2027): colunas-resumo no polígono + tabela por dia e instituição (CSV e GeoPackage), ligadas por cod_bdp
+    const resumo = window.EMP?.ativo ? EMP.resumo() : null, attrs = resumo ? {...data, ...resumo} : data;
     await carregarJSZip();
     const zip = new JSZip();
-    zip.file(`${cod}.shp`, shp); zip.file(`${cod}.shx`, shx); zip.file(`${cod}.dbf`, montarDBF(data, n));
+    zip.file(`${cod}.shp`, shp); zip.file(`${cod}.shx`, shx); zip.file(`${cod}.dbf`, montarDBF(attrs, n));
     zip.file(`${cod}.prj`, PRJ_SIRGAS); zip.file(`${cod}.cpg`, "UTF-8");
+    if (resumo){
+      zip.file(`${cod}_empenho.csv`, EMP.csv(cod));
+      try{
+        status("Gerando o GeoPackage…");
+        const props = Object.fromEntries(Object.entries(attrs).map(([k, x]) => [k, typeof x === "number" ? x : (x == null ? null : valorShp(k, x))]));
+        zip.file(`${cod}_BDG.gpkg`, await montarGPKG({camada: "bdg_" + cod.replace(/-/g, "_"), polis: poligonos, props, descricao: "Área queimada (BDG) " + cod,
+          tabelas: [{nome: "empenho", descricao: "Recursos empenhados por dia e instituição (liga por cod_bdp)", linhas: EMP.tabela(cod)}]}));
+      }catch(e){ console.warn(e); }
+    }
     const blob = await zip.generateAsync({type:"blob"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${cod}_BDG.zip`; a.click();
-    status(`Shapefile ${cod}_BDG.zip gerado (${n} polígono(s), atributos do BDG).`, "ok");
+    status(`Shapefile ${cod}_BDG.zip gerado (${n} polígono(s), atributos do BDG${resumo ? "; com o empenho em CSV e o GeoPackage" : ""}).`, "ok");
   }catch(e){ status("Shapefile: " + e.message, "erro"); }
 };
 

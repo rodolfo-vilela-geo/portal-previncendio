@@ -23,9 +23,9 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | Página / arquivo | Para quê |
 |---|---|
 | `index.html` | Página inicial (cabeçalho institucional IEF/DIUC/Previncêndio, login em diálogo, cards por público, seção Gestão por papel) |
-| `roi.html` | Formulário do ROI (Relatório de Ocorrência de Incêndio). `?importar=1` = modo usado dentro do importador de PDFs |
+| `roi.html` + `roi_empenho.js` + `gpkg.js` | Formulário do ROI (Relatório de Ocorrência de Incêndio). `?importar=1` = modo usado dentro do importador de PDFs (aí vale a tabela antiga de evolução). `roi_empenho.js`: seção 2.2 nova (recursos empenhados por dia e instituição) que calcula a evolução antiga e a seção 3. `gpkg.js` + `lib/sqljs/`: GeoPackage no pacote do BDG |
 | `roi_importar.html` + `roi_pdf.js` | Importa ROIs em PDF (modelo Word da DIUC) lendo o PDF no navegador (pdf.js em `lib/pdfjs/`, hospedado aqui porque o cdnjs é bloqueado em máquinas do Estado) |
-| `sala.html` | Sala de Situação (RI, atuações, apoios, listas suspensas) |
+| `sala.html` | Sala de Situação (RI, recursos empenhados por dia sem turnos, apoios, catálogo de instituições com categorias e pendentes, listas suspensas) |
 | `tecnica.html` | Sala Técnica (prazos, cobranças, SEI/PC/CAINF) |
 | `bdg.html` | Polígonos do BDG (cicatrizes, polígonos ausentes) |
 | `smc.html` | Ligação com o SMC (Sistema de Mapeamento de Cicatrizes, app no GEE) |
@@ -48,6 +48,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 - Funções de permissão: `is_usuario()`, `is_equipe()`, `is_gpcif()` (Previncêndio ou admin), `is_tecnica()`, `is_admin()`, `pode_editar_uc(nome_uc)`, `meu_perfil()`.
 - Padrão de RLS: leitura `is_usuario()`; edição `pode_editar_uc(nome_uc)`; o que é do Previncêndio, `is_gpcif()`. Funções de leitura especiais são `security definer` e testam `is_usuario()` por dentro (ex.: `geo_*` do Geo Colibri).
 - Auditoria: gatilho `tg_auditoria()` → tabela `auditoria` (histórico exibido nos módulos).
+- Empenho (2027 em diante; 2026 em teste): `empenho_categoria` (13 categorias, cada uma soma numa coluna antiga do ROI: `coluna`), `instituicao` (`grupo` = categoria; o gatilho acerta `categoria` = coluna antiga; `variantes` para busca; "(juntada)" = inativa por fusão; obs "PENDENTE…" = incluída pela Sala), `atuacao` (Sala), `roi_empenho` (ROI), `vw_roi_empenho_resumo`. Catálogo carregado em 07/10/2026 (carga no pacote privado).
 - Tabelas principais: `roi` (ocorrências; `cod_bdp`, `ano`, `ri`), `ri` (registro inicial da Sala, eventos do ano corrente com coordenada), `area_queimada` (polígonos do BDG), `uc`, `uc_limite` (tipo `uc`, `za_pm`, `za_3km`), `uc_cadastro`, `uc_infra`, `uc_ponto`, `uc_veiculo`, `uc_radio`, `uc_material`, `uc_parceiro`, `uc_prestador`, `uc_colaborador`, `uc_via`, `uc_elemento`, `uc_acao_preventiva`, `uc_acao_execucao`, `uc_projeto`, `uc_brigada`, `uc_risco`, `uc_risco_revisao`, `regional`, `municipio`.
 - Pelo MCP: DDL pequeno com `apply_migration`; `execute_sql` para consultas. Escritas grandes e DELETEs costumam ser canceladas — carga de dados volumosa vai pelas páginas de importação (o usuário importa logado).
 
@@ -67,9 +68,9 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 - **ROIs em PDF**: `roi_importar.html` (a equipe do Previncêndio transcreve; seções detectadas pelo título, não pelo número).
 - Decisões gerais e histórico: `docs/decisoes.md`.
 
-## Estado atual e próximos passos (atualizado em 06/10/2026)
+## Estado atual e próximos passos (atualizado em 07/10/2026)
 
-Feito: ROI/RI/Sala/Técnica/BDG/SMC; cadastro das UCs módulos 1–5 com PIPCIF 2026 de ~30 UCs; importador de ROIs em PDF; módulo 6 (mapa de risco — protótipo só da Serra do Cabral, com conferência do gerente e seção 14); Geo Colibri (visualizador, sem IDE-Sisema por decisão do Rodolfo).
+Feito: ROI/RI/Sala/Técnica/BDG/SMC; cadastro das UCs módulos 1–5 com PIPCIF 2026 de ~30 UCs; importador de ROIs em PDF; módulo 6 (mapa de risco — protótipo só da Serra do Cabral, com conferência do gerente e seção 14); Geo Colibri (visualizador, sem IDE-Sisema por decisão do Rodolfo); empenho padronizado (catálogo de 140 instituições em 13 categorias; Sala por dia sem turnos; ROI 2.2 nova pré-preenchida pela Sala; pacote do BDG com colunas-resumo emp_*, CSV do empenho e GeoPackage).
 
 Próximos (sem ordem fixa):
 - Mapa de risco das demais UCs (mesma receita; atualização anual).
@@ -77,7 +78,8 @@ Próximos (sem ordem fixa):
 - Camada de trilhas/acessos (`uc_via`) como variável do risco, quando o cadastro estiver completo.
 - Camada de risco na Sala de Situação; visão estadual do risco.
 - Módulo 7 (Plano operacional); PIPCIF como relatório gerado dos módulos.
-- Unificar empenho de pessoal/veículos entre RI e ROI (redesenho, provavelmente a partir de 2027).
+- Empenho: revisão/migração dos textos de 2026 no fim da temporada; exportação em lote do BDG com o empenho (hoje é por ROI); favoritas da UC também a partir dos parceiros do PIPCIF; conferir as pendentes no catálogo.
+- Carregar os PIPCIFs restantes (~53 UCs) e depois o catálogo único de recursos compartilhados (Pampulha, mirantes entre UCs). Corrigir `pipcif_ano` de Pau Furado.
 - Geo Colibri: Shapefile/GeoPackage, desenhar área para exportar, régua, exportar risco.
 
 ## Backup (responsabilidade do Rodolfo)
