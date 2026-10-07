@@ -84,7 +84,7 @@ Próximos (sem ordem fixa):
 - Módulo 7 (Plano operacional); PIPCIF como relatório gerado dos módulos.
 - Empenho: revisão/migração dos textos de 2026 no fim da temporada; exportação em lote do BDG com o empenho (hoje é por ROI); favoritas da UC também a partir dos parceiros do PIPCIF; conferir as pendentes no catálogo.
 - Carregar os PIPCIFs restantes (~53 UCs) e depois o catálogo único de recursos compartilhados (Pampulha, mirantes entre UCs). Corrigir `pipcif_ano` de Pau Furado.
-- Apoio aéreo: revisar as 99 áreas de pouso "a conferir" e a pista de Itamarandiba; excluir de vez os 52 aeródromos fora de MG (hoje inativos; o MCP não executa DELETE); módulo 2 da UC mostrando os pontos próximos (`recursos_aereos_perto`) e ligando novos pontos ao cadastro.
+- Apoio aéreo: revisar as 99 áreas de pouso "a conferir" e a pista de Itamarandiba; excluir de vez os 52 aeródromos fora de MG (hoje inativos; o MCP não executa DELETE); módulo 2 da UC mostrando os pontos próximos (`recursos_aereos_perto`). Novos pontos de PIPCIF/módulo 2 já se ligam sozinhos (gatilho da migração 40).
 - Geo Colibri: Shapefile/GeoPackage, desenhar área para exportar, régua, exportar risco.
 
 ## Backup (responsabilidade do Rodolfo)

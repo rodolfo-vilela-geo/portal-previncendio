@@ -60,6 +60,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 37_aeronaves_codinome.sql    Aeronaves no empenho: a_contrato = contrato do Air Tractor AT-802 (CFM/FTP); a_heli = helicóptero pelo codinome (Pegasus PMMG, Arcanjo CBMMG, Carcará PCMG, Guará IEF/PMMG); ri_para_roi leva a_heli
 38_recurso_aereo.sql        Cadastro único de pontos de apoio aéreo (recurso_aereo: aeródromos do IDE-Sisema/ANAC + pistas não registradas, helipontos e áreas de pouso dos PIPCIFs, com atributos operacionais: água, AT-802 etc.); uc_ponto.recurso_id liga o ponto da UC ao cadastro; recursos_aereos_perto(uc, km). Carga dos dados no pacote privado
 39_recurso_aereo_historico.sql Histórico (auditoria) do cadastro de apoio aéreo legível por usuários logados (tela apoio_aereo.html)
+40_ligar_ponto_aereo.sql    Gatilho em uc_ponto: pista/heliponto inserido (importador de PIPCIF ou módulo 2) é ligado ao recurso_aereo (pista ≤ 2 km, heliponto ≤ 300 m, ou mesmo nome) ou cria um lugar "a conferir"; nome da UC vira apelido e o informado vai para atributos.pipcif
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador

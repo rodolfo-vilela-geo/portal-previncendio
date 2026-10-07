@@ -191,6 +191,11 @@ async function gravar(i){
       for (let k = 0; k < rows.length; k += 200){ const {error} = await sb.from(t).insert(rows.slice(k, k + 200)); if (error) throw Object.assign(error, {parte: ROT[t]}); }
       L(`✓ ${ROT[t]}: ${rows.length}`);
     }
+    if ((d.tabelas.uc_ponto || []).some(r => r.tipo === "pista" || r.tipo === "heliponto")){
+      const {data: pa} = await sb.from("uc_ponto").select("recurso_id, recurso_aereo(situacao)").eq("nome_uc", uc).in("tipo", ["pista", "heliponto"]);
+      const lig = (pa || []).filter(p => p.recurso_id), conf = lig.filter(p => p.recurso_aereo?.situacao === "a_conferir").length;
+      L(`✓ Apoio aéreo: ${lig.length} de ${(pa || []).length} pistas/helipontos ligados ao cadastro único` + (conf ? ` (${conf} “a conferir” — revise em Apoio aéreo)` : ""));
+    }
     L("Concluído."); msg(`${uc} gravada.`, "ok");
   }catch(e){ falha(e.parte || "gravação", e); }
   d._banco = await contagens(uc); $("[data-gravar]", box).disabled = false;
