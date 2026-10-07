@@ -52,6 +52,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 29_empenho.sql               Empenho padronizado: empenho_categoria (13 categorias → colunas históricas), instituicao.grupo/municipio, atuacao sem turno + contrato da aeronave, roi_empenho, vw_roi_empenho_resumo (no Supabase aplicada como 29a/29b; carga do catálogo de instituições fica no pacote privado)
 30_ri_para_roi_empenho.sql   ri_para_roi devolve o empenho da Sala linha a linha (sem observação) para pré-preencher a 2.2 nova do ROI; instituição genérica "Outra instituição (ver observação)"
 31_catalogo_historico_juntar.sql  Catálogo: auditoria em instituicao/empenho_categoria; juntar_instituicao(de, para) (só Previncêndio, sem apagar registros); trocar a categoria recalcula os ROIs com empenho novo (roi_evolucao_calculada, roi_recalcular_empenho). No Supabase: 31a/31b/31c
+32_roi_gerente_fauna.sql     gerentes_uc() (gerente do cadastro, para o ROI); roi.fn_condicao e roi_fauna (fauna estruturada); envio do ROI por usuário logado (gerente) com as mesmas regras do envio aberto; roi_empenho: edição só da equipe. No Supabase: 32a/32b
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador

@@ -43,6 +43,7 @@
   .linha-radio input{width:auto}
   .dms{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px}
   .tabela-wrap{overflow-x:auto;border:1px solid var(--linha);border-radius:8px}
+  input.travado{background:#f1f1ea;color:#3d3d36}
   table.din{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
   table.din th{background:#e9eddf;font-size:12px;text-align:left;padding:6px;border-bottom:1px solid var(--linha);white-space:nowrap}
   table.din td{padding:4px;border-bottom:1px solid #eee}
@@ -156,7 +157,7 @@
           <input name="municipio" list="listaMun" placeholder="ex.: Buenópolis  (vários: separe com /)" required>
           <datalist id="listaMun"></datalist></div>
         <div><label>Gerente da unidade</label><input name="gerente_uc"></div>
-        <div><label>Responsável pelo preenchimento <span class="req">*</span></label><input name="responsavel" required></div>
+        <div><label>Responsável pelo preenchimento <span class="req">*</span></label><input name="responsavel" required><div class="dica" id="dicaLogin"></div></div>
         <div><label>Telefone de contato</label><input name="telefone" inputmode="tel"></div>
         <div class="largo"><label>Nome do local do início do incêndio</label><input name="nome_local"></div>
         <div><label>Localização provável do início <span class="req">*</span></label><select name="local" data-lista="local" required></select></div>
@@ -272,13 +273,15 @@
     <h2>6. Fauna atingida</h2>
     <div class="corpo">
       <div class="tabela-wrap">
-        <table class="din" id="tabFauna" style="min-width:620px">
-          <thead><tr><th>Quantidade</th><th>Identificação do animal</th><th>Latitude (ex.: 19°23'45")</th><th>Longitude (ex.: 43°34'16")</th><th></th></tr></thead>
+        <table class="din" id="tabFauna" style="min-width:900px;table-layout:fixed">
+          <colgroup><col style="width:62px"><col><col style="width:104px"><col style="width:190px"><col style="width:190px"><col style="width:150px"></colgroup>
+          <thead><tr><th>Qtd.</th><th>Animal</th><th>Condição</th><th>Latitude (S) · g / m / s</th><th>Longitude (W) · g / m / s</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
+      <datalist id="listaFauna"></datalist>
       <button type="button" class="btn peq" id="addFauna" style="margin-top:8px">+ Adicionar animal</button>
-      <div class="dica">Deixe vazio se não houve fauna atingida.</div>
+      <div class="dica">Deixe vazio se não houve fauna atingida. Uma linha por espécie e condição (ex.: 2 tamanduás mortos e 1 ferido = duas linhas). Coordenada de onde o animal foi encontrado; sem ela, use “📍 incêndio” (copia o ponto da seção 2.1). Dá para colar a coordenada inteira no campo de graus (ex.: 19°23'45" ou -19,3958).</div>
     </div>
   </section>
 
@@ -340,7 +343,7 @@
   </div>
 </div>
 
-<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.1</div>
+<div id="versao" style="text-align:center;font-size:11px;color:#999;padding:0 0 90px">Formulário ROI · versão 2026-10-07.2</div>
 <div id="relatorio"></div>
 
 <script src="roi_empenho.js?v=20261007b"></script>
@@ -412,6 +415,24 @@ function aplicarListas(listas){
   $("#listaMun").innerHTML = (listas.municipio||[]).map(m=>`<option value="${esc(m)}">`).join("");
   if (selUC.value) aplicarUC(false);
 }
+let GERENTES = {}, PERFIL = null;   // gerente de cada UC (cadastro) e quem está logado (se estiver)
+async function carregarLogin(){
+  if (!sb) return;
+  try{
+    const r = await comPrazo(sb.rpc("gerentes_uc"), 10000);
+    if (!r.error) (r.data || []).forEach(g => { if (g.gerente) GERENTES[g.nome_uc] = g.gerente; });
+    const {data: {session}} = await sb.auth.getSession();
+    if (session){ const p = await comPrazo(sb.rpc("meu_perfil"), 10000); if (!p.error && p.data) PERFIL = p.data; }
+  }catch(e){}
+}
+// quem está logado preenche o ROI: o nome vem do login (não precisa digitar)
+function aplicarLogin(){
+  if (MODO_IMPORTAR || !PERFIL) return;
+  F("responsavel").value = PERFIL.nome; F("responsavel").readOnly = true; F("responsavel").classList.add("travado");
+  F("responsavel").title = "Nome do seu login";
+  $("#dicaLogin").innerHTML = `Você está preenchendo como <b>${esc(PERFIL.nome)}</b>. Não é você? <a href="index.html">Saia e entre com o seu login</a>.`;
+  if (!F("nome_uc").value && (PERFIL.ucs || []).length === 1 && UCS[PERFIL.ucs[0]]){ F("nome_uc").value = PERFIL.ucs[0]; aplicarUC(true); }
+}
 const comPrazo = (promessa, ms) => Promise.race([promessa, new Promise((_,f) => setTimeout(() => f(new Error("tempo esgotado")), ms))]);
 async function carregarListas(){
   aplicarListas(LISTAS_RESERVA);                 // 1º: cópia embutida — listas disponíveis na hora
@@ -460,16 +481,45 @@ function linhaEvol(d={}){
   $("#tabEvol tbody").appendChild(tr);
   atualizarTotaisEvol();
 }
+// coordenada escrita de qualquer jeito (19°23'45", 19 23 45,5, -19.3958, 19,3958) -> graus decimais negativos (Sul/Oeste)
+function lerCoordTexto(t){
+  t = String(t || "").trim(); if (!t) return null;
+  const n = t.replace(/,/g, ".").match(/-?\d+(?:\.\d+)?/g); if (!n) return null;
+  const v = n.length >= 2 ? Math.abs(+n[0]) + (+n[1] || 0) / 60 + (+n[2] || 0) / 3600 : Math.abs(+n[0]);
+  return v ? -v : null;
+}
+const CONDICOES = ["Morto", "Ferido"];
 function linhaFauna(d={}){
   const tr = document.createElement("tr");
+  const la = d.latDec ?? lerCoordTexto(d.lat), lo = d.lonDec ?? lerCoordTexto(d.lon);
+  const [g1, m1, s1] = la != null ? decParaDMS(la) : ["", "", ""], [g2, m2, s2] = lo != null ? decParaDMS(lo) : ["", "", ""];
+  const cx = (k, v, ph) => `<input data-k="${k}" value="${esc(v)}" inputmode="decimal" placeholder="${ph}" style="min-width:0;padding:6px 4px">`;
   tr.innerHTML =
-    `<td><input type="number" min="1" data-k="qtd" value="${d.qtd??""}" style="max-width:90px"></td>
-     <td><input data-k="nome" value="${esc(d.nome||"")}" placeholder="ex.: Tamanduá"></td>
-     <td><input data-k="lat" value="${esc(d.lat||"")}"></td>
-     <td><input data-k="lon" value="${esc(d.lon||"")}"></td>
-     <td><button type="button" class="btn peq" title="Remover">×</button></td>`;
-  tr.querySelector("button").onclick = () => { tr.remove(); mudou(); };
+    `<td><input type="number" min="1" data-k="qtd" value="${d.qtd??""}" style="min-width:0;width:100%"></td>
+     <td><input data-k="nome" value="${esc(d.nome||"")}" placeholder="ex.: Tamanduá-bandeira" list="listaFauna"></td>
+     <td><select data-k="condicao" style="width:100%"><option value=""></option>${CONDICOES.map(c => `<option ${c === d.condicao ? "selected" : ""}>${c}</option>`).join("")}</select></td>
+     <td><div class="dms">${cx("lat_g", g1, "19")}${cx("lat_m", m1, "23")}${cx("lat_s", s1, "45,0")}</div></td>
+     <td><div class="dms">${cx("lon_g", g2, "43")}${cx("lon_m", m2, "34")}${cx("lon_s", s2, "16,0")}</div></td>
+     <td style="white-space:nowrap"><button type="button" class="btn peq" data-ponto title="Usa a coordenada do local do incêndio (seção 2.1)">📍 incêndio</button> <button type="button" class="btn peq" data-x title="Remover">×</button></td>`;
+  tr.querySelector("[data-x]").onclick = () => { tr.remove(); mudou(); };
+  tr.querySelector("[data-ponto]").onclick = () => {
+    const c = coords(); if (c.lat === null || c.lon === null) return status("Preencha antes as coordenadas do incêndio (seção 2.1).", "alerta");
+    ["lat_g","lat_m","lat_s","lon_g","lon_m","lon_s"].forEach(k => tr.querySelector(`[data-k=${k}]`).value = F(k).value); mudou(); };
+  // colar "19°23'45"" (ou decimal) no campo de graus espalha nos três
+  ["lat","lon"].forEach(p => tr.querySelector(`[data-k=${p}_g]`).addEventListener("paste", e => {
+    const t = (e.clipboardData || window.clipboardData).getData("text"); if (!/[°'’"”\s.,]/.test(t.trim())) return;
+    const v = lerCoordTexto(t); if (v == null) return; e.preventDefault();
+    const [g, m, ss] = decParaDMS(v); tr.querySelector(`[data-k=${p}_g]`).value = g; tr.querySelector(`[data-k=${p}_m]`).value = m; tr.querySelector(`[data-k=${p}_s]`).value = ss; mudou(); }));
   $("#tabFauna tbody").appendChild(tr);
+}
+function lerFauna(){
+  return $$("#tabFauna tbody tr").map(tr => {
+    const g = k => tr.querySelector(`[data-k=${k}]`)?.value || "";
+    const la = dmsParaDec(g("lat_g"), g("lat_m"), g("lat_s")), lo = dmsParaDec(g("lon_g"), g("lon_m"), g("lon_s"));
+    const txtDMS = (gg, mm, ss) => gg ? `${gg}°${mm || 0}'${ss || 0}"` : "";
+    return {qtd: g("qtd"), nome: g("nome"), condicao: g("condicao"), lat: txtDMS(g("lat_g"), g("lat_m"), g("lat_s")), lon: txtDMS(g("lon_g"), g("lon_m"), g("lon_s")),
+            latDec: la, lonDec: lo, _tr: tr};
+  });
 }
 const lerTabela = id => $$(`#${id} tbody tr`).map(tr => Object.fromEntries($$("input", tr).map(i => [i.dataset.k, i.value])));
 function atualizarTotaisEvol(){
@@ -592,12 +642,19 @@ function aplicarUC(trocouUC){
   $("#dicaUC").innerHTML = u
     ? `🔒 Categoria, grupo, bioma, regional e base vêm do cadastro da UC. Algo errado? Avise o Previncêndio para corrigir o cadastro.`
     : `Ao escolher a unidade, os dados fixos são preenchidos pelo cadastro de UCs.`;
+  // gerente: sempre do cadastro da UC (módulo 1); só fica livre se o cadastro não tiver
+  const ger = GERENTES[F("nome_uc").value] || u?.gerente || "";
+  if (!MODO_IMPORTAR){
+    if (ger){ F("gerente_uc").value = ger; F("gerente_uc").readOnly = true; F("gerente_uc").title = "Vem do cadastro da UC (módulo 1). Mudou o gerente? Atualize o cadastro da UC."; }
+    else { F("gerente_uc").readOnly = false; F("gerente_uc").title = ""; }
+    F("gerente_uc").classList.toggle("travado", !!ger);
+  }
   if (!u) return;
   const mun = [...(u.mun||[]), ...[...$("#listaMun").options].map(o=>o.value).filter(m => !(u.mun||[]).includes(m))];
   $("#listaMun").innerHTML = mun.map(m=>`<option value="${esc(m)}">`).join("");
   if (trocouUC){
     if (u.mun?.length) F("municipio").value = u.mun[0];
-    if (u.gerente)  F("gerente_uc").value = u.gerente;
+    if (MODO_IMPORTAR && u.gerente && !F("gerente_uc").value) F("gerente_uc").value = u.gerente;
     if (u.telefone) F("telefone").value = u.telefone;
   }
 }
@@ -613,7 +670,7 @@ function estado(){
     else if (el.type==="checkbox") s[el.name]=el.checked;
     else s[el.name]=el.value;
   });
-  s._evol = lerTabela("tabEvol"); s._fauna = lerTabela("tabFauna"); if (window.EMP?.ativo) s._emp = EMP.ler();
+  s._evol = lerTabela("tabEvol"); s._fauna = lerFauna().map(({_tr, ...f}) => f); if (window.EMP?.ativo) s._emp = EMP.ler();
   return s;
 }
 function aplicar(s){
@@ -1102,13 +1159,23 @@ function validar(){
   if (c.lat!==null && (c.lat < -23.5 || c.lat > -14)) marca("lat_g","Latitude fora de Minas Gerais.");
   if (c.lon!==null && (c.lon < -51.5 || c.lon > -39.5)) marca("lon_g","Longitude fora de Minas Gerais.");
   if (window.EMP?.ativo) erros.push(...EMP.validar());
+  lerFauna().forEach((f, i) => {
+    const algo = f.nome || f.qtd || f.lat || f.lon; if (!algo) return;
+    const m = (k, t) => { f._tr.querySelector(`[data-k=${k}]`)?.classList.add("invalido"); erros.push(`Fauna, linha ${i + 1}: ${t}`); };
+    if (!txt(f.nome)) m("nome", "informe o animal.");
+    if (!num(f.qtd)) m("qtd", "informe a quantidade.");
+    if (!f.condicao && !MODO_IMPORTAR) m("condicao", "informe se o animal estava morto ou ferido.");
+    if (f.latDec != null && (f.latDec < -23.5 || f.latDec > -14)) m("lat_g", "latitude fora de Minas Gerais.");
+    if (f.lonDec != null && (f.lonDec < -51.5 || f.lonDec > -39.5)) m("lon_g", "longitude fora de Minas Gerais.");
+    if ((f.latDec == null) !== (f.lonDec == null)) m(f.latDec == null ? "lat_g" : "lon_g", "informe latitude e longitude.");
+  });
   return erros;
 }
 
 function registro(){
   const semComb = F("sem_combate").checked;
   const evol = semComb ? [] : lerTabela("tabEvol").filter(l => l.data);
-  const fauna = lerTabela("tabFauna").filter(l => txt(l.nome));
+  const fauna = lerFauna().filter(l => txt(l.nome));
   const c = coords();
   const r = {
     cod_bdp: codBdp(), status: "enviado",
@@ -1131,6 +1198,7 @@ function registro(){
     fn_nome: fauna.length ? fauna.map((f,i)=>`${i+1}-${f.nome.trim()}`).join(", ") : null,
     fn_qnt:  fauna.length ? fauna.map((f,i)=>`${i+1}-${num(f.qtd)??""}`).join(", ") : null,
     fn_coord: fauna.length ? fauna.map((f,i)=>`${i+1}-Lat:${(f.lat||"").trim()} Long:${(f.lon||"").trim()}`).join(", ") : null,
+    fn_condicao: fauna.some(f => f.condicao) ? fauna.map((f,i)=>`${i+1}-${f.condicao||""}`).join(", ") : null,
     descricao: txt(F("descricao").value), proprietario: txt(F("proprietario").value), dificuldades: txt(F("dificuldades").value),
     alim_fornecida: $('[name=alim_fornecida]:checked') ? $('[name=alim_fornecida]:checked').value==="true" : null,
     alim_cafe_manha: num(F("alim_cafe_manha").value), alim_almoco: num(F("alim_almoco").value),
@@ -1145,19 +1213,21 @@ function registro(){
     return o;
   });
   const linhasEmp = window.EMP?.ativo ? EMP.linhas(r.cod_bdp) : [];
-  return {r, linhasEvol, linhasEmp, fauna};
+  const linhasFauna = fauna.map((f, i) => ({cod_bdp: r.cod_bdp, ordem: i + 1, especie: f.nome.trim(), qtd: num(f.qtd), condicao: txt(f.condicao),
+    lat: f.latDec != null ? +f.latDec.toFixed(6) : null, lon: f.lonDec != null ? +f.lonDec.toFixed(6) : null}));
+  return {r, linhasEvol, linhasEmp, linhasFauna, fauna};
 }
 
 /* ================================================================
    ENVIO — em etapas; se uma falhar, "Enviar" retoma de onde parou
    ================================================================ */
-let progresso = {cod:null, roi:false, evol:false, fotos:[], poli:false};
+let progresso = {cod:null, roi:false, evol:false, emp:false, fauna:false, fotos:[], poli:false};
 $("#btnEnviar").onclick = async () => {
   const erros = validar();
   if (erros.length){ status(erros[0] + (erros.length>1 ? ` (+${erros.length-1} pendência(s))` : ""), "erro"); $(".invalido")?.scrollIntoView({behavior:"smooth", block:"center"}); return; }
   if (!sb){ status("Sem conexão com o banco (biblioteca não carregou). Verifique a internet.", "erro"); return; }
-  const {r, linhasEvol, linhasEmp} = registro();
-  if (progresso.cod !== r.cod_bdp) progresso = {cod:r.cod_bdp, roi:false, evol:false, emp:false, fotos:[], poli:false};
+  const {r, linhasEvol, linhasEmp, linhasFauna} = registro();
+  if (progresso.cod !== r.cod_bdp) progresso = {cod:r.cod_bdp, roi:false, evol:false, emp:false, fauna:false, fotos:[], poli:false};
   const btn = $("#btnEnviar"); btn.disabled = true;
   try{
     if (!progresso.roi){
@@ -1182,6 +1252,12 @@ $("#btnEnviar").onclick = async () => {
       if (error) throw new Error("Recursos empenhados: " + error.message);
     }
     progresso.emp = true;
+    if (!progresso.fauna && linhasFauna.length){
+      status("Enviando a fauna atingida…");
+      const {error} = await sb.from("roi_fauna").insert(linhasFauna);
+      if (error) throw new Error("Fauna atingida: " + error.message);
+    }
+    progresso.fauna = true;
     if (!progresso.poli && poligonos.length){
       status("Enviando o polígono da área queimada…");
       const {error} = await sb.from("area_queimada").insert({cod_bdp:r.cod_bdp, geom:paraWKT(poligonos), fonte: fontePoligono === "campo" ? "campo" : "SMC"});
@@ -1382,8 +1458,8 @@ function montarRelatorio(){
       <tr><td>Indício de autoria</td><td>${v(r.ind_aut)}</td></tr></table>
 
     <div class="sec">6. Fauna atingida</div>
-    <table><tr><th style="width:12%">Quantidade</th><th>Identificação de animais mortos</th><th>Lat.</th><th>Long.</th></tr>
-      ${fauna.length ? fauna.map(f=>`<tr><td>${v(f.qtd)}</td><td>${v(f.nome)}</td><td>${v(f.lat)}</td><td>${v(f.lon)}</td></tr>`).join("") : `<tr><td colspan="4">Nenhuma.</td></tr>`}</table>
+    <table><tr><th style="width:10%">Quantidade</th><th>Identificação do animal</th><th>Condição</th><th>Lat.</th><th>Long.</th></tr>
+      ${fauna.length ? fauna.map(f=>`<tr><td>${v(f.qtd)}</td><td>${v(f.nome)}</td><td>${v(f.condicao)}</td><td>${v(f.lat)}</td><td>${v(f.lon)}</td></tr>`).join("") : `<tr><td colspan="5">Nenhuma.</td></tr>`}</table>
 
     <div class="sec">7. Descrição da ocorrência</div><div class="txt">${v(r.descricao)}</div>
     <div class="sec">8. Identificação do proprietário ou posseiro da área de ocorrência</div><div class="txt">${v(r.proprietario)}</div>
@@ -1433,7 +1509,7 @@ function limparFormulario(){
   $("#tabEvol tbody").innerHTML = ""; $("#tabFauna tbody").innerHTML = "";
   fotos.forEach(f => URL.revokeObjectURL(f.url)); fotos = []; desenharFotos();
   poligonos = []; $("#poliInfo").innerHTML = ""; $("#smcAttr").innerHTML = ""; $("#riInfo").innerHTML = "";
-  progresso = {cod:null, roi:false, evol:false, fotos:[], poli:false}; chaveRI = "";
+  progresso = {cod:null, roi:false, evol:false, emp:false, fauna:false, fotos:[], poli:false}; chaveRI = "";
   const b = $("#btnEnviar"); b.disabled = false; b.textContent = "Gravar ROI";
   status("");
 }
@@ -1475,12 +1551,18 @@ function iniciarImportacao(){
 (async function iniciar(){
   $("#maxFotos").textContent = MAX_FOTOS;
   montarVeiculos(); montarVegetacao();
-  await Promise.all([carregarListas(), window.EMP?.iniciar()]);
+  $("#listaFauna").innerHTML = ["Tamanduá-bandeira","Tamanduá-mirim","Tatu-galinha","Tatu-peba","Tatu-canastra","Lobo-guará","Cachorro-do-mato","Raposa-do-campo",
+    "Veado-campeiro","Veado-catingueiro","Onça-parda","Jaguatirica","Gato-do-mato","Capivara","Paca","Cutia","Quati","Mão-pelada","Ouriço-cacheiro","Gambá",
+    "Mico-estrela","Sagui","Macaco-prego","Bugio","Ema","Seriema","Coruja-buraqueira","Jabuti","Teiú","Jiboia","Jararaca","Cascavel","Cobra-coral",
+    "Lagarto","Sapo / rã","Ave (ninho)","Abelhas (colmeia)"].map(n => `<option value="${n}">`).join("");
+  await Promise.all([carregarListas(), window.EMP?.iniciar(), carregarLogin()]);
   let rasc = null;
   if (MODO_IMPORTAR) iniciarImportacao();
   else try{ rasc = JSON.parse(localStorage.getItem(CHAVE_RASCUNHO) || "null"); }catch(e){}
   if (rasc){ aplicar(rasc); $("#avisoRascunho").hidden = false; aplicarUC(false); }
   else { F("ano").value = new Date().getFullYear(); if (window.EMP?.ativo) EMP.linha(); else linhaEvol(); }
+  if (F("nome_uc").value) aplicarUC(false);
+  aplicarLogin();
   const q = new URLSearchParams(location.search);
   if (q.get("ri")){ if (q.get("ano")) F("ano").value = q.get("ano"); F("ri").value = q.get("ri"); atualizarDerivados(); preencherDoRI(); }
   $("#form").addEventListener("input", e => { e.target.classList?.remove("invalido"); mudou(); });

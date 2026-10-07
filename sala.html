@@ -102,6 +102,7 @@
   .at-dia td{background:#f1f4e9;font-weight:600;font-size:12.5px}
   .at-form{border:1px solid var(--linha);border-radius:8px;padding:10px;margin-top:10px;background:#f9faf5}
   .at-form .grade{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  input.travado{background:#f1f1ea;color:#3d3d36}
   .at-form .veic{display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:6px;margin-top:8px}
   .at-form .veic label{font-weight:500;font-size:11.5px}
   .lnk{background:none;border:0;color:var(--vinho);cursor:pointer;font:inherit;font-size:12.5px;padding:0 3px;text-decoration:underline}
@@ -282,7 +283,7 @@ async function entrar(){
   $("#quem").textContent = `${perfil.nome} · ${perfil.papel}`; $("#usuario").hidden=false;
   $("#telaLogin").style.display="none"; $("#app").style.display="block";
   $("#abaListas").hidden = perfil.papel !== "admin";
-  await Promise.all([carregarUCs(), carregarInst(), carregarFDetec()]); montarFiltros(); await carregarLista();
+  await Promise.all([carregarUCs(), carregarInst(), carregarFDetec(), carregarGerentes()]); montarFiltros(); await carregarLista();
   const q = new URLSearchParams(location.search);
   if (q.get("ri")) abrirRI(+q.get("ano")||new Date().getFullYear(), q.get("ri").padStart(4,"0"));
   const aba = q.get("aba") && $(`.abas button[data-aba="${q.get("aba")}"]`);
@@ -301,6 +302,12 @@ async function carregarUCs(){
   const {data} = await sb.from("uc").select("nome_uc,categoria,municipios,base_op").eq("ativo", true);
   UCS = {}; (data||[]).forEach(u => UCS[u.nome_uc] = u);
 }
+let GERENTES = {};
+async function carregarGerentes(){
+  const {data} = await sb.rpc("gerentes_uc"); GERENTES = {}; (data||[]).forEach(g => { if (g.gerente) GERENTES[g.nome_uc] = g.gerente; });
+}
+// sugestões para "Responsável pela informação": quem está logado e o gerente da UC (pode digitar outro nome)
+const sugestoesInformante = uc => [perfil?.nome, GERENTES[uc] ? `${GERENTES[uc]} (gerente da UC)` : null].filter(Boolean);
 async function carregarFDetec(){
   const {data} = await sb.from("dominio").select("valor").eq("campo", "f_detec").eq("ativo", true).order("ordem").order("valor");
   F_DETEC = (data||[]).map(x => x.valor);
@@ -390,21 +397,22 @@ function htmlCabecalho(r){
       <div><label>Data *</label><input type="date" name="dat_detec" value="${r.dat_detec||""}" required></div>
       <div><label>Hora</label><input type="time" name="hr_detec" value="${fmtH(r.hr_detec)}"></div>
       <div class="largo"><label>Forma de detecção</label><select name="f_detec"><option value=""></option>${fdet.map(v=>`<option ${v===r.f_detec?"selected":""}>${esc(v)}</option>`).join("")}</select></div>
-      <div class="largo"><label>Responsável pela informação</label><input name="informante_detec" value="${esc(r.informante_detec||"")}" placeholder="nome de quem informou a detecção"></div>
+      <div class="largo"><label>Responsável pela informação</label><input name="informante_detec" list="sugInformante" value="${esc(r.informante_detec||"")}" placeholder="nome de quem informou a detecção"></div>
     </div></fieldset>
     <fieldset><legend>Início do combate</legend><div class="grade">
       <div><label>Data</label><input type="date" name="dat_ini_comb" value="${r.dat_ini_comb||""}"></div>
       <div><label>Hora</label><input type="time" name="hr_ini_comb" value="${fmtH(r.hr_ini_comb)}"></div>
-      <div class="largo"><label>Responsável pela informação</label><input name="informante_ini_comb" value="${esc(r.informante_ini_comb||"")}"></div>
+      <div class="largo"><label>Responsável pela informação</label><input name="informante_ini_comb" list="sugInformante" value="${esc(r.informante_ini_comb||"")}"></div>
     </div></fieldset>
     <fieldset><legend>Incêndio debelado</legend><div class="grade">
       <div><label>Data</label><input type="date" name="dat_final" value="${r.dat_final||""}"></div>
       <div><label>Hora</label><input type="time" name="hr_final" value="${fmtH(r.hr_final)}"></div>
-      <div class="largo"><label>Responsável pela informação</label><input name="informante_final" value="${esc(r.informante_final||"")}"></div>
-      ${r.ri ? `<div class="largo"><label>Responsável pelo fechamento do RI</label><input name="fechado_por" value="${esc(r.fechado_por||"")}"></div>` : ""}
+      <div class="largo"><label>Responsável pela informação</label><input name="informante_final" list="sugInformante" value="${esc(r.informante_final||"")}"></div>
+      ${r.ri ? `<div class="largo"><label>Responsável pelo fechamento do RI</label><input name="fechado_por" value="${esc(r.fechado_por||"")}" readonly class="travado" placeholder="preenchido pelo botão “Fechar RI”, com o nome do login" title="Preenchido pelo botão Fechar RI com o nome de quem está logado"></div>` : ""}
     </div></fieldset>
   </div>
-  <div class="grade"><div class="largo"><label>Observações</label><input name="obs" value="${esc(r.obs||"")}"></div></div>`;
+  <div class="grade"><div class="largo"><label>Observações</label><input name="obs" value="${esc(r.obs||"")}"></div></div>
+  <datalist id="sugInformante">${sugestoesInformante(r.nome_uc).map(v => `<option value="${esc(v)}">`).join("")}</datalist>`;
 }
 function lerCabecalho(el){
   const g = n => el.querySelector(`[name="${n}"]`);
@@ -420,7 +428,6 @@ function lerCabecalho(el){
     dat_final: txt(g("dat_final").value), hr_final: txt(g("hr_final").value), informante_final: txt(g("informante_final").value),
     lat: lat!==null ? +lat.toFixed(6) : null, lon: lon!==null ? +lon.toFixed(6) : null, obs: txt(g("obs").value)};
   if (g("status")) o.status = g("status").value;
-  if (g("fechado_por")){ o.fechado_por = txt(g("fechado_por").value); if (!o.fechado_por) o.fechado_em = null; }
   const dh = (d, h) => d ? d + "T" + (h || "00:00") : null;
   const det = dh(o.dat_detec, o.hr_detec), ini = dh(o.dat_ini_comb, o.hr_ini_comb), fim = dh(o.dat_final, o.hr_final);
   if (ini && ini < det) throw new Error("O início do combate está antes da detecção.");
@@ -440,7 +447,7 @@ function htmlEvento(ultimo, primeiro=false){
   return `<div class="grade">
       <div><label>Data e hora da informação</label><input type="datetime-local" name="data_hora" value="${agoraLocal()}"></div>
       <div><label>Tipo</label><select name="tipo">${Object.entries(TIPOS).map(([k,t])=>`<option value="${k}" ${k===(primeiro?"acionamento":"atualizacao")?"selected":""}>${t}</option>`).join("")}</select></div>
-      <div class="largo" style="grid-column:span 2"><label>Quem informou</label><input name="informante" placeholder="ex.: Gerente da UC, Sr. José"></div>
+      <div class="largo" style="grid-column:span 2"><label>Quem informou</label><input name="informante" list="sugInformante" placeholder="ex.: Gerente da UC, Sr. José"></div>
       <div class="largo"><label>Descrição *</label><textarea name="descricao" required placeholder="O que foi informado na ligação: situação do incêndio, local, horários, pedidos de apoio…"></textarea></div>
     </div>
     <fieldset><legend>Pessoas empenhadas agora <span class="total" data-total="p"></span></legend><div class="recursos">
