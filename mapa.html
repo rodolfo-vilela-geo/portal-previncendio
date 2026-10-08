@@ -12,6 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
+<script src="medir.js?v=20261008c"></script>
 <style>
   :root{
     color-scheme: dark;
@@ -429,7 +430,8 @@ async function iniciar(){
   mapa.on("mousemove", e => { const z = Math.floor((e.latlng.lng + 180) / 6) + 1, [x, y] = RiscoMapa.llParaUTM(e.latlng.lat, e.latlng.lng, z);
     $("#coord").textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}  ·  UTM ${z}S ${Math.round(x).toLocaleString("pt-BR")} E ${Math.round(y).toLocaleString("pt-BR")} N`; });
   mapa.on("moveend", () => { salvarHash(); if (ligada("queimadas")) queimadasAtualizar(); if (ligada("vegetacao")) vegetacaoAtualizar(); });
-  mapa.on("click", e => cliqueMapa(e));
+  mapa.on("click", e => { if (!window.Medir?.ativo()) cliqueMapa(e); });
+  window.Medir?.iniciar(mapa);
 
   montarPainel(h.c);
   // UCs para a busca
