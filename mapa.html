@@ -12,7 +12,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
-<script src="medir.js?v=20261008c"></script>
+<script src="medir.js?v=20261008d"></script>
 <style>
   :root{
     color-scheme: dark;
@@ -130,6 +130,7 @@
   #ficha .acoes a{font-size:13.5px;font-weight:600;text-decoration:none;border:1px solid var(--bf-esc);border-radius:8px;padding:5px 10px}
 
   /* exportar */
+  .nota-exp{font-size:12.5px;color:var(--liquen);margin:6px 0 0}
   dialog{border:1px solid var(--trilha);border-radius:16px;background:var(--dossel);color:var(--nevoa);padding:0;width:min(460px,calc(100vw - 24px))}
   dialog::backdrop{background:#000a}
   dialog form{padding:18px 20px}
@@ -230,7 +231,9 @@
     <fieldset><legend>Onde</legend><div class="opcoes">
       <label><input type="radio" name="escopo" value="tela" checked> Área visível no mapa</label>
       <label id="optUC"><input type="radio" name="escopo" value="uc"> UC em foco</label>
-      <label><input type="radio" name="escopo" value="tudo"> Minas Gerais inteiro</label></div></fieldset>
+      <label id="optDes"><input type="radio" name="escopo" value="desenho"> Área desenhada <select id="expDes" style="width:auto;margin-left:4px"></select></label>
+      <label><input type="radio" name="escopo" value="tudo"> Minas Gerais inteiro</label></div>
+      <p id="expDesNota" class="nota-exp" hidden>Pontos dentro da área; linhas e polígonos cortados no limite dela (com a área dentro do recorte, em ha). O desenho vai junto no arquivo.</p></fieldset>
     <fieldset><legend>Camadas</legend><div id="expCamadas"></div></fieldset>
     <fieldset><legend>Formato</legend><div class="opcoes">
       <label><input type="radio" name="formato" value="geojson" checked> GeoJSON</label>
@@ -699,6 +702,13 @@ $("#btnExportar").onclick = () => {
   const ativas = CAMADAS.filter(c => c.ativa);
   $("#optUC").hidden = !ucFoco;
   if (!ucFoco && $('[name=escopo][value=uc]').checked) $('[name=escopo][value=tela]').checked = true;
+  const des = window.Medir?.areas() || [];
+  $("#optDes").hidden = !des.length;
+  $("#expDes").innerHTML = des.map(a => `<option value="${a.id}">${esc(a.nome)} · ${fmtHa(a.ha)}</option>`).reverse().join("");
+  if (des.length) $('[name=escopo][value=desenho]').checked = true;
+  else if ($('[name=escopo][value=desenho]').checked) $('[name=escopo][value=tela]').checked = true;
+  $("#expDesNota").hidden = !$('[name=escopo][value=desenho]').checked;
+  $$("[name=escopo]").forEach(r => r.onchange = () => $("#expDesNota").hidden = !$('[name=escopo][value=desenho]').checked);
   $("#expCamadas").innerHTML = ativas.length ? ativas.map(c => {
     const pode = c.tipo !== "risco";
     return `<label><input type="checkbox" value="${c.id}" ${pode ? "checked" : "disabled"}> ${esc(c.nome)} ${pode ? "" : `<small>ainda não exporta</small>`}</label>`;
@@ -711,28 +721,39 @@ $("#expBaixar").onclick = async () => {
   if (!ids.length) return $("#expMsg").textContent = "Escolha ao menos uma camada.";
   $("#expMsg").textContent = "Preparando…"; $("#expBaixar").disabled = true;
   try{
-    let caixa = null, ucB = null;
+    let caixa = null, ucB = null, des = null;
     if (escopo === "tela") caixa = mapa.getBounds();
+    if (escopo === "desenho"){
+      des = (window.Medir?.areas() || []).find(a => a.id === +$("#expDes").value);
+      if (!des) throw new Error("Desenhe uma área com a ferramenta de medir.");
+      await carregarTurf(); caixa = L.geoJSON(des.geometry).getBounds();
+    }
     if (escopo === "uc"){ ucB = focoLayer.getBounds(); }
     const dentro = (f, b) => { const bb = L.geoJSON(f).getBounds(); return b.intersects(bb); };
     const camadas = [];
     for (const id of ids){
       const c = C[id]; let fs;
-      if (id === "queimadas"){
+      if (id === "vegetacao" && des){
+        const {data, error} = await sb.rpc("geo_vegetacao", {x0:caixa.getWest(), y0:caixa.getSouth(), x1:caixa.getEast(), y1:caixa.getNorth(), p_tol:0, p_lim:20000});
+        if (error) throw error;
+        fs = (data || []).filter(r => r.g).map(r => ({type:"Feature", geometry:r.g, properties:{_t: VEG_NOME[r.c] || "Classe " + r.c, classe:r.c, no_roi: VEG_ROI[r.c] || ""}}));
+      } else if (id === "queimadas"){
         const b = caixa || ucB || L.latLngBounds([-23, -52], [-14, -39]);
         const {data, error} = await sb.rpc("geo_queimadas", {x0:b.getWest(), y0:b.getSouth(), x1:b.getEast(), y1:b.getNorth(), p_ano_ini:ANOS[0], p_ano_fim:ANOS[1], p_tol:0, p_uc: escopo === "uc" ? ucFoco : null, p_lim: 20000});
         if (error) throw error;
         fs = (data || []).map(r => ({type:"Feature", geometry:r.geom, properties:{_t:r.cod_bdp, cod_bdp:r.cod_bdp, ano:r.ano, nome_uc:r.nome_uc, area_ha:r.area_ha, fonte:r.fonte}}));
       } else {
         fs = c.vis || c.feats || [];
-        if (escopo === "tela") fs = fs.filter(f => dentro(f, caixa));
+        if (escopo === "tela" || escopo === "desenho") fs = fs.filter(f => dentro(f, caixa));
         if (escopo === "uc") fs = ["ucs", "za", "municipios"].includes(id) ? fs.filter(f => f.properties.nome_uc === ucFoco || (id === "municipios" && dentro(f, ucB))) : fs.filter(f => f.properties.nome_uc === ucFoco);
       }
+      if (des) fs = recortar(fs, des.geometry);
       camadas.push({c, fs});
     }
-    const total = camadas.reduce((s, x) => s + x.fs.length, 0);
+    if (des) camadas.push({c: {id:"desenho", nome:"Área desenhada", cor:"#ffd166"}, fs: [{type:"Feature", geometry: des.geometry, properties: {_t: des.nome, area_ha: +des.ha.toFixed(4)}}]});
+    const total = camadas.reduce((s, x) => s + (x.c.id === "desenho" ? 0 : x.fs.length), 0);
     if (!total){ $("#expMsg").textContent = "Nada a exportar nessa área."; return; }
-    const nome = `colibri_${escopo === "uc" ? ucFoco.replace(/\W+/g, "_").toLowerCase() : escopo === "tela" ? "area_visivel" : "mg"}_${new Date().toISOString().slice(0, 10)}`;
+    const nome = `colibri_${escopo === "uc" ? ucFoco.replace(/\W+/g, "_").toLowerCase() : escopo === "tela" ? "area_visivel" : escopo === "desenho" ? "area_desenhada_" + des.id : "mg"}_${new Date().toISOString().slice(0, 10)}`;
     if (fmt === "geojson") baixar(nome + ".geojson", JSON.stringify({type:"FeatureCollection", features: camadas.flatMap(({c, fs}) => fs.map(f => ({type:"Feature", geometry:f.geometry, properties: limpar(f.properties, c)})))}), "application/geo+json");
     if (fmt === "kml") baixar(nome + ".kml", kml(camadas, nome), "application/vnd.google-earth.kml+xml");
     if (fmt === "csv") baixar(nome + ".csv", csv(camadas), "text/csv");
@@ -740,6 +761,40 @@ $("#expBaixar").onclick = async () => {
   }catch(e){ $("#expMsg").textContent = e.message || String(e); }
   finally{ $("#expBaixar").disabled = false; }
 };
+/* recorte pela área desenhada (Turf, carregado só quando precisa) */
+let _turf;
+function carregarTurf(){ return _turf ||= new Promise((ok, falha) => { if (window.turf) return ok();
+  const sc = document.createElement("script"); sc.src = "lib/turf/turf.min.js?v=6.5.0";
+  sc.onload = ok; sc.onerror = () => { _turf = null; falha(new Error("Não foi possível carregar a ferramenta de recorte. Verifique a internet.")); }; document.head.appendChild(sc); }); }
+// área (ha) no plano UTM SIRGAS 2000, a mesma conta da ferramenta de medir (turf.area usa esfera e dá ~0,5% a mais)
+function haUTM(g){ const anel = r => window.Medir._area(r.slice(0, -1).map(([x, y]) => ({lat: y, lng: x})));
+  const pol = p => anel(p[0]) - p.slice(1).reduce((s, h) => s + anel(h), 0);
+  return (g.type === "Polygon" ? pol(g.coordinates) : g.coordinates.reduce((s, p) => s + pol(p), 0)) / 1e4; }
+function recortar(fs, poly){
+  const P = turf.feature(poly), out = [];
+  for (const f of fs){
+    const g = f.geometry; if (!g) continue;
+    try{
+      if (g.type === "Point"){ if (turf.booleanPointInPolygon(g, P)) out.push(f); continue; }
+      if (!turf.booleanIntersects(f, P)) continue;
+      if (g.type === "Polygon" || g.type === "MultiPolygon"){
+        const r = turf.intersect(turf.feature(g), P); if (!r) continue;
+        out.push({type:"Feature", geometry: r.geometry, properties: {...f.properties, area_no_recorte_ha: +(haUTM(r.geometry)).toFixed(4)}});
+      } else if (g.type === "LineString" || g.type === "MultiLineString"){
+        const linhas = g.type === "LineString" ? [g.coordinates] : g.coordinates, partes = [];
+        for (const l of linhas){
+          const pedacos = turf.lineSplit(turf.lineString(l), P).features;
+          (pedacos.length ? pedacos : [turf.lineString(l)]).forEach(pd => { const c = pd.geometry.coordinates;
+            const meio = turf.along(pd, turf.length(pd) / 2); if (turf.booleanPointInPolygon(meio, P)) partes.push(c); });
+        }
+        if (!partes.length) continue;
+        out.push({type:"Feature", geometry: partes.length === 1 ? {type:"LineString", coordinates: partes[0]} : {type:"MultiLineString", coordinates: partes},
+          properties: {...f.properties, compr_no_recorte_m: Math.round(partes.reduce((s, c) => s + turf.length(turf.lineString(c)) * 1000, 0))}});
+      } else out.push(f);
+    }catch(e){ console.warn("recorte", e); if (turf.booleanIntersects(f, P)) out.push(f); }
+  }
+  return out;
+}
 function limpar(p, c){ const o = {camada: c.nome, nome: p._t}; for (const [k, v] of Object.entries(p)) if (!k.startsWith("_") && v !== null && v !== undefined && v !== "") o[k] = v; return o; }
 function baixar(nome, txt, tipo){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], {type: tipo})); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 const xml = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));

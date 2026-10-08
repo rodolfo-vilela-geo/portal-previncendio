@@ -207,5 +207,8 @@ function baixar(t, fmtArq){
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
-window.Medir = {iniciar, ativo: () => !!modo, _area: area, _compr: compr};
+// áreas desenhadas, para a exportação recortar por elas (GeoJSON Polygon, lon/lat)
+function areas(){ return tracos.filter(t => t.tipo === "area").map(t => { const c = t.p.map(q => [q.lng, q.lat]);
+  return {id: t.id, nome: `Área medida ${t.id}`, ha: area(t.p) / 1e4, geometry: {type:"Polygon", coordinates:[[...c, c[0]]]}}; }); }
+window.Medir = {iniciar, ativo: () => !!modo, areas, _area: area, _compr: compr};
 })();
