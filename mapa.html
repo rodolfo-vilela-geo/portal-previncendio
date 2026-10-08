@@ -13,6 +13,7 @@
 <script src="icones_mapa.js?v=20261007b"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
 <script src="medir.js?v=20261008d"></script>
+<script src="geo_saida.js?v=20261008b"></script>
 <style>
   :root{
     color-scheme: dark;
@@ -238,6 +239,8 @@
     <fieldset><legend>Formato</legend><div class="opcoes">
       <label><input type="radio" name="formato" value="geojson" checked> GeoJSON</label>
       <label><input type="radio" name="formato" value="kml"> KML (Google Earth)</label>
+      <label><input type="radio" name="formato" value="shp"> Shapefile (.zip)</label>
+      <label><input type="radio" name="formato" value="gpkg"> GeoPackage (QGIS)</label>
       <label><input type="radio" name="formato" value="csv"> CSV (planilha)</label></div></fieldset>
     <div class="dlg-acoes"><span id="expMsg"></span><button type="button" class="btn" value="cancel" id="expCancelar">Cancelar</button><button type="button" class="btn pri" id="expBaixar">Baixar</button></div>
   </form>
@@ -757,6 +760,11 @@ $("#expBaixar").onclick = async () => {
     if (fmt === "geojson") baixar(nome + ".geojson", JSON.stringify({type:"FeatureCollection", features: camadas.flatMap(({c, fs}) => fs.map(f => ({type:"Feature", geometry:f.geometry, properties: limpar(f.properties, c)})))}), "application/geo+json");
     if (fmt === "kml") baixar(nome + ".kml", kml(camadas, nome), "application/vnd.google-earth.kml+xml");
     if (fmt === "csv") baixar(nome + ".csv", csv(camadas), "text/csv");
+    if (fmt === "shp" || fmt === "gpkg"){
+      const cs = camadas.map(({c, fs}) => ({nome: c.nome, feicoes: fs.map(f => ({geometry: f.geometry, props: limpar(f.properties, c)}))}));
+      if (fmt === "shp") baixar(nome + "_shp.zip", GeoSaida.shapefileZip(cs), "application/zip");
+      else baixar(nome + ".gpkg", await GeoSaida.geopackage(cs), "application/geopackage+sqlite3");
+    }
     $("#dlgExportar").close(); msg(`${fmtN(total)} feições exportadas.`);
   }catch(e){ $("#expMsg").textContent = e.message || String(e); }
   finally{ $("#expBaixar").disabled = false; }
