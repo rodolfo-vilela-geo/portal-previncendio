@@ -507,7 +507,7 @@ function montarMapa(){
   const u = D.uc, g = D.geo;
   mapa = L.map("mapa", {zoomSnap:.25});
   const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar", crossOrigin:true});
-  const ruas = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {maxZoom:18, subdomains:"abcd", attribution:"© OpenStreetMap · © CARTO", crossOrigin:true});
+  const ruas = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, maxNativeZoom:16, attribution:"© Esri, HERE, Garmin, OpenStreetMap", crossOrigin:true});
   sat.addTo(mapa);
   const cam = {}, leg = [];
   if (g.za_3km){ cam["Raio de 3 km (ZA)"] = L.geoJSON(g.za_3km, {style:{color:"#ffffff", weight:1.5, dashArray:"4 4", fill:false}, interactive:false}).addTo(mapa); leg.push(`<i style="border:1.5px dashed #fff;background:none"></i>Raio de 3 km`); }

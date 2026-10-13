@@ -414,13 +414,13 @@ $("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); }
 const BASES = {
   sat:   {nome:"Satélite", url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr:"Imagem © Esri, Maxar", amostra:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/6/35/23"},
   relevo:{nome:"Relevo", url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", attr:"© Esri", amostra:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/6/35/23"},
-  escuro:{nome:"Escuro", url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap · © CARTO", amostra:"https://a.basemaps.cartocdn.com/dark_all/6/23/35.png"},
-  claro: {nome:"Claro", url:"https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attr:"© OpenStreetMap · © CARTO", amostra:"https://a.basemaps.cartocdn.com/light_all/6/23/35.png"}
+  escuro:{nome:"Escuro", url:"https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", nat:16, attr:"© Esri, HERE, Garmin, OpenStreetMap", amostra:"https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/35/23"},
+  claro: {nome:"Claro", url:"https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", nat:16, attr:"© Esri, HERE, Garmin, OpenStreetMap", amostra:"https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/6/35/23"}
 };
 let baseAtual = null;
 function trocarBase(k){
   if (baseAtual) mapa.removeLayer(baseAtual.l);
-  const b = BASES[k]; baseAtual = {k, l: L.tileLayer(b.url, {maxZoom:19, subdomains:"abcd", attribution:b.attr}).addTo(mapa)}; baseAtual.l.bringToBack();
+  const b = BASES[k]; baseAtual = {k, l: L.tileLayer(b.url, {maxZoom:19, maxNativeZoom:b.nat || 19, attribution:b.attr}).addTo(mapa)}; baseAtual.l.bringToBack();
   $$("#bases button").forEach(x => x.setAttribute("aria-pressed", x.dataset.k === k)); salvarHash();
 }
 

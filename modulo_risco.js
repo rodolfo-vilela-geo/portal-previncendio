@@ -137,7 +137,7 @@ function montarMapa(){
   if (mapaR){ mapaR.remove(); mapaR = null; }
   mapaR = L.map("mapaRisco", {zoomSnap:.25, preferCanvas:false});
   const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar"}).addTo(mapaR);
-  const ruas = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {maxZoom:18, subdomains:"abcd", attribution:"© OpenStreetMap · © CARTO"});
+  const ruas = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, maxNativeZoom:16, attribution:"© Esri, HERE, Garmin, OpenStreetMap"});
   L.control.scale({imperial:false}).addTo(mapaR);
   const C = RM.camada(RK.R);
   RK.C = C;

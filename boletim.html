@@ -233,8 +233,8 @@ const bases = {
       {maxZoom:18, attribution:"Imagem © Esri, Maxar, Earthstar Geographics"}),
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
       {maxZoom:18, opacity:.85})]),
-  mapa: () => L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-      {maxZoom:18, subdomains:"abcd", attribution:"© OpenStreetMap · © CARTO"})
+  mapa: () => L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      {maxZoom:18, maxNativeZoom:16, attribution:"© Esri, HERE, Garmin, OpenStreetMap"})
 };
 function trocarBase(k){
   if (!bases[k]) k = "sat";
