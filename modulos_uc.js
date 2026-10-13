@@ -306,7 +306,7 @@ function editarFicha(b, r){
     if (la === null || lo === null){ res.textContent = ""; pintarMU(); return; }
     if (Number.isNaN(la) || Number.isNaN(lo) || !dentroMG(la, lo)){ res.textContent = "Coordenada não reconhecida ou fora de MG."; res.classList.add("bad"); return; }
     const f = GEO?.features.find(x => x.properties.nome_uc === MU.nome), dentro = f ? pontoNoPoligono(la, lo, f.geometry) : null;
-    res.textContent = `${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
+    res.textContent = `${Coord.par(la, lo)} · decimal ${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
     pintarMU({lat: la, lon: lo});
   };
   if (coord){
@@ -316,7 +316,7 @@ function editarFicha(b, r){
       const box = $('#muEd [data-coord="fc"]'), z = +$("[data-utm=z]", box).value;
       const E = numDec($("[data-utm=e]", box).value.replace(/[^\d.,]/g, "")), N = numDec($("[data-utm=n]", box).value.replace(/[^\d.,]/g, ""));
       if (!E || !N || E < 100000 || E > 900000 || N < 7000000 || N > 10000000) return msg("Confira E (6 dígitos) e N (7 dígitos).", "erro");
-      const [la, lo] = utmParaGeo(z, E, N); $('#muEd [data-k="fc_lat"]').value = la.toFixed(6); $('#muEd [data-k="fc_lon"]').value = lo.toFixed(6); atualizarRes(); marcarSujo();
+      const [la, lo] = utmParaGeo(z, E, N); Coord.por($('#muEd [data-k="fc_lat"]'), +la.toFixed(6), "lat"); Coord.por($('#muEd [data-k="fc_lon"]'), +lo.toFixed(6), "lon"); atualizarRes(); marcarSujo();
     });
   }
   $("#muSalvar")?.addEventListener("click", async () => {
@@ -327,7 +327,7 @@ function editarFicha(b, r){
     const inval = b.validar?.(o); if (inval) return msg(inval, "erro");
     if (linha && MU.geo?.mudou){ if (MU.geo.modo === "desenhar") concluirTrecho(); o.geojson = jsonDeGeo(MU.geo.partes); o.tracado_origem = o.geojson ? MU.geo.origem : null; }
     if (coord){
-      const la = lerCoord($('#muEd [data-k="fc_lat"]').value), lo = lerCoord($('#muEd [data-k="fc_lon"]').value);
+      const la = Coord.ler($('#muEd [data-k="fc_lat"]'), lerCoord), lo = Coord.ler($('#muEd [data-k="fc_lon"]'), lerCoord);
       if (Number.isNaN(la) || Number.isNaN(lo) || ((la === null) !== (lo === null))) return msg("Coordenada incompleta ou não reconhecida.", "erro");
       if (la !== null && !dentroMG(la, lo)) return msg("Coordenada fora de Minas Gerais.", "erro");
       o.lat = la === null ? null : +la.toFixed(6); o.lon = lo === null ? null : +lo.toFixed(6);
@@ -364,7 +364,7 @@ function montarMapaMU(){
   const f = GEO?.features.find(x => x.properties.nome_uc === MU.nome);
   MU.lim = f ? L.geoJSON(f, {style:{color:"#8be06b", weight:2, fillColor:"#6fd34a", fillOpacity:.12}, interactive:false}).addTo(mapaMU) : null;
   mapaMU.on("click", e => { if (MU.geo?.modo === "desenhar") return addVertice(e.latlng); if (!alvoMU || !MU.edit) return;
-    $('#muEd [data-k="fc_lat"]').value = e.latlng.lat.toFixed(6); $('#muEd [data-k="fc_lon"]').value = e.latlng.lng.toFixed(6);
+    Coord.por($('#muEd [data-k="fc_lat"]'), +e.latlng.lat.toFixed(6), "lat"); Coord.por($('#muEd [data-k="fc_lon"]'), +e.latlng.lng.toFixed(6), "lon");
     $('#muEd [data-k="fc_lat"]').dispatchEvent(new Event("change")); marcarSujo(); alvoMU = false; $("#mapaMU").style.cursor = ""; });
   mapaMU.on("dblclick", e => { if (MU.geo?.modo === "desenhar"){ L.DomEvent.stop(e); concluirTrecho(); } });
   mapaMU.on("mousemove", e => { if (MU.geo?.modo === "desenhar") elastico(e.latlng); });
@@ -518,7 +518,7 @@ function htmlGeo(ed){
       <div class="mu-geo-barra" id="geoBarra" hidden></div>
       <details class="utm"><summary>Só tenho as coordenadas de início e fim</summary>
         <div class="grade" style="margin-top:6px">
-          <div><label>Início — latitude</label><input data-gi="ini_lat" placeholder="-17.9741 ou 17°58'26&quot;S"></div><div><label>Início — longitude</label><input data-gi="ini_lon" placeholder="-43.1634 ou 43°09'48&quot;O"></div>
+          <div><label>Início — latitude</label><input data-gi="ini_lat" placeholder="17°58'26,8&quot;S ou -17.9741"></div><div><label>Início — longitude</label><input data-gi="ini_lon" placeholder="43°09'48,2&quot;O ou -43.1634"></div>
           <div><label>Fim — latitude</label><input data-gi="fim_lat"></div><div><label>Fim — longitude</label><input data-gi="fim_lon"></div></div>
         <button class="btn peq" type="button" data-g="reta" style="margin-top:6px">Traçar linha reta (aproximada)</button></details>` : ""}</div>`;
 }
@@ -844,8 +844,8 @@ function formExec(b, r, e){
       <div><label>Pessoas alcançadas</label><input type="number" min="0" data-x="participantes" value="${e?.participantes ?? ""}" placeholder="participantes, público"></div>
       <div class="duplo"><label>Local</label><input data-x="local" value="${esc(e?.local ?? r.local ?? "")}"></div>
       <div class="largo"><label>Relato</label><textarea data-x="relato" style="min-height:60px" placeholder="O que foi feito, com quem, resultados">${esc(e?.relato || "")}</textarea></div>
-      <div><label>Latitude (opcional)</label><input data-x="lat" value="${e?.lat ?? ""}" placeholder="-17.97 ou 17°58'S"></div>
-      <div><label>Longitude (opcional)</label><input data-x="lon" value="${e?.lon ?? ""}" placeholder="-43.16 ou 43°09'O"></div>
+      <div><label>Latitude (opcional)</label><input data-x="lat" ${Coord.attr(e?.lat, "lat")} placeholder="17°58'26,0&quot;S ou -17.97"></div>
+      <div><label>Longitude (opcional)</label><input data-x="lon" ${Coord.attr(e?.lon, "lon")} placeholder="43°09'48,0&quot;O ou -43.16"></div>
     </div>
     <label style="margin-top:10px">Fotos (até ${MAX_FOTOS})</label>
     <div class="ex-fotos" id="exFotos"></div>
@@ -877,7 +877,7 @@ function formExec(b, r, e){
         const blob = await reduzirFoto(f);
         novas.push({blob, url: URL.createObjectURL(blob), data: ex.data || null, lat: ex.lat ?? null, lon: ex.lon ?? null});
         if (ex.data && !dataMexida && ex.data <= hojeISO()){ campo("data").value = ex.data; dataMexida = true; preencheu = true; }
-        if (ex.lat != null && !campo("lat").value && dentroMG(ex.lat, ex.lon)){ campo("lat").value = ex.lat; campo("lon").value = ex.lon; preencheu = true; }
+        if (ex.lat != null && !campo("lat").value && dentroMG(ex.lat, ex.lon)){ Coord.por(campo("lat"), ex.lat, "lat"); Coord.por(campo("lon"), ex.lon, "lon"); preencheu = true; }
       }catch(err){ msg(err.message, "erro"); }
     }
     $("#exEstado").textContent = preencheu ? "Data e/ou local preenchidos a partir da foto — confira." : "";
@@ -890,7 +890,7 @@ function formExec(b, r, e){
     if (data > hojeISO()) return msg("A data não pode ser futura: registre a execução depois que ela acontecer.", "erro");
     const part = pt === "" ? null : Math.round(+pt.replace(",", "."));
     if (part != null && (isNaN(part) || part < 0)) return msg("Confira o número de pessoas.", "erro");
-    const la = lerCoord(campo("lat").value), lo = lerCoord(campo("lon").value);
+    const la = Coord.ler(campo("lat"), lerCoord), lo = Coord.ler(campo("lon"), lerCoord);
     if (Number.isNaN(la) || Number.isNaN(lo) || ((la === null) !== (lo === null))) return msg("Coordenada incompleta ou não reconhecida.", "erro");
     if (la !== null && !dentroMG(la, lo)) return msg("Coordenada fora de Minas Gerais.", "erro");
     $("#exSalvar").disabled = true; $("#exEstado").textContent = novas.length ? "Enviando fotos…" : "Salvando…";

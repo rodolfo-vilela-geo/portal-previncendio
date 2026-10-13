@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="pipcif_modulos.js?v=20261006a"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
+<script src="coord.js?v=20261013a"></script>
 <style>
   :root{
     --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --mudo:#7a7a72; --linha:#dcd8d0;
@@ -250,7 +251,7 @@ const ROTULOS = {gerente_nome:"Gerente", gerente_contatos:"Contatos do gerente",
   nome:"Identificação", tipo:"Tipo", lat:"Latitude", lon:"Longitude", altitude_m:"Altitude (m)", ponto_ref:"Ponto de referência", situacao:"Situação", atributos:"Detalhes",
   tem_alojamento:"Possui alojamento", camas:"Camas/colchões", roupa_cama:"Roupa de cama/banho", sanitarios:"Sanitários/banhos (alojamento)", cozinha:"Cozinha e utensílios",
   tem_camping:"Possui área de camping", barracas:"Barracas", camping_sanitarios:"Sanitários/banho (camping)", camping_energia:"Energia elétrica (camping)",
-  alojamento_obs:"Obs. alojamento", nao_possui:"Declarou não possuir"};
+  alojamento_obs:"Obs. alojamento", nao_possui:"Declarou não possuir", cbmmg_unidade:"Unidade do CBMMG da área", cbmmg_contatos:"Contatos da unidade do CBMMG"};
 
 let perfil = null, UCS = [], REG = {}, EQUIPE = [], GEO = null, atual = null, filtroMinhas = true, sujo = false;
 
@@ -382,8 +383,8 @@ function pontoNoPoligono(lat, lon, geom){
 }
 function htmlCoord(pref, lat, lon, ed){
   return `<div class="coord" data-coord="${pref}">
-    <div><label>Latitude</label><input data-k="${pref}_lat" value="${lat??""}" placeholder="-19.7874 ou 19°47'14&quot;S" ${ed?"":"disabled"}></div>
-    <div><label>Longitude</label><input data-k="${pref}_lon" value="${lon??""}" placeholder="-43.9602 ou 43°57'36&quot;O" ${ed?"":"disabled"}></div>
+    <div><label>Latitude</label><input data-k="${pref}_lat" ${Coord.attr(lat,"lat")} placeholder="19°47'14,6&quot;S ou -19.7874" ${ed?"":"disabled"}></div>
+    <div><label>Longitude</label><input data-k="${pref}_lon" ${Coord.attr(lon,"lon")} placeholder="43°57'36,7&quot;O ou -43.9602" ${ed?"":"disabled"}></div>
     ${ed ? `<button class="btn peq" type="button" data-marcar="${pref}" title="Clique depois no mapa">Marcar no mapa</button>` : "<span></span>"}
     <div class="res" data-res="${pref}"></div>
     ${ed ? `<details class="utm"><summary>Tenho a coordenada em UTM</summary><div class="grade">
@@ -465,6 +466,14 @@ async function abrirUC(nome){
       <p class="dica" style="margin:8px 0 0">Compartilhado por todas as UCs da regional — editado na aba “Regionais”.</p>
     </fieldset>
 
+    <fieldset><legend>Corpo de Bombeiros (CBMMG) da área</legend>
+      <div class="grade">
+        <div class="largo"><label>Unidade ou fração do CBMMG responsável pelo atendimento na UC</label><input data-k="cbmmg_unidade" value="${esc(d.cbmmg_unidade||"")}" placeholder="ex.: Pelotão / Companhia e cidade" ${ed?"":"disabled"}></div>
+      </div>
+      <label style="margin-top:10px">Contatos da unidade</label><div class="rep" id="repCbmmg"></div>
+      <p class="dica" style="margin:8px 0 0">Protocolo Conjunto 03/2026: na detecção, o responsável pela UC aciona o CBMMG (193 ou a unidade da área) e, ao mesmo tempo, a Sala de Situação do IEF (0800 283 2323). Estes dados aparecem para a Sala no registro do incêndio.</p>
+    </fieldset>
+
     <fieldset><legend>Criação e ambiente</legend>
       <div class="grade">
         <div class="largo"><label>Número do(s) decreto(s) com data de criação</label><textarea data-k="decretos" style="min-height:52px" ${ed?"":"disabled"}>${esc(d.decretos||"")}</textarea></div>
@@ -513,6 +522,7 @@ async function abrirUC(nome){
   ligarAbasModulos(nome);
 
   const getContatos = repetidor($("#repContatos"), (d.gerente_contatos||[]).map(x=>({...x})), CONTATO, ed, {tipo:"tel", valor:"", obs:""});
+  const getCbmmg = repetidor($("#repCbmmg"), (d.cbmmg_contatos||[]).map(x=>({...x})), CONTATO, ed, {tipo:"tel", valor:"", obs:""});
   const getResp = repetidor($("#repResp"), (d.responsaveis||[]).map(x=>({...x})), RESP, ed, {nome:"", telefone:"", email:""});
   $$("#meses button, #biomas button").forEach(b => b.onclick = () => { b.setAttribute("aria-pressed", b.getAttribute("aria-pressed")!=="true"); marcarSujo(); });
   $$("#detalhe [data-k]").forEach(el => { if (!el.closest(".rep")) el.addEventListener("input", marcarSujo); });
@@ -521,8 +531,9 @@ async function abrirUC(nome){
   if (modURL && modURL !== "cadastro") setTimeout(() => $(`.abas-mod [data-mod="${modURL}"]`)?.click(), 0);
   if (!ed) return;
   $("#salvarUC").onclick = async () => {
-    const g = k => $(`#detalhe [data-k="${k}"]`)?.value;
+    const g = k => $$(`#detalhe [data-k="${k}"]`).find(el => !el.closest(".rep"))?.value;   // ignora as listas (contatos também têm "obs")
     const o = {gerente_nome: txt(g("gerente_nome")), gerente_contatos: getContatos(), responsaveis: getResp(),
+      cbmmg_unidade: txt(g("cbmmg_unidade")), cbmmg_contatos: getCbmmg(),
       decretos: txt(g("decretos")), fitofisionomia: txt(g("fitofisionomia")), topografia: txt(g("topografia")), clima: txt(g("clima")),
       meses_obs: txt(g("meses_obs")), sede_municipio: txt(g("sede_municipio")), sede_endereco: txt(g("sede_endereco")),
       fundiaria_obs: txt(g("fundiaria_obs")), obs: txt(g("obs")),
@@ -532,7 +543,7 @@ async function abrirUC(nome){
     for (const k of ["area_decreto_ha","fundiaria_pct","fundiaria_ha"]){ o[k] = numDec(g(k)); if (Number.isNaN(o[k])) return msg(`Valor inválido em “${ROTULOS[k]}”.`, "erro"); }
     if (o.fundiaria_pct != null && (o.fundiaria_pct < 0 || o.fundiaria_pct > 100)) return msg("O percentual regularizado deve estar entre 0 e 100.", "erro");
     for (const p of ["ref","sede"]){
-      const la = lerCoord(g(p+"_lat")), lo = lerCoord(g(p+"_lon"));
+      const la = Coord.ler($(`#detalhe [data-k="${p}_lat"]`), lerCoord), lo = Coord.ler($(`#detalhe [data-k="${p}_lon"]`), lerCoord);
       if (Number.isNaN(la) || Number.isNaN(lo)) return msg("Coordenada não reconhecida.", "erro");
       if ((la===null) !== (lo===null)) return msg("Informe latitude e longitude juntas.", "erro");
       if (la!==null && !dentroMG(la, lo)) return msg("Coordenada fora de Minas Gerais — confira latitude/longitude.", "erro");
@@ -552,7 +563,7 @@ const nomePor = e => !e ? "—" : (EQUIPE.find(x => x.email === e)?.nome || e);
 function fmtValor(k, v){
   if (v == null || v === "" || (Array.isArray(v) && !v.length)) return "vazio";
   if (k === "meses_criticos") return v.map(m => MESES[m-1]).join(", ");
-  if (k === "gerente_contatos" || k === "coord_contatos") return v.map(x => x.valor + (x.obs ? ` (${x.obs})` : "")).join("; ");
+  if (k === "gerente_contatos" || k === "coord_contatos" || k === "cbmmg_contatos") return v.map(x => x.valor + (x.obs ? ` (${x.obs})` : "")).join("; ");
   if (k === "responsaveis") return v.map(x => [x.nome, x.telefone, x.email].filter(Boolean).join(" · ")).join("; ");
   if (k === "nao_possui") return v.map(t => TIPOS_PONTO[t]?.rot || window.MU_NP?.[t] || t).join(", ");
   if (k === "situacao") return SITUACOES[v] || v;
@@ -586,7 +597,7 @@ function montarMapa(u, d, ed){
     if (la === null || lo === null){ res.textContent = ""; return; }
     if (Number.isNaN(la) || Number.isNaN(lo) || !dentroMG(la, lo)){ res.textContent = "Coordenada não reconhecida ou fora de MG."; res.classList.add("bad"); return; }
     const dentro = f ? pontoNoPoligono(la, lo, f.geometry) : null;
-    res.textContent = `${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
+    res.textContent = `${Coord.par(la, lo)} · decimal ${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
     marcadores[p] = L.marker([la, lo], {icon: icone(p), title: p==="ref" ? "Ponto de referência" : "Sede"}).addTo(mapa);
   };
   ["ref","sede"].forEach(p => { atualizar(p); $$(`[data-k^="${p}_"]`).forEach(i => i.addEventListener("change", () => atualizar(p))); });
@@ -594,14 +605,14 @@ function montarMapa(u, d, ed){
   if (!ed) return;
   $$("[data-marcar]").forEach(b => b.onclick = () => { alvo = b.dataset.marcar; $("#mapaUC").style.cursor = "crosshair"; msg(`Clique no mapa para marcar ${alvo==="ref" ? "o ponto de referência" : "a sede"}.`); });
   mapa.on("click", e => { if (!alvo) return;
-    $(`[data-k="${alvo}_lat"]`).value = e.latlng.lat.toFixed(6); $(`[data-k="${alvo}_lon"]`).value = e.latlng.lng.toFixed(6);
+    Coord.por($(`[data-k="${alvo}_lat"]`), +e.latlng.lat.toFixed(6), "lat"); Coord.por($(`[data-k="${alvo}_lon"]`), +e.latlng.lng.toFixed(6), "lon");
     atualizar(alvo); marcarSujo(); alvo = null; $("#mapaUC").style.cursor = ""; });
   $$("[data-utm-conv]").forEach(b => b.onclick = () => {
     const box = b.closest(".coord"), p = box.dataset.coord, z = +$("[data-utm=z]", box).value;
     const EE = numDec($("[data-utm=e]", box).value.replace(/[^\d.,]/g,"")), NN = numDec($("[data-utm=n]", box).value.replace(/[^\d.,]/g,""));   // aceita 695859,27 ou 695859.27
     if (!EE || !NN || EE < 100000 || EE > 900000 || NN < 7000000 || NN > 10000000) return msg("Confira E (6 dígitos) e N (7 dígitos).", "erro");
     const [la, lo] = utmParaGeo(z, EE, NN);
-    $(`[data-k="${p}_lat"]`).value = la.toFixed(6); $(`[data-k="${p}_lon"]`).value = lo.toFixed(6); atualizar(p); marcarSujo();
+    Coord.por($(`[data-k="${p}_lat"]`), +la.toFixed(6), "lat"); Coord.por($(`[data-k="${p}_lon"]`), +lo.toFixed(6), "lon"); atualizar(p); marcarSujo();
   });
 }
 
@@ -738,7 +749,7 @@ function editarPt(p){
     if (la === null || lo === null){ res.textContent = ""; pintarInfra(); return; }
     if (Number.isNaN(la) || Number.isNaN(lo) || !dentroMG(la, lo)){ res.textContent = "Coordenada não reconhecida ou fora de MG."; res.classList.add("bad"); return; }
     const f = GEO?.features.find(x => x.properties.nome_uc === INF.nome), dentro = f ? pontoNoPoligono(la, lo, f.geometry) : null;
-    res.textContent = `${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
+    res.textContent = `${Coord.par(la, lo)} · decimal ${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
     pintarInfra({lat: la, lon: lo});
   };
   $$('[data-k^="pt_"]').forEach(i => i.addEventListener("change", atualizarRes)); atualizarRes();
@@ -747,7 +758,7 @@ function editarPt(p){
     const box = $('[data-coord="pt"]'), z = +$("[data-utm=z]", box).value;
     const E = numDec($("[data-utm=e]", box).value.replace(/[^\d.,]/g,"")), N = numDec($("[data-utm=n]", box).value.replace(/[^\d.,]/g,""));
     if (!E || !N || E < 100000 || E > 900000 || N < 7000000 || N > 10000000) return msg("Confira E (6 dígitos) e N (7 dígitos).", "erro");
-    const [la, lo] = utmParaGeo(z, E, N); $('[data-k="pt_lat"]').value = la.toFixed(6); $('[data-k="pt_lon"]').value = lo.toFixed(6); atualizarRes(); marcarSujo();
+    const [la, lo] = utmParaGeo(z, E, N); Coord.por($('[data-k="pt_lat"]'), +la.toFixed(6), "lat"); Coord.por($('[data-k="pt_lon"]'), +lo.toFixed(6), "lon"); atualizarRes(); marcarSujo();
   });
   $("#ptSalvar")?.addEventListener("click", async () => {
     const g = k => $(`#editorPt [data-p="${k}"]`)?.value;
@@ -755,7 +766,7 @@ function editarPt(p){
                altitude_m: txt(g("altitude_m")) === null ? null : Math.round(+g("altitude_m")), atributos: {}};
     if (!o.nome) return msg("Informe a identificação do local.", "erro");
     T.campos.forEach(([k, , tipo]) => { const v = $(`#editorPt [data-a="${k}"]`).value.trim(); if (v !== "") o.atributos[k] = tipo === "num" ? +v : v; });
-    const la = lerCoord($('[data-k="pt_lat"]').value), lo = lerCoord($('[data-k="pt_lon"]').value);
+    const la = Coord.ler($('[data-k="pt_lat"]'), lerCoord), lo = Coord.ler($('[data-k="pt_lon"]'), lerCoord);
     if (Number.isNaN(la) || Number.isNaN(lo) || ((la === null) !== (lo === null))) return msg("Coordenada incompleta ou não reconhecida.", "erro");
     if (la !== null && !dentroMG(la, lo)) return msg("Coordenada fora de Minas Gerais.", "erro");
     o.lat = la === null ? null : +la.toFixed(6); o.lon = lo === null ? null : +lo.toFixed(6);
@@ -786,7 +797,7 @@ function montarMapaInfra(){
   const f = GEO?.features.find(x => x.properties.nome_uc === INF.nome);
   INF.lim = f ? L.geoJSON(f, {style:{color:"#8be06b", weight:2, fillColor:"#6fd34a", fillOpacity:.12}, interactive:false}).addTo(mapaInf) : null;
   mapaInf.on("click", e => { if (!alvoInf || !editando) return;
-    $('[data-k="pt_lat"]').value = e.latlng.lat.toFixed(6); $('[data-k="pt_lon"]').value = e.latlng.lng.toFixed(6);
+    Coord.por($('[data-k="pt_lat"]'), +e.latlng.lat.toFixed(6), "lat"); Coord.por($('[data-k="pt_lon"]'), +e.latlng.lng.toFixed(6), "lon");
     $('[data-k="pt_lat"]').dispatchEvent(new Event("change")); marcarSujo(); alvoInf = false; $("#mapaInfra").style.cursor = ""; });
   $("#legInfra").innerHTML = [...Object.entries(TIPOS_PONTO).map(([t,T]) => [t, T.curto]), ["camera","Câmera"]].map(([t, r]) => `<span style="white-space:nowrap;margin-right:10px;display:inline-block;margin-bottom:3px">${iconeLegenda(t)}${esc(r)}</span>`).join("") + ` <span style="white-space:nowrap">· × inoperante · ! parcialmente operante · verde: limite da UC</span>`;
   pintarInfra(null, true);
@@ -941,7 +952,7 @@ $$(".abas button").forEach(b => b.onclick = async () => {
 });
 entrar();
 </script>
-<script src="modulos_uc.js?v=20261001d"></script>
+<script src="modulos_uc.js?v=20261013a"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
 <script src="modulo_risco.js?v=20261008a"></script>
 </body>

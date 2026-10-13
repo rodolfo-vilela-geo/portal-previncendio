@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
+<script src="coord.js?v=20261013a"></script>
 <style>
   :root{ --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --linha:#dcd8d0; --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --erro:#b3261e; --alerta:#9a5b00; --claro:#f6f7f1 }
   *{box-sizing:border-box} [hidden]{display:none!important}
@@ -223,6 +224,7 @@ function campo(k, rot, v, o = {}){
   const d = pode ? "" : "disabled";
   const el = o.sel ? `<select data-k="${k}" ${d}>${opc(o.sel, v, o.vazio)}</select>`
     : o.area ? `<textarea data-k="${k}" rows="${o.area}" ${d}>${esc(v ?? "")}</textarea>`
+    : o.coord ? `<input data-k="${k}" ${Coord.attr(v, o.coord)} placeholder="${esc(o.ph || "")}" ${d}>`
     : `<input data-k="${k}" value="${esc(v ?? "")}" ${o.num ? 'inputmode="decimal"' : ""} placeholder="${esc(o.ph || "")}" ${d}>`;
   return `<div class="${o.todo ? "todo" : ""}"><label>${rot}</label>${el}${o.dica ? `<div class="dica">${o.dica}</div>` : ""}</div>`;
 }
@@ -244,8 +246,8 @@ function desenharFicha(r){
       ${r.tipo.startsWith("aerodromo") || r.icao || r.ciad ? campo("icao", "Indicador ICAO", r.icao, {ph: "ex.: SBBH"}) + campo("ciad", "Código ANAC (CIAD)", r.ciad) : ""}
     </div></fieldset>
     <fieldset><legend>Localização</legend><div class="grade">
-      ${campo("lat", "Latitude", r.lat, {num: true, ph: "-19.85 ou 19°51'07\"S"})}
-      ${campo("lon", "Longitude", r.lon, {num: true, ph: "-43.95 ou 43°57'02\"O"})}
+      ${campo("lat", "Latitude", r.lat, {coord: "lat", ph: "19°51'07,0\"S ou -19.85"})}
+      ${campo("lon", "Longitude", r.lon, {coord: "lon", ph: "43°57'02,0\"O ou -43.95"})}
       ${campo("elevacao_m", "Elevação (m)", r.elevacao_m, {num: true})}
       ${r.tipo.startsWith("aerodromo") ? campo("operacao", "Operação (ANAC)", r.operacao, {ph: "VFR, IFR…"}) : ""}
       ${pode ? `<div class="todo dica">Para mudar a posição, arraste o marcador no mapa ou digite a coordenada.</div>` : ""}
@@ -281,7 +283,7 @@ function desenharFicha(r){
   }
   if (!novo) carregarHist(r.id);
 }
-function mudarCoord(la, lo){ const a = $("[data-k=lat]"), b = $("[data-k=lon]"); if (a && b){ a.value = la.toFixed(6); b.value = lo.toFixed(6); } }
+function mudarCoord(la, lo){ const a = $("[data-k=lat]"), b = $("[data-k=lon]"); if (a && b){ Coord.por(a, +la.toFixed(6), "lat"); Coord.por(b, +lo.toFixed(6), "lon"); } }
 
 function coletar(){
   const v = k => $(`[data-k=${k}]`)?.value;
@@ -292,7 +294,7 @@ function coletar(){
   o.apelidos = String(v("apelidos") || "").split("\n").map(s => s.trim()).filter(Boolean);
   o.municipio = String(v("municipio") || "").trim() || null; o.situacao = v("situacao");
   if (tem("icao")){ o.icao = String(v("icao") || "").trim().toUpperCase() || null; o.ciad = String(v("ciad") || "").trim().toUpperCase() || null; }
-  o.lat = lerCoord(v("lat")); o.lon = lerCoord(v("lon"));
+  o.lat = Coord.ler($("[data-k=lat]"), lerCoord); o.lon = Coord.ler($("[data-k=lon]"), lerCoord);
   o.elevacao_m = num("elevacao_m");
   if (tem("operacao")) o.operacao = String(v("operacao") || "").trim() || null;
   o.superficie = v("superficie") || null; o.conservacao = v("conservacao") || null;

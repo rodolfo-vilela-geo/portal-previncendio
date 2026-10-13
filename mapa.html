@@ -11,6 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
+<script src="coord.js?v=20261013a"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
 <script src="medir.js?v=20261008d"></script>
 <script src="geo_saida.js?v=20261008b"></script>
@@ -604,7 +605,9 @@ function abrirFicha(c, f){
   if (c.id === "ocorr" || c.id === "queimadas") return fichaOcorrencia(c, p);
   if (c.id === "vegetacao") return mostrarFicha({sb: `<svg viewBox="0 0 18 18" width="18" height="18"><rect x="1" y="1" width="16" height="16" rx="3" fill="${VEG_COR[p.classe]}"/></svg>`,
     titulo: p._t, sub: "Inventário Florestal de MG (IDE-Sisema)", linhas: [["Área do polígono", fmtHa(p.ha)], ["No ROI entra como", VEG_ROI[p.classe] || "—"]]});
-  mostrarFicha({sb: p._icone ? sbIcone(p._icone) : c.sb, titulo: p._t, sub, linhas: d.linhas, links: d.links});
+  const pt = f.geometry?.type === "Point" ? f.geometry.coordinates : null;
+  const linhas = pt ? [...(d.linhas || []), ["Coordenada", Coord.par(pt[1], pt[0])]] : d.linhas;
+  mostrarFicha({sb: p._icone ? sbIcone(p._icone) : c.sb, titulo: p._t, sub, linhas, links: d.links});
 }
 async function fichaOcorrencia(c, p){
   mostrarFicha({sb: c.sb, titulo: p._t, sub: "Carregando…", linhas: []});

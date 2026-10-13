@@ -41,6 +41,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | `pipcif_importar.html` | Importa PIPCIFs convertidos (JSON) e mapas de risco (`formato: "colibri-risco-1"`) |
 | `manual.html` | Manual do usuário (atualize junto com cada função nova) |
 | `icones_mapa.js` | Ícones SVG dos mapas (`iconeMapa`, `iconeLegenda`, `ICONES_ROTULO`) |
+| `coord.js` | Coordenadas em graus, minutos e segundos (padrão desde 13/10/2026): `Coord.gms`, `Coord.attr` (campo com `data-dec`), `Coord.por`, `Coord.ler` (devolve o decimal original se o texto não mudou) |
 | `dados/` | GeoJSON públicos (UCs, municípios, MG) |
 | `banco/` | Planta do banco (ver `banco/README.md`) |
 | `docs/` | Receitas e decisões (PIPCIF, mapa de risco, plano operacional, decisões gerais) |
@@ -73,7 +74,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 - **ROIs em PDF**: `roi_importar.html` (a equipe do Previncêndio transcreve; seções detectadas pelo título, não pelo número).
 - Decisões gerais e histórico: `docs/decisoes.md`.
 
-## Estado atual e próximos passos (atualizado em 08/10/2026)
+## Estado atual e próximos passos (atualizado em 13/10/2026)
 
 Feito: ROI/RI/Sala/Técnica/BDG/SMC; cadastro das UCs módulos 1–5 com PIPCIF 2026 de ~30 UCs (+5 PIPCIFs 2025 da Zona da Mata convertidos em 07/10/2026: Ibitipoca, Serra do Brigadeiro, Serra Negra da Mantiqueira, Água Limpa, Mar de Espanha; e 4 PIPCIFs 2026 de Monumentos Naturais do Centro Norte: Vargem da Pedra, Lapa Vermelha, Peter Lund, Santo Antônio; em 08/10/2026 mais 4 do Centro Norte: Serra das Aroeiras, Cerca Grande, Serra do Sobrado, Sumidouro; e 8 PIPCIFs 2024/2025 do Jequitinhonha e Alto Médio São Francisco: Águas Vertentes, Biribiri (2024), Pandeiros (APA), Cochá e Gibão, Serra Azul, Serra do Sabonetal, Serra das Araras, Veredas do Acari; em 13/10/2026 mais 3 do Norte: Lapa Grande (2025), Montezuma (2024), Botumirim (2024); e 7 PIPCIFs 2025: Campos Altos, Gruta Rei do Mato, Várzea da Lapa, Seminário Menor de Mariana, Tripuí, Uaimií, Pico do Itabirito); importador de ROIs em PDF; módulo 6 (mapa de risco — protótipo só da Serra do Cabral, com conferência do gerente e seção 14); Geo Colibri (visualizador, sem IDE-Sisema por decisão do Rodolfo); empenho padronizado (catálogo de 140 instituições em 13 categorias; Sala por dia sem turnos; ROI 2.2 nova pré-preenchida pela Sala; pacote do BDG com colunas-resumo emp_*, CSV do empenho e GeoPackage); vegetação do ROI pelo Inventário Florestal; cadastro único de apoio aéreo (tela + camada no Geo Colibri).
 
@@ -82,7 +83,7 @@ Próximos (sem ordem fixa):
 - Vertente "planejamento" do mapa (áreas e ações desenhadas pelo gerente → cronograma do módulo 5; futuro módulo de queimas).
 - Camada de trilhas/acessos (`uc_via`) como variável do risco, quando o cadastro estiver completo.
 - Camada de risco na Sala de Situação; visão estadual do risco.
-- Módulo 7 (Plano operacional): lógica e decisões em `docs/plano_operacional.md` (parte comum fixa pelos protocolos conjuntos + parte da UC feita com o CBMMG: setores no mapa, estruturas em risco, comando). Falta: campo da unidade do CBMMG no cadastro, coordenadas em g/m/s nas telas, campos do acionamento no RI. PIPCIF como relatório gerado dos módulos.
+- Módulo 7 (Plano operacional): lógica e decisões em `docs/plano_operacional.md` (parte comum fixa pelos protocolos conjuntos + parte da UC feita com o CBMMG: setores no mapa, estruturas em risco, comando). Feito (migração 43): unidade do CBMMG no cadastro da UC, informações do acionamento no RI, coordenadas em g/m/s (`coord.js`). Falta a parte da UC (setores, cenários, comando, prontidão). PIPCIF como relatório gerado dos módulos.
 - Empenho: revisão/migração dos textos de 2026 no fim da temporada; exportação em lote do BDG com o empenho (hoje é por ROI); favoritas da UC também a partir dos parceiros do PIPCIF; conferir as pendentes no catálogo.
 - Carregar os PIPCIFs restantes (~19 UCs, sem contar as 2 APEs fora da gestão) e depois o catálogo único de recursos compartilhados (Pampulha, mirantes entre UCs). Corrigir `pipcif_ano` de Pau Furado.
 - Apoio aéreo: revisar as 99 áreas de pouso "a conferir" e a pista de Itamarandiba; excluir de vez os 52 aeródromos fora de MG (hoje inativos; o MCP não executa DELETE); módulo 2 da UC mostrando os pontos próximos (`recursos_aereos_perto`). Novos pontos de PIPCIF/módulo 2 já se ligam sozinhos (gatilho da migração 40).

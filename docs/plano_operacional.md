@@ -52,10 +52,14 @@ Duas camadas:
 9. **Registro.** ROI no Colibri, com a área medida, em até **10 dias corridos da extinção**. Medição, em ordem de preferência: percurso do perímetro em campo com GPS; drone; imagem de satélite (dNBR). Polígono, fotos, método, data e equipe vão no ROI. Frentes distantes entre si = ROIs separados; frentes próximas no mesmo perímetro = um ROI.
 10. **Avaliação pós-incêndio** com a equipe.
 
+## Feito em 13/10/2026 (migração 43)
+
+- Cadastro da UC (módulo 1): bloco "Corpo de Bombeiros (CBMMG) da área" — `uc_cadastro.cbmmg_unidade` e `cbmmg_contatos`.
+- RI da Sala: bloco "Informações do acionamento" — `ri.cbmmg_acionado`, `setor`, `linha_fogo`, `acesso`, `apoio_logistico`, `em_risco`; mostra o CBMMG da área ao escolher a UC; sai no PDF do RI.
+- Coordenadas em graus, minutos e segundos (`coord.js`) no cadastro e módulos da UC, no RI, no apoio aéreo e nas fichas de ponto do Geo Colibri (o ROI já usava). O banco continua em decimal; o valor exato é preservado quando o campo não é mexido.
+
 ## Pendências
 
 - Telefone da coordenação do CBMMG (a definir com o CBMMG).
-- Campo "unidade/fração do CBMMG responsável" no cadastro da UC.
-- Coordenadas em graus, minutos e segundos nas telas e fichas do Colibri (RI, ROI, ficha operacional).
-- RI da Sala: campos para as informações do acionamento (hoje só "Acesso").
+- Parte da UC do módulo 7: setores no mapa, cenários, quadro de comando, prontidão.
 - Conferir o texto do Decreto 48.767/2024 (competências, art. 6º).

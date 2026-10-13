@@ -64,6 +64,8 @@
   .marcos{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin:10px 0}
   .marcos fieldset{border:1px solid var(--linha);border-radius:8px;padding:6px 10px 10px;margin:0;min-width:0}
   .marcos legend{font-weight:700;font-size:13px;padding:0 4px}
+  .acion legend{font-weight:700;font-size:13px}
+  .cbmmg-uc{margin:0 0 8px;padding:6px 8px;background:var(--fundo);border-radius:6px}
   .marcos-res{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:12px}
   .marco{border:1px solid var(--linha);border-left:4px solid var(--vinho);border-radius:8px;padding:7px 10px;font-size:13px}
   .marco.vazio{border-left-color:var(--linha);color:var(--suave)}
@@ -115,6 +117,7 @@
   .logo img{height:46px;width:auto;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 </style>
 <script src="fluxo.js?v=20261007a" data-passo="ri"></script>
+<script src="coord.js?v=20261013a"></script>
 </head>
 <body>
 <header class="topo">
@@ -301,6 +304,8 @@ $("#sair").onclick = async () => { await sb.auth.signOut(); location.reload(); }
 async function carregarUCs(){
   const {data} = await sb.from("uc").select("nome_uc,categoria,municipios,base_op").eq("ativo", true);
   UCS = {}; (data||[]).forEach(u => UCS[u.nome_uc] = u);
+  const {data: cb} = await sb.from("uc_cadastro").select("nome_uc,cbmmg_unidade,cbmmg_contatos");
+  (cb||[]).forEach(c => { if (UCS[c.nome_uc]) Object.assign(UCS[c.nome_uc], {cbmmg_unidade: c.cbmmg_unidade, cbmmg_contatos: c.cbmmg_contatos || []}); });
 }
 let GERENTES = {};
 async function carregarGerentes(){
@@ -388,8 +393,8 @@ function htmlCabecalho(r){
     <div class="largo" style="grid-column:span 2"><label>Unidade de Conservação *</label><select name="nome_uc" required>${opcoesUC(r.nome_uc)}</select></div>
     <div><label>Local</label><select name="local"><option value=""></option>${LOCAIS.map(l=>`<option ${l===r.local?"selected":""}>${l}</option>`).join("")}</select></div>
     <div><label>Município</label><input name="municipio" value="${esc(r.municipio||"")}" list="munsUC"><datalist id="munsUC"></datalist></div>
-    <div><label>Latitude</label><input name="lat" value="${r.lat??""}" placeholder="-17.9756 ou 17°58'32&quot;S"></div>
-    <div><label>Longitude</label><input name="lon" value="${r.lon??""}" placeholder="-44.2845 ou 44°17'04&quot;O"></div>
+    <div><label>Latitude</label><input name="lat" ${Coord.attr(r.lat, "lat")} placeholder="17°58'32,2&quot;S ou -17.9756"></div>
+    <div><label>Longitude</label><input name="lon" ${Coord.attr(r.lon, "lon")} placeholder="44°17'04,2&quot;O ou -44.2845"></div>
     ${r.ri ? `<div><label>Status</label><select name="status">${["andamento","debelado","cancelado"].map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}</select></div>` : ""}
   </div>
   <div class="marcos">
@@ -411,12 +416,24 @@ function htmlCabecalho(r){
       ${r.ri ? `<div class="largo"><label>Responsável pelo fechamento do RI</label><input name="fechado_por" value="${esc(r.fechado_por||"")}" readonly class="travado" placeholder="preenchido pelo botão “Fechar RI”, com o nome do login" title="Preenchido pelo botão Fechar RI com o nome de quem está logado"></div>` : ""}
     </div></fieldset>
   </div>
+  <fieldset class="acion"><legend>Informações do acionamento <span class="dica" style="font-weight:400">(Protocolo Conjunto 03/2026 — passar ao CBMMG e manter atualizado)</span></legend>
+    <div class="cbmmg-uc dica" data-cbmmg></div>
+    <div class="grade">
+      <div><label>CBMMG acionado?</label><select name="cbmmg_acionado"><option value=""></option><option value="sim" ${r.cbmmg_acionado===true?"selected":""}>Sim</option><option value="nao" ${r.cbmmg_acionado===false?"selected":""}>Não</option></select></div>
+      <div><label>Setor da UC</label><input name="setor" value="${esc(r.setor||"")}" placeholder="região, setor ou trilha"></div>
+      <div class="largo"><label>Linha de fogo</label><input name="linha_fogo" value="${esc(r.linha_fogo||"")}" placeholder="ex.: cerca de 500 m, duas frentes"></div>
+      <div class="largo" style="grid-column:span 2"><label>Acesso ao local (veículos e pessoas)</label><input name="acesso" value="${esc(r.acesso||"")}" placeholder="estradas, trilhas, se precisa de 4x4, tempo de caminhada"></div>
+      <div class="largo" style="grid-column:span 2"><label>Apoio logístico disponível</label><input name="apoio_logistico" value="${esc(r.apoio_logistico||"")}" placeholder="pontos de apoio, equipamentos, veículos traçados, água"></div>
+      <div class="largo" style="grid-column:1/-1"><label>Populações e estruturas em risco</label><input name="em_risco" value="${esc(r.em_risco||"")}" placeholder="moradias, linhas de transmissão, escolas, nascentes, áreas de valor ambiental"></div>
+    </div>
+    <p class="dica" style="margin:6px 0 0">O pessoal empenhado vai na aba “Recursos empenhados”.</p>
+  </fieldset>
   <div class="grade"><div class="largo"><label>Observações</label><input name="obs" value="${esc(r.obs||"")}"></div></div>
   <datalist id="sugInformante">${sugestoesInformante(r.nome_uc).map(v => `<option value="${esc(v)}">`).join("")}</datalist>`;
 }
 function lerCabecalho(el){
   const g = n => el.querySelector(`[name="${n}"]`);
-  const lat = lerCoord(g("lat").value), lon = lerCoord(g("lon").value);
+  const lat = Coord.ler(g("lat"), lerCoord), lon = Coord.ler(g("lon"), lerCoord);
   if (Number.isNaN(lat) || Number.isNaN(lon)) throw new Error("Coordenada não reconhecida.");
   if (lat!==null && (lat<-23.5 || lat>-14)) throw new Error("Latitude fora de Minas Gerais.");
   if (lon!==null && (lon<-51.5 || lon>-39.5)) throw new Error("Longitude fora de Minas Gerais.");
@@ -426,7 +443,10 @@ function lerCabecalho(el){
     dat_detec: g("dat_detec").value, hr_detec: txt(g("hr_detec").value), f_detec: txt(g("f_detec").value), informante_detec: txt(g("informante_detec").value),
     dat_ini_comb: txt(g("dat_ini_comb").value), hr_ini_comb: txt(g("hr_ini_comb").value), informante_ini_comb: txt(g("informante_ini_comb").value),
     dat_final: txt(g("dat_final").value), hr_final: txt(g("hr_final").value), informante_final: txt(g("informante_final").value),
-    lat: lat!==null ? +lat.toFixed(6) : null, lon: lon!==null ? +lon.toFixed(6) : null, obs: txt(g("obs").value)};
+    lat: lat!==null ? +lat.toFixed(6) : null, lon: lon!==null ? +lon.toFixed(6) : null, obs: txt(g("obs").value),
+    setor: txt(g("setor").value), linha_fogo: txt(g("linha_fogo").value), acesso: txt(g("acesso").value),
+    apoio_logistico: txt(g("apoio_logistico").value), em_risco: txt(g("em_risco").value),
+    cbmmg_acionado: g("cbmmg_acionado").value === "sim" ? true : g("cbmmg_acionado").value === "nao" ? false : null};
   if (g("status")) o.status = g("status").value;
   const dh = (d, h) => d ? d + "T" + (h || "00:00") : null;
   const det = dh(o.dat_detec, o.hr_detec), ini = dh(o.dat_ini_comb, o.hr_ini_comb), fim = dh(o.dat_final, o.hr_final);
@@ -438,7 +458,10 @@ function lerCabecalho(el){
 function ligarUC(el){
   const s = el.querySelector('[name="nome_uc"]'), mun = el.querySelector('[name="municipio"]'), base = el.querySelector('[name="base_op"]');
   const f = () => { const u = UCS[s.value]; el.querySelector("#munsUC").innerHTML = (u?.municipios||[]).map(m=>`<option value="${esc(m)}">`).join("");
-    if (u && !mun.value && u.municipios?.length) mun.value = u.municipios[0]; if (u?.base_op && !el.dataset.editando) base.value = u.base_op; };
+    if (u && !mun.value && u.municipios?.length) mun.value = u.municipios[0]; if (u?.base_op && !el.dataset.editando) base.value = u.base_op;
+    const cb = el.querySelector("[data-cbmmg]"); if (cb) cb.innerHTML = !u ? "" : u.cbmmg_unidade || u.cbmmg_contatos?.length
+      ? `CBMMG da área: <b>${esc(u.cbmmg_unidade || "—")}</b>${u.cbmmg_contatos?.length ? " · " + u.cbmmg_contatos.map(x => esc(x.valor + (x.obs ? ` (${x.obs})` : ""))).join(" · ") : ""} · ou 193`
+      : `CBMMG: 193 ou a coordenação do CBMMG (unidade da área ainda não cadastrada no módulo 1 da UC).`; };
   s.addEventListener("change", f); f();
 }
 function agoraLocal(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
@@ -675,6 +698,9 @@ async function pdfRI(r, evs){
   <div class="num">${r.ri}/${r.ano}</div><div class="uc">${esc(rotuloUC(r.nome_uc).toUpperCase())}</div>
   <table><tr><th>CATEGORIA</th><th>MUNICÍPIO</th><th>UR IEF</th><th>COORDENADAS DO INCÊNDIO</th><th>LOCAL</th></tr>
     <tr class="c"><td>${PI}</td><td>${esc(r.municipio||"")}</td><td>${esc(reg?.ufbio||"")}</td><td>${r.lat!=null ? `Lat. ${dms(r.lat,"S")}<br>Long. ${dms(r.lon,"W")}` : ""}</td><td>${esc(r.local||"")}</td></tr></table>
+  ${[r.setor, r.linha_fogo, r.acesso, r.apoio_logistico, r.em_risco].some(Boolean) || r.cbmmg_acionado != null ? `<table><tr><td colspan="2" class="sec">INFORMAÇÕES DO ACIONAMENTO</td></tr>
+    ${[["CBMMG acionado", r.cbmmg_acionado == null ? "" : r.cbmmg_acionado ? "Sim" : "Não"], ["Setor da UC", r.setor], ["Linha de fogo", r.linha_fogo], ["Acesso", r.acesso],
+       ["Apoio logístico", r.apoio_logistico], ["Populações e estruturas em risco", r.em_risco]].filter(([, v]) => v).map(([k, v]) => `<tr><th style="width:32%;text-align:left">${k}</th><td>${esc(v)}</td></tr>`).join("")}</table>` : ""}
   <table><tr><td colspan="4" class="sec">DETECÇÃO DO INCÊNDIO</td></tr>
     <tr><th style="width:15%">DATA</th><td>${fmtD(r.dat_detec)}</td><th style="width:15%">HORA</th><td>${hh(r.hr_detec)}</td></tr>
     <tr><th>FORMA</th><td colspan="3">${formas.map(([t,k]) => `<span class="cx">(${fdl.includes(k) ? "X" : "&nbsp;&nbsp;"}) ${t.toUpperCase()}</span>`).join(" ")}
