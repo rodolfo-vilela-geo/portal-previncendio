@@ -62,6 +62,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 39_recurso_aereo_historico.sql Histórico (auditoria) do cadastro de apoio aéreo legível por usuários logados (tela apoio_aereo.html)
 40_ligar_ponto_aereo.sql    Gatilho em uc_ponto: pista/heliponto inserido (importador de PIPCIF ou módulo 2) é ligado ao recurso_aereo (pista ≤ 2 km, heliponto ≤ 300 m, ou mesmo nome) ou cria um lugar "a conferir"; nome da UC vira apelido e o informado vai para atributos.pipcif
 41_identificacao_uc.sql     roi, ri e uc_limite com FK para uc(nome_uc) on update cascade; uc ganha cod_uc (UC-001…, fixo, sequência para as novas), nome_oficial (IDE-Sisema com acentos), cod_ide (id_uc_ do IDE) e variantes. A chave continua nome_uc. Em produção: 41a (estrutura) + 41b (dados)
+42_correcao_nomes_uc.sql    "Mata de Krambeck" → "Mata do Krambeck" (cascata) e nome oficial "Pico da Ibituruna"; antigas grafias em variantes
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
