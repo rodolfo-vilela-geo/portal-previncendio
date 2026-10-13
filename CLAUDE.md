@@ -43,7 +43,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | `icones_mapa.js` | Ícones SVG dos mapas (`iconeMapa`, `iconeLegenda`, `ICONES_ROTULO`) |
 | `dados/` | GeoJSON públicos (UCs, municípios, MG) |
 | `banco/` | Planta do banco (ver `banco/README.md`) |
-| `docs/` | Receitas e decisões (PIPCIF, mapa de risco, decisões gerais) |
+| `docs/` | Receitas e decisões (PIPCIF, mapa de risco, plano operacional, decisões gerais) |
 | `ferramentas/` | Scripts de apoio sem dado pessoal (mapa de risco, testes locais) |
 
 ## Banco: o essencial
@@ -82,7 +82,7 @@ Próximos (sem ordem fixa):
 - Vertente "planejamento" do mapa (áreas e ações desenhadas pelo gerente → cronograma do módulo 5; futuro módulo de queimas).
 - Camada de trilhas/acessos (`uc_via`) como variável do risco, quando o cadastro estiver completo.
 - Camada de risco na Sala de Situação; visão estadual do risco.
-- Módulo 7 (Plano operacional); PIPCIF como relatório gerado dos módulos.
+- Módulo 7 (Plano operacional): lógica e decisões em `docs/plano_operacional.md` (parte comum fixa pelos protocolos conjuntos + parte da UC feita com o CBMMG: setores no mapa, estruturas em risco, comando). Falta: campo da unidade do CBMMG no cadastro, coordenadas em g/m/s nas telas, campos do acionamento no RI. PIPCIF como relatório gerado dos módulos.
 - Empenho: revisão/migração dos textos de 2026 no fim da temporada; exportação em lote do BDG com o empenho (hoje é por ROI); favoritas da UC também a partir dos parceiros do PIPCIF; conferir as pendentes no catálogo.
 - Carregar os PIPCIFs restantes (~19 UCs, sem contar as 2 APEs fora da gestão) e depois o catálogo único de recursos compartilhados (Pampulha, mirantes entre UCs). Corrigir `pipcif_ano` de Pau Furado.
 - Apoio aéreo: revisar as 99 áreas de pouso "a conferir" e a pista de Itamarandiba; excluir de vez os 52 aeródromos fora de MG (hoje inativos; o MCP não executa DELETE); módulo 2 da UC mostrando os pontos próximos (`recursos_aereos_perto`). Novos pontos de PIPCIF/módulo 2 já se ligam sozinhos (gatilho da migração 40).
