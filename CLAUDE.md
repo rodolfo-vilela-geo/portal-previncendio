@@ -42,6 +42,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | `pipcif_importar.html` | Importa PIPCIFs convertidos (JSON), mapas de risco (`formato: "colibri-risco-1"`) e zoneamentos de UC (`formato: "colibri-zoneamento-1"`) |
 | `manual.html` | Manual do usuário (atualize junto com cada função nova) |
 | `icones_mapa.js` | Ícones SVG dos mapas (`iconeMapa`, `iconeLegenda`, `ICONES_ROTULO`) |
+| `camadas_ref.js` | Camadas de referência públicas para qualquer mapa (desligadas por padrão, baixadas ao ligar): rodovias e ferrovias de MG do IDE-Sisema (`dados/rodovias_mg.geojson`, `dados/ferrovias_mg.geojson`, simplificados ~10 m por `ferramentas/transporte/gerar_transporte.py`). `CamadasRef.adicionar(mapa, controle?)` põe as duas no seletor de camadas; usado no Geo Colibri (grupo Transporte), módulos da UC, risco, plano operacional, painel da UC e apoio aéreo |
 | `coord.js` | Coordenadas em graus, minutos e segundos (padrão desde 13/10/2026): `Coord.gms`, `Coord.attr` (campo com `data-dec`), `Coord.por`, `Coord.ler` (devolve o decimal original se o texto não mudou) |
 | `dados/` | GeoJSON públicos (UCs, municípios, MG) |
 | `banco/` | Planta do banco (ver `banco/README.md`) |

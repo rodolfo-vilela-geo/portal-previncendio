@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
+<script src="camadas_ref.js?v=20261014a"></script>
 <script src="coord.js?v=20261013a"></script>
 <style>
   :root{ --verde:#2e5603; --verde-esc:#1e3a02; --tinta:#1d1d1f; --suave:#5f6368; --linha:#dcd8d0; --fundo:#eef0e6; --papel:#fff; --ok:#1e7a46; --erro:#b3261e; --alerta:#9a5b00; --claro:#f6f7f1 }
@@ -141,6 +142,7 @@ function km(a, b, c, d){ const r = Math.PI / 180, x = (d - b) * r * Math.cos((a 
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, attribution:"Imagem © Esri, Maxar"}).addTo(mapa);
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, opacity:.8}).addTo(mapa);
   mapa.createPane("ucs").style.zIndex = 380;
+  window.CamadasRef && CamadasRef.adicionar(mapa);
   camada = L.layerGroup().addTo(mapa);
   mapa.on("click", cliqueMapa);
 

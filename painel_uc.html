@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
+<script src="camadas_ref.js?v=20261014a"></script>
 <style>
   :root{
     color-scheme: light;
@@ -592,7 +593,8 @@ function montarMapa(){
   if (u.sede){ pts.push(L.marker([u.sede.lat, u.sede.lon], {icon: iconeMapa("sede", {tam:26}), zIndexOffset:600}).bindTooltip("Sede da UC")); leg.push(`${iconeLegenda("sede", 16)}Sede`); }
   if (pts.length) cam["Sede"] = L.featureGroup(pts).addTo(mapa);
   if (D.risco) camadaRisco(D.risco);
-  L.control.layers({"Satélite": sat, "Mapa": ruas}, cam, {collapsed: true}).addTo(mapa);
+  const ctlCam = L.control.layers({"Satélite": sat, "Mapa": ruas}, cam, {collapsed: true}).addTo(mapa);
+  window.CamadasRef && CamadasRef.adicionar(mapa, ctlCam);
   // norte e legenda dentro do mapa (não vazam para fora quando a ficha ao lado é mais alta)
   const Norte = L.Control.extend({onAdd(){ const d = L.DomUtil.create("div", "norte"); d.innerHTML = "▲<br>N"; return d; }});
   new Norte({position:"topleft"}).addTo(mapa);

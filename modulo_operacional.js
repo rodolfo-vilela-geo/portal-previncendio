@@ -276,7 +276,8 @@ function montarMapa(){
   OP.camSet = L.featureGroup().addTo(mapaO);
   OP.camAereo = L.layerGroup().addTo(mapaO);
   OP.camDes = L.layerGroup().addTo(mapaO);
-  L.control.layers({"Satélite": sat, "Mapa": ruas}, Object.assign({"Setores": OP.camSet}, extras, OP.lim ? {"Limite da UC": OP.lim} : {}, OP.zon.length ? {"Zoneamento (plano de manejo)": OP.zonCam} : {}, {"Apoio aéreo": OP.camAereo}), {collapsed:true}).addTo(mapaO);
+  OP.ctl = L.control.layers({"Satélite": sat, "Mapa": ruas}, Object.assign({"Setores": OP.camSet}, extras, OP.lim ? {"Limite da UC": OP.lim} : {}, OP.zon.length ? {"Zoneamento (plano de manejo)": OP.zonCam} : {}, {"Apoio aéreo": OP.camAereo}), {collapsed:true}).addTo(mapaO);
+  window.CamadasRef && CamadasRef.adicionar(mapaO, OP.ctl);
   pintarSetores();
   enquadrar();
   mapaO.on("click", e => { if (OP.des) addVertice(e.latlng); });

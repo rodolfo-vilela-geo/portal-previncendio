@@ -145,7 +145,8 @@ function montarMapa(){
   const f = GEO?.features.find(x => x.properties.nome_uc === RK.nome);
   const lim = f ? L.geoJSON(f, {style:{color:"#7CFC00", weight:2.5, fill:false}, interactive:false}).addTo(mapaR) : null;
   RK.pinos = L.layerGroup().addTo(mapaR);
-  L.control.layers({"Satélite": sat, "Mapa": ruas}, Object.assign({"Mapa de risco": C.camada}, lim ? {"Limite da UC": lim} : {}, {"Marcações da UC": RK.pinos}), {collapsed:true}).addTo(mapaR);
+  const ctl = L.control.layers({"Satélite": sat, "Mapa": ruas}, Object.assign({"Mapa de risco": C.camada}, lim ? {"Limite da UC": lim} : {}, {"Marcações da UC": RK.pinos}), {collapsed:true}).addTo(mapaR);
+  window.CamadasRef && CamadasRef.adicionar(mapaR, ctl);
   if (C.bounds) mapaR.fitBounds(C.bounds, {padding:[8,8]});
   mapaR.on("click", ev => {
     if (RK.marcando){ adicionarMarca(ev.latlng); return; }

@@ -11,6 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
+<script src="camadas_ref.js?v=20261014a"></script>
 <script src="coord.js?v=20261013a"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
 <script src="medir.js?v=20261008d"></script>
@@ -292,7 +293,8 @@ const GRUPOS = [
   {id:"ambiente", nome:"Vegetação"},
   {id:"estrutura", nome:"Estrutura das UCs"},
   {id:"prevencao", nome:"Prevenção"},
-  {id:"apoio", nome:"Rede de apoio"}
+  {id:"apoio", nome:"Rede de apoio"},
+  {id:"transporte", nome:"Transporte"}
 ];
 /* apoio aéreo (recurso_aereo): grupos do filtro e rótulos */
 const AEREO_GR = [["aero", "Aeródromos públicos e militares", "aerodromo"], ["priv", "Aeródromos privados", "aerodromo_privado"], ["pista", "Pistas não registradas", "pista_terra"], ["heli", "Helipontos", "heliponto"], ["pouso", "Áreas de pouso eventuais", "pouso"]];
@@ -334,6 +336,16 @@ const CAMADAS = [
    estilo: f => { const c = ZON_COR(f.properties.zona); return {color:c, weight:.8, opacity:.9, fillColor:c, fillOpacity:.38}; },
    ficha: p => ({linhas:[["Grupo", ZON_GRUPO(p.zona)[1]], ["Área da zona", fmtHa(p.area_ha)], ["Fonte", p.fonte + " · plano de manejo"]], links:[["Painel da UC", "painel_uc.html?uc=" + encodeURIComponent(p.nome_uc)]]}),
    extra: `<div class="leg-veg" data-legzon hidden>${ZON_GRUPOS.map(([, t, c]) => `<span><i style="background:${c}"></i>${t}</span>`).join("")}</div>`},
+  {id:"rodovias", g:"transporte", nome:"Rodovias", nota:"IDE-Sisema · federais e estaduais", sb: sbArea("#f59f00", null), tipo:"linha", canvas:true,
+   carregar: async () => (await CamadasRef.dados("rodovias")).features.map(f => ({type:"Feature", geometry:f.geometry, properties:{_t: f.properties.r + (f.properties.a ? " (acesso)" : ""), rodovia:f.properties.r,
+     superficie: CamadasRef.SUP[f.properties.s] || f.properties.s, inicio:f.properties.i, fim:f.properties.f, extensao_km:f.properties.k, _s:f.properties.s, _a:f.properties.a}})),
+   estilo: f => CamadasRef.estilo("rodovias", {s: f.properties._s, a: f.properties._a}),
+   ficha: p => ({linhas:[["Superfície", p.superficie], ["Trecho", [p.inicio, p.fim].filter(Boolean).join(" → ")], ["Extensão do trecho", p.extensao_km != null ? String(p.extensao_km).replace(".", ",") + " km" : ""], ["Fonte", "IDE-Sisema (cadastro rodoviário)"]]}),
+   extra: `<div class="leg-veg" data-legrod hidden>${CamadasRef.legenda("rodovias").map(([c, t, d]) => `<span><i style="background:${c};height:4px;width:16px;${d ? "background:repeating-linear-gradient(90deg," + c + " 0 4px,transparent 4px 7px)" : ""}"></i>${t}</span>`).join("")}</div>`},
+  {id:"ferrovias", g:"transporte", nome:"Ferrovias", nota:"IDE-Sisema · em operação", sb: sbArea("#2b2b2b", null), tipo:"linha", canvas:true,
+   carregar: async () => (await CamadasRef.dados("ferrovias")).features.map(f => ({type:"Feature", geometry:f.geometry, properties:{_t: "Ferrovia " + (f.properties.e || ""), operadora:f.properties.o, bitola:f.properties.b}})),
+   estilo: () => ({color:"#2b2b2b", weight:3.2, opacity:.95, dashArray:"10 3"}),
+   ficha: p => ({linhas:[["Operadora", p.operadora], ["Bitola", p.bitola], ["Fonte", "IDE-Sisema"]]})},
   {id:"municipios", g:"limites", nome:"Municípios", sb: sbArea("#c7d0d9", null), tipo:"poli",
    carregar: async () => (await fetch("dados/municipios_mg.geojson").then(r => r.json())).features.map(f => (f.properties = {_t: f.properties.nome, municipio: f.properties.nome, cod_ibge: f.properties.cod}, f)),
    estilo: () => ({color:"#c7d0d9", weight:.7, opacity:.7, fillOpacity:0}),
@@ -494,6 +506,7 @@ async function ligar(id, on){
   if (id === "vegetacao") $("[data-legveg]").hidden = !on;
   if (id === "aereo") $("[data-legaereo]").hidden = !on;
   if (id === "zoneamento") $("[data-legzon]").hidden = !on;
+  if (id === "rodovias") $("[data-legrod]").hidden = !on;
   if (!on){ desligar(id); contarGrupos(); salvarHash(); if (id === "queimadas" || id === "vegetacao") $("#aviso").hidden = true; return; }
   c.ativa = true; contarGrupos(); salvarHash();
   try{
@@ -526,6 +539,7 @@ function desenhar(c){
         .on("click", ev => { L.DomEvent.stop(ev); abrirFicha(c, f); }); }));
   } else {
     layer = L.geoJSON({type:"FeatureCollection", features: fs}, {pane: c.tipo === "linha" ? "linhas" : "limites", style: c.estilo,
+      ...(c.canvas ? {renderer: c._rend ||= L.canvas({pane: "linhas", padding:.3, tolerance:6})} : {}),
       interactive: c.tipo === "linha", onEachFeature: (f, l) => l.on("click", ev => { L.DomEvent.stop(ev); abrirFicha(c, f); })});
   }
   c.layer = layer.addTo(mapa); c.vis = fs;

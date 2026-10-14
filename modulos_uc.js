@@ -361,6 +361,7 @@ function montarMapaMU(){
   mapaMU = L.map("mapaMU", {zoomSnap:.25});
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar"}).addTo(mapaMU);
   L.control.scale({imperial:false}).addTo(mapaMU);
+  window.CamadasRef && CamadasRef.adicionar(mapaMU);
   const f = GEO?.features.find(x => x.properties.nome_uc === MU.nome);
   MU.lim = f ? L.geoJSON(f, {style:{color:"#8be06b", weight:2, fillColor:"#6fd34a", fillOpacity:.12}, interactive:false}).addTo(mapaMU) : null;
   mapaMU.on("click", e => { if (MU.geo?.modo === "desenhar") return addVertice(e.latlng); if (!alvoMU || !MU.edit) return;

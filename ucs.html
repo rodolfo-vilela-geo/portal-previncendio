@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="pipcif_modulos.js?v=20261014a"></script>
 <script src="icones_mapa.js?v=20261007b"></script>
+<script src="camadas_ref.js?v=20261014a"></script>
 <script src="coord.js?v=20261013a"></script>
 <style>
   :root{
@@ -585,6 +586,7 @@ function montarMapa(u, d, ed){
   if (mapa){ mapa.remove(); mapa = null; }
   mapa = L.map("mapaUC", {zoomSnap:.25});
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar"}).addTo(mapa);
+  window.CamadasRef && CamadasRef.adicionar(mapa);
   const f = GEO?.features.find(x => x.properties.nome_uc === u.nome_uc);
   let limites = null;
   if (f){ limites = L.geoJSON(f, {style:{color:"#8be06b", weight:2, fillColor:"#6fd34a", fillOpacity:.15}, interactive:false}).addTo(mapa); mapa.fitBounds(limites.getBounds(), {padding:[20,20]}); }
@@ -795,6 +797,7 @@ function montarMapaInfra(){
   mapaInf = L.map("mapaInfra", {zoomSnap:.25});
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:"Imagem © Esri, Maxar"}).addTo(mapaInf);
   L.control.scale({imperial:false}).addTo(mapaInf);
+  window.CamadasRef && CamadasRef.adicionar(mapaInf);
   const f = GEO?.features.find(x => x.properties.nome_uc === INF.nome);
   INF.lim = f ? L.geoJSON(f, {style:{color:"#8be06b", weight:2, fillColor:"#6fd34a", fillOpacity:.12}, interactive:false}).addTo(mapaInf) : null;
   mapaInf.on("click", e => { if (!alvoInf || !editando) return;
@@ -953,10 +956,10 @@ $$(".abas button").forEach(b => b.onclick = async () => {
 });
 entrar();
 </script>
-<script src="modulos_uc.js?v=20261014a"></script>
+<script src="modulos_uc.js?v=20261014b"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
-<script src="modulo_risco.js?v=20261008a"></script>
+<script src="modulo_risco.js?v=20261014a"></script>
 <script src="geo_entrada.js?v=20261014a"></script>
-<script src="modulo_operacional.js?v=20261014c"></script>
+<script src="modulo_operacional.js?v=20261014d"></script>
 </body>
 </html>
