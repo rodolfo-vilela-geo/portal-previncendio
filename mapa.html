@@ -435,7 +435,7 @@ async function iniciar(){
   $$("#bases button").forEach(b => b.onclick = () => trocarBase(b.dataset.k));
   trocarBase(h.b && BASES[h.b] ? h.b : "sat");
   mapa.on("mousemove", e => { const z = Math.floor((e.latlng.lng + 180) / 6) + 1, [x, y] = RiscoMapa.llParaUTM(e.latlng.lat, e.latlng.lng, z);
-    $("#coord").textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}  ·  UTM ${z}S ${Math.round(x).toLocaleString("pt-BR")} E ${Math.round(y).toLocaleString("pt-BR")} N`; });
+    $("#coord").textContent = `${Coord.par(e.latlng.lat, e.latlng.lng)}  ·  UTM ${z}S ${Math.round(x).toLocaleString("pt-BR")} E ${Math.round(y).toLocaleString("pt-BR")} N`; });
   mapa.on("moveend", () => { salvarHash(); if (ligada("queimadas")) queimadasAtualizar(); if (ligada("vegetacao")) vegetacaoAtualizar(); });
   mapa.on("click", e => { if (!window.Medir?.ativo()) cliqueMapa(e); });
   window.Medir?.iniciar(mapa);
@@ -843,9 +843,9 @@ function wkt(g){
 }
 function csv(camadas){
   const linhas = camadas.flatMap(({c, fs}) => fs.map(f => { const p = limpar(f.properties, c), g = f.geometry;
-    if (g.type === "Point"){ p.lon = g.coordinates[0]; p.lat = g.coordinates[1]; } else p.wkt = wkt(g); return p; }));
+    if (g.type === "Point"){ p.lon = g.coordinates[0]; p.lat = g.coordinates[1]; p.lat_gms = Coord.gms(p.lat, "lat"); p.lon_gms = Coord.gms(p.lon, "lon"); } else p.wkt = wkt(g); return p; }));
   const fixas = ["camada", "nome", "nome_uc"], todas = [...new Set(linhas.flatMap(Object.keys))];
-  const cols = fixas.filter(k => todas.includes(k)).concat(todas.filter(k => !fixas.includes(k) && !["lon", "lat", "wkt"].includes(k)), ["lon", "lat", "wkt"].filter(k => todas.includes(k)));
+  const cols = fixas.filter(k => todas.includes(k)).concat(todas.filter(k => !fixas.includes(k) && !["lon", "lat", "lat_gms", "lon_gms", "wkt"].includes(k)), ["lon", "lat", "lat_gms", "lon_gms", "wkt"].filter(k => todas.includes(k)));
   const q = v => { const s = String(v ?? ""); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   return "﻿" + [cols.join(";")].concat(linhas.map(l => cols.map(k => q(typeof l[k] === "number" ? String(l[k]).replace(".", ",") : l[k])).join(";"))).join("\r\n");
 }

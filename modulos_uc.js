@@ -306,7 +306,7 @@ function editarFicha(b, r){
     if (la === null || lo === null){ res.textContent = ""; pintarMU(); return; }
     if (Number.isNaN(la) || Number.isNaN(lo) || !dentroMG(la, lo)){ res.textContent = "Coordenada não reconhecida ou fora de MG."; res.classList.add("bad"); return; }
     const f = GEO?.features.find(x => x.properties.nome_uc === MU.nome), dentro = f ? pontoNoPoligono(la, lo, f.geometry) : null;
-    res.textContent = `${Coord.par(la, lo)} · decimal ${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
+    res.textContent = Coord.par(la, lo) + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
     pintarMU({lat: la, lon: lo});
   };
   if (coord){

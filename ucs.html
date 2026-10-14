@@ -597,7 +597,7 @@ function montarMapa(u, d, ed){
     if (la === null || lo === null){ res.textContent = ""; return; }
     if (Number.isNaN(la) || Number.isNaN(lo) || !dentroMG(la, lo)){ res.textContent = "Coordenada não reconhecida ou fora de MG."; res.classList.add("bad"); return; }
     const dentro = f ? pontoNoPoligono(la, lo, f.geometry) : null;
-    res.textContent = `${Coord.par(la, lo)} · decimal ${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
+    res.textContent = Coord.par(la, lo) + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
     marcadores[p] = L.marker([la, lo], {icon: icone(p), title: p==="ref" ? "Ponto de referência" : "Sede"}).addTo(mapa);
   };
   ["ref","sede"].forEach(p => { atualizar(p); $$(`[data-k^="${p}_"]`).forEach(i => i.addEventListener("change", () => atualizar(p))); });
@@ -749,7 +749,7 @@ function editarPt(p){
     if (la === null || lo === null){ res.textContent = ""; pintarInfra(); return; }
     if (Number.isNaN(la) || Number.isNaN(lo) || !dentroMG(la, lo)){ res.textContent = "Coordenada não reconhecida ou fora de MG."; res.classList.add("bad"); return; }
     const f = GEO?.features.find(x => x.properties.nome_uc === INF.nome), dentro = f ? pontoNoPoligono(la, lo, f.geometry) : null;
-    res.textContent = `${Coord.par(la, lo)} · decimal ${la.toFixed(6)}, ${lo.toFixed(6)}` + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
+    res.textContent = Coord.par(la, lo) + (dentro === null ? "" : dentro ? " · dentro do limite da UC" : " · fora do limite da UC");
     pintarInfra({lat: la, lon: lo});
   };
   $$('[data-k^="pt_"]').forEach(i => i.addEventListener("change", atualizarRes)); atualizarRes();
@@ -952,7 +952,7 @@ $$(".abas button").forEach(b => b.onclick = async () => {
 });
 entrar();
 </script>
-<script src="modulos_uc.js?v=20261013a"></script>
+<script src="modulos_uc.js?v=20261014a"></script>
 <script src="risco_mapa.js?v=20261006a"></script>
 <script src="modulo_risco.js?v=20261008a"></script>
 </body>

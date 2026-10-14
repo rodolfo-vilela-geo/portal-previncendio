@@ -204,7 +204,6 @@
           <div class="dms"><input name="lat_g" inputmode="numeric" placeholder="17"><input name="lat_m" inputmode="numeric" placeholder="58"><input name="lat_s" inputmode="decimal" placeholder="32,3"></div></div>
         <div><label>Longitude (W) — graus / min / seg</label>
           <div class="dms"><input name="lon_g" inputmode="numeric" placeholder="44"><input name="lon_m" inputmode="numeric" placeholder="17"><input name="lon_s" inputmode="decimal" placeholder="04,3"></div></div>
-        <div><label>Em decimal (automático)</label><div class="dica" id="coordDec" style="font-size:14px;margin-top:8px">—</div></div>
       </div>
       <div id="blocoCombate">
         <div class="grade" style="margin-bottom:12px">
@@ -562,8 +561,6 @@ function somaVeg(){ return VEGETACAO.reduce((s,[n])=>s+(num(F(n).value)||0),0); 
 
 function atualizarDerivados(){
   $("#codPreview").textContent = codBdp() || "AAAA-RRRR-OOO";
-  const c = coords();
-  $("#coordDec").textContent = (c.lat!==null && c.lon!==null) ? `${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}` : "—";
   const tot = (num(F("area_int").value)||0) + (num(F("area_ent").value)||0);
   $("#areaTotal").textContent = fmtHa(tot) + " ha";
   const sv = somaVeg();
@@ -1031,7 +1028,7 @@ function desenhoMapa(polis, {larg=680, alt=470, ponto=null, codigo="", uc="", li
   svg += `<rect x="${lx-6}" y="${ly0-14}" width="${lw+6}" height="${itens.length*lh+8}" fill="#fff" fill-opacity=".92" stroke="#999" stroke-width=".6"/>`;
   itens.forEach(([simb, rotulo], i) => { const y = ly0 + i*lh; svg += `<g transform="translate(${lx},${y})">${simb}</g>${t(lx+22, y+1, rotulo, 'font-size="10.5"')}`; });
   svg += t(larg-10, alt-8, "Coordenadas geográficas · SIRGAS 2000", 'font-size="9" text-anchor="end" fill="#555"');
-  if (ponto) svg += t(sx, alt-8, `Ponto: ${ponto.lat.toFixed(5)}, ${ponto.lon.toFixed(5)}`, 'font-size="9" fill="#555"');
+  if (ponto) svg += t(sx, alt-8, `Ponto: ${(([g,m,s]) => `${g}°${String(m).padStart(2,"0")}'${s}"S`)(decParaDMS(ponto.lat))} ${(([g,m,s]) => `${g}°${String(m).padStart(2,"0")}'${s}"W`)(decParaDMS(ponto.lon))}`, 'font-size="9" fill="#555"');
   return svg + "</svg>";
 }
 
@@ -1455,8 +1452,7 @@ function montarRelatorio(){
 
     <div class="sec">2. Operação de combate</div>
     <b>2.1. Coordenadas geográficas do local do incêndio</b>
-    <table><tr><td>Lat. (S)</td><td>${dmsTxt(F("lat_g").value,F("lat_m").value,F("lat_s").value)}</td><td>Long. (W)</td><td>${dmsTxt(F("lon_g").value,F("lon_m").value,F("lon_s").value)}</td>
-      <td>Decimal</td><td>${c.lat!==null&&c.lon!==null ? `${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}` : ""}</td></tr></table>
+    <table><tr><td>Lat. (S)</td><td>${dmsTxt(F("lat_g").value,F("lat_m").value,F("lat_s").value)}</td><td>Long. (W)</td><td>${dmsTxt(F("lon_g").value,F("lon_m").value,F("lon_s").value)}</td></tr></table>
     <div style="margin-top:4px">Início do combate: <b>${r.dat_comb ? fmtData(r.dat_comb)+" "+v(r.hr_comb) : "não houve combate"}</b> · Fim da ocorrência: <b>${fmtData(r.dat_final)} ${v(r.hr_final)}</b></div>
     ${window.EMP?.ativo && EMP.linhas("x").length ? `<b>2.2. Recursos empenhados</b>${EMP.html(v, fmtData)}<div style="margin-top:4px"><b>Pessoas por dia nas colunas do BDG</b></div>` : `<b>2.2. Evolução da operação de combate</b>`}
     <table><tr><th>Data</th><th>Início</th><th>Fim</th><th>UC</th><th>FTP</th><th>Parc.</th><th>Brig. CFM</th><th>Voluntária</th><th>PM</th><th>BM</th><th>Total</th></tr>${evolHtml}</table>

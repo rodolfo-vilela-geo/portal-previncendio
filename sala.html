@@ -1043,10 +1043,10 @@ async function carregarBoletim(){
 }
 ["#bDe","#bAte","#bStatus","#bBase"].forEach(s => $(s).addEventListener("change", carregarBoletim));
 $("#bCsv").onclick = () => {
-  const cols = ["ano","ri","status","base_op","nome_uc","local","municipio","dat_detec","hr_detec","dat_final","hr_final","lat","lon","total_pessoas",
+  const cols = ["ano","ri","status","base_op","nome_uc","local","municipio","dat_detec","hr_detec","dat_final","hr_final","lat","lon","lat_gms","lon_gms","total_pessoas",
     ...PESSOAS.map(p=>p[0]), ...VEICULOS.map(v=>v[0]), "recursos_txt","ultima_atualizacao","tem_roi"];
   const q = v => v==null ? "" : /[";\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v);
-  const csv = "﻿" + cols.join(";") + "\n" + boletim.map(r => cols.map(c=>q(r[c])).join(";")).join("\n");
+  const csv = "﻿" + cols.join(";") + "\n" + boletim.map(r => cols.map(c=>q(c === "lat_gms" ? Coord.gms(r.lat, "lat") : c === "lon_gms" ? Coord.gms(r.lon, "lon") : r[c])).join(";")).join("\n");
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
   a.download = `boletim_${$("#bDe").value}_a_${$("#bAte").value}.csv`; a.click();
 };
