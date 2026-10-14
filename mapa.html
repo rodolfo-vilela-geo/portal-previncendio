@@ -301,6 +301,18 @@ const AEREO_ON = new Set(AEREO_GR.map(g => g[0]));
 const AEREO_TIPO = {aerodromo_publico:"Aeródromo público", aerodromo_privado:"Aeródromo privado", aerodromo_militar:"Aeródromo militar", pista_nao_registrada:"Pista não registrada", heliponto:"Heliponto", area_pouso:"Área de pouso eventual"};
 const AEREO_CAP = v => v ? v[0].toUpperCase() + v.slice(1) : "";
 const AEREO_AT = {nao_avaliado:"não avaliado", sim:"sim", com_restricao:"com restrição", nao:"não"};
+/* zoneamento: grupos só para colorir (os nomes das zonas variam entre planos de manejo) */
+const ZON_GRUPOS = [
+  [/intang|preserva|primitiva/i, "Proteção mais restrita", "#1b7837"],
+  [/conserva/i, "Conservação", "#5aae61"],
+  [/uso restrito|uso extensivo|uso moderado/i, "Uso restrito, extensivo, moderado", "#a6dba0"],
+  [/recupera|adequa/i, "Recuperação e adequação", "#dfc27d"],
+  [/intensivo|infra|especial|interesses p|hist/i, "Uso intensivo, infraestrutura", "#8c96c6"],
+  [/divergente|conflitante|sobreposi/i, "Divergente, conflitante, sobreposição", "#f4a582"],
+  [/produ|popula|urban|industrial|comunit/i, "Produção, população, urbano", "#bf812d"],
+  [/./, "Outras", "#bdbdbd"]];
+const ZON_GRUPO = z => ZON_GRUPOS.find(([re]) => re.test(z || "")) || ZON_GRUPOS[ZON_GRUPOS.length - 1];
+const ZON_COR = z => ZON_GRUPO(z)[2];
 const CAMADAS = [
   {id:"mg", g:"limites", nome:"Minas Gerais", nota:"limite do estado", sb: sbArea("#f4f1e6", null), ligada:true, tipo:"poli",
    carregar: async () => { const d = await fetch("dados/mg.geojson").then(r => r.json()); const fs = d.type === "FeatureCollection" ? d.features : [d];
@@ -316,6 +328,12 @@ const CAMADAS = [
      properties:{_t: "ZA · " + l.nome_uc, nome_uc:l.nome_uc, tipo: l.tipo === "za_pm" ? "Plano de manejo" : "Faixa de 3 km"}})),
    estilo: () => ({color:"#d7e8a8", weight:1.2, dashArray:"4 4", fillOpacity:0}),
    ficha: p => ({linhas:[["Definida por", p.tipo]]})},
+  {id:"zoneamento", g:"limites", nome:"Zoneamento (plano de manejo)", nota:"IDE-Sisema · referência, não é específico para incêndio", sb: sbArea("#5aae61", "#5aae61"), tipo:"poli",
+   carregar: async () => { const {data, error} = await sb.rpc("geo_zoneamento", {p_tol: 0.00003}); if (error) throw error;
+     return (data || []).map(z => ({type:"Feature", geometry:z.geom, properties:{_t: z.zona + (z.sigla ? ` (${z.sigla})` : ""), nome_uc:z.nome_uc, zona:z.zona, area_ha:z.area_ha, fonte:z.fonte}})); },
+   estilo: f => { const c = ZON_COR(f.properties.zona); return {color:c, weight:.8, opacity:.9, fillColor:c, fillOpacity:.38}; },
+   ficha: p => ({linhas:[["Grupo", ZON_GRUPO(p.zona)[1]], ["Área da zona", fmtHa(p.area_ha)], ["Fonte", p.fonte + " · plano de manejo"]], links:[["Painel da UC", "painel_uc.html?uc=" + encodeURIComponent(p.nome_uc)]]}),
+   extra: `<div class="leg-veg" data-legzon hidden>${ZON_GRUPOS.map(([, t, c]) => `<span><i style="background:${c}"></i>${t}</span>`).join("")}</div>`},
   {id:"municipios", g:"limites", nome:"Municípios", sb: sbArea("#c7d0d9", null), tipo:"poli",
    carregar: async () => (await fetch("dados/municipios_mg.geojson").then(r => r.json())).features.map(f => (f.properties = {_t: f.properties.nome, municipio: f.properties.nome, cod_ibge: f.properties.cod}, f)),
    estilo: () => ({color:"#c7d0d9", weight:.7, opacity:.7, fillOpacity:0}),
@@ -475,6 +493,7 @@ async function ligar(id, on){
   const c = C[id], row = $(`[data-c="${id}"]`);
   if (id === "vegetacao") $("[data-legveg]").hidden = !on;
   if (id === "aereo") $("[data-legaereo]").hidden = !on;
+  if (id === "zoneamento") $("[data-legzon]").hidden = !on;
   if (!on){ desligar(id); contarGrupos(); salvarHash(); if (id === "queimadas" || id === "vegetacao") $("#aviso").hidden = true; return; }
   c.ativa = true; contarGrupos(); salvarHash();
   try{
@@ -516,7 +535,7 @@ function desenhar(c){
 /* polígonos e limites não capturam clique (ficam por baixo dos pontos): o clique no mapa procura o polígono */
 function cliqueMapa(e){
   if (window._riscoClique && window._riscoClique(e)) return;
-  for (const id of ["queimadas", "vegetacao", "ucs", "za", "municipios"]){
+  for (const id of ["queimadas", "vegetacao", "zoneamento", "ucs", "za", "municipios"]){
     const c = C[id]; if (!c.ativa) continue;
     const fs = id === "queimadas" ? c.vis || [] : c.vis || [];
     const f = fs.find(f => contem(f.geometry, e.latlng.lng, e.latlng.lat));

@@ -58,6 +58,13 @@ Duas camadas:
 - RI da Sala: bloco "Acionamento" — `ri.cbmmg_acionado` e `setor`; mostra o CBMMG da área ao escolher a UC; sai no PDF do RI. (14/10/2026: linha de fogo, acesso, apoio logístico e populações/estruturas em risco foram retirados — migração 44 — porque o protocolo deve mudar em breve. O setor terá cadastro próprio, vindo do zoneamento da UC. O ROI não foi alterado.)
 - Coordenadas em graus, minutos e segundos (`coord.js`) no cadastro e módulos da UC, no RI, no apoio aéreo e nas fichas de ponto do Geo Colibri (o ROI já usava). O banco continua em decimal; o valor exato é preservado quando o campo não é mexido.
 
+## Zoneamento do plano de manejo (14/10/2026, migração 45)
+
+- Decisão do Rodolfo: o zoneamento do plano de manejo fica **à parte**, como camada de referência (não é específico para incêndios); pode ou não compor os setores do plano operacional. Os planos de manejo só serão enviados se for preciso extrair as normas de cada zona (máquina, aceiro, retardante, queima) para o módulo 7.
+- Tabela `uc_zoneamento` (zona, sigla, fonte, geom, area_ha). Carga pelo importador (`formato: "colibri-zoneamento-1"`, função `zoneamento_carregar`, só Previncêndio). Geo Colibri: camada "Zoneamento (plano de manejo)" em Limites. RI: mostra a zona onde cai a coordenada (`zona_no_ponto`) e leva ao PDF.
+- Carga inicial: 14 UCs do IDE-Sisema (`ide_2021_mg_zon*_uc_*_pol`): Cachoeira das Andorinhas, São José (APA), Vargem das Flores, Água Limpa, Mar de Espanha, Tripuí, Serra das Araras, Veredas do Acari, Libélulas da Serra de São José, Botumirim, Nova Baden, Serra Negra da Mantiqueira, Serra do Sobrado, Serra Verde — 70 zonas. Acentuação corrigida (arquivos em UTF-8 declarados como ISO-8859-1); siglas só quando vêm no arquivo e sem repetição; geometria simplificada ~2 m sem perda de área.
+- Problemas dos arquivos do IDE: Nova Baden e Serra Verde vinham com latitude e longitude trocadas (corrigido); mesmo assim ficam 40–60 m a sudoeste do limite oficial (sobreposição 94% e 88%) — deixado como publicado. As áreas digitadas nas tabelas de atributos de alguns arquivos não batem com o desenho (vale o desenho).
+
 ## Pendências
 
 - Telefone da coordenação do CBMMG (a definir com o CBMMG).

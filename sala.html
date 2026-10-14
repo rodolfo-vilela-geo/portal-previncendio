@@ -422,6 +422,7 @@ function htmlCabecalho(r){
       <div><label>CBMMG acionado?</label><select name="cbmmg_acionado"><option value=""></option><option value="sim" ${r.cbmmg_acionado===true?"selected":""}>Sim</option><option value="nao" ${r.cbmmg_acionado===false?"selected":""}>Não</option></select></div>
       <div style="grid-column:span 2"><label>Setor da UC</label><input name="setor" value="${esc(r.setor||"")}" placeholder="região, setor ou trilha"></div>
     </div>
+    <div class="dica" data-zona style="margin-top:6px"></div>
   </fieldset>
   <div class="grade"><div class="largo"><label>Observações</label><input name="obs" value="${esc(r.obs||"")}"></div></div>
   <datalist id="sugInformante">${sugestoesInformante(r.nome_uc).map(v => `<option value="${esc(v)}">`).join("")}</datalist>`;
@@ -457,6 +458,13 @@ function ligarUC(el){
       ? `CBMMG da área: <b>${esc(u.cbmmg_unidade || "—")}</b>${u.cbmmg_contatos?.length ? " · " + u.cbmmg_contatos.map(x => esc(x.valor + (x.obs ? ` (${x.obs})` : ""))).join(" · ") : ""} · ou 193`
       : `CBMMG: 193 ou a coordenação do CBMMG (unidade da área ainda não cadastrada no módulo 1 da UC).`; };
   s.addEventListener("change", f); f();
+  // zona do plano de manejo onde cai a coordenada (camada de referência)
+  const zEl = el.querySelector("[data-zona]"), la = el.querySelector('[name="lat"]'), lo = el.querySelector('[name="lon"]');
+  const zona = async () => { if (!zEl) return; const a = Coord.ler(la, lerCoord), b = Coord.ler(lo, lerCoord);
+    if (a == null || b == null || Number.isNaN(a) || Number.isNaN(b)){ zEl.textContent = ""; return; }
+    const {data} = await sb.rpc("zona_no_ponto", {p_lat: a, p_lon: b});
+    zEl.innerHTML = (data || []).length ? "Zoneamento do plano de manejo: " + data.map(z => `<b>${esc(z.zona)}</b> (${esc(z.nome_uc)})`).join(" · ") : ""; };
+  if (la && lo){ la.addEventListener("change", zona); lo.addEventListener("change", zona); zona(); }
 }
 function agoraLocal(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
 function htmlEvento(ultimo, primeiro=false){
@@ -663,10 +671,11 @@ async function carregarListasRI(r){
 /* ======================= PDF DO RI (modelo da Força-Tarefa) ======================= */
 async function pdfRI(r, evs){
   const u = UCS[r.nome_uc] || {};
-  const [{data: cont}, {data: pm}, {data: reg}] = await Promise.all([
+  const [{data: cont}, {data: pm}, {data: reg}, {data: zon}] = await Promise.all([
     sb.from("ri_contato").select("*").eq("ano", r.ano).eq("ri", r.ri).order("id"),
     sb.from("ri_pmamb").select("*").eq("ano", r.ano).eq("ri", r.ri).order("data_hora", {nullsFirst:true}),
-    sb.from("uc").select("nome_uc,categoria,grupo,ufbio").eq("nome_uc", r.nome_uc).maybeSingle()]);
+    sb.from("uc").select("nome_uc,categoria,grupo,ufbio").eq("nome_uc", r.nome_uc).maybeSingle(),
+    r.lat != null ? sb.rpc("zona_no_ponto", {p_lat: r.lat, p_lon: r.lon}) : Promise.resolve({data: []})]);
   const PI = reg?.grupo || (["PAR","MONA","ESEC","REBIO","RVS"].includes(u.categoria) ? "Proteção Integral" : u.categoria ? "Uso Sustentável" : "");
   const dms = (v, h) => { if (v == null) return ""; const a = Math.abs(v), g = Math.floor(a), m = Math.floor((a-g)*60), s = ((a-g)*60-m)*60;
     return `${g}°${String(m).padStart(2,"0")}'${s.toFixed(1).replace(".",",")}"${h}`; };
@@ -692,8 +701,9 @@ async function pdfRI(r, evs){
   <div class="num">${r.ri}/${r.ano}</div><div class="uc">${esc(rotuloUC(r.nome_uc).toUpperCase())}</div>
   <table><tr><th>CATEGORIA</th><th>MUNICÍPIO</th><th>UR IEF</th><th>COORDENADAS DO INCÊNDIO</th><th>LOCAL</th></tr>
     <tr class="c"><td>${PI}</td><td>${esc(r.municipio||"")}</td><td>${esc(reg?.ufbio||"")}</td><td>${r.lat!=null ? `Lat. ${dms(r.lat,"S")}<br>Long. ${dms(r.lon,"W")}` : ""}</td><td>${esc(r.local||"")}</td></tr></table>
-  ${r.setor || r.cbmmg_acionado != null ? `<table><tr><td colspan="2" class="sec">ACIONAMENTO</td></tr>
-    ${[["CBMMG acionado", r.cbmmg_acionado == null ? "" : r.cbmmg_acionado ? "Sim" : "Não"], ["Setor da UC", r.setor]].filter(([, v]) => v).map(([k, v]) => `<tr><th style="width:32%;text-align:left">${k}</th><td>${esc(v)}</td></tr>`).join("")}</table>` : ""}
+  ${r.setor || r.cbmmg_acionado != null || (zon || []).length ? `<table><tr><td colspan="2" class="sec">ACIONAMENTO</td></tr>
+    ${[["CBMMG acionado", r.cbmmg_acionado == null ? "" : r.cbmmg_acionado ? "Sim" : "Não"], ["Setor da UC", r.setor],
+       ["Zona (plano de manejo)", (zon || []).map(z => z.zona + (z.nome_uc !== r.nome_uc ? ` (${z.nome_uc})` : "")).join("; ")]].filter(([, v]) => v).map(([k, v]) => `<tr><th style="width:32%;text-align:left">${k}</th><td>${esc(v)}</td></tr>`).join("")}</table>` : ""}
   <table><tr><td colspan="4" class="sec">DETECÇÃO DO INCÊNDIO</td></tr>
     <tr><th style="width:15%">DATA</th><td>${fmtD(r.dat_detec)}</td><th style="width:15%">HORA</th><td>${hh(r.hr_detec)}</td></tr>
     <tr><th>FORMA</th><td colspan="3">${formas.map(([t,k]) => `<span class="cx">(${fdl.includes(k) ? "X" : "&nbsp;&nbsp;"}) ${t.toUpperCase()}</span>`).join(" ")}
