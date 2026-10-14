@@ -14,7 +14,7 @@ const FLUXO = [
   ["Primeiro combate", "Se a UC tem pessoal treinado ou brigada, o combate começa logo após a detecção, sempre que for seguro. <b>Até a chegada do CBMMG, ou durante toda a operação quando o CBMMG não for, o comando é do gerente ou do responsável pela UC.</b>"],
   ["Chegada do CBMMG", "O CBMMG abre o chamado, coordena o combate e instala o Sistema de Comando em Operações com posto de comando unificado; o responsável pela UC integra o comando e repassa as informações de campo."],
   ["RI atualizado", "O responsável pela UC mantém a Sala de Situação informada durante toda a operação."],
-  ["Apoio aéreo", "Pedido à coordenação do CBMMG, com as informações do acionamento e as pistas próximas. Avião: pista de pelo menos 25 × 1.000 m a até 17 km, com água para reabastecer. Helicóptero: área para pouso ou embarque, ponto de água próximo e ao menos uma equipe em solo por aeronave."],
+  ["Apoio aéreo", "Pedido à coordenação do CBMMG, com as informações do acionamento e as pistas e áreas de pouso próximas (o plano mostra as pistas num raio de 50 km de cada setor, como informação). A decisão sobre o emprego da aeronave é de quem a opera."],
   ["Extinção", "Comunicar a Sala de Situação para fechar o RI. Se o IEF atuou sem o CBMMG, avisar o CBMMG no mesmo dia (REDS)."],
   ["Registro", "ROI no Colibri com a área medida em até <b>10 dias corridos da extinção</b> (percurso em campo com GPS, drone ou imagem de satélite). Frentes distantes entre si = ROIs separados."],
   ["Avaliação", "Reunião de avaliação com a equipe depois do incêndio."]];
@@ -150,7 +150,7 @@ function desenhar(){
       </div>
       <div><div id="opLado"></div></div>
     </div>
-    <div style="overflow:auto;margin-top:10px"><table class="op-set"><thead><tr><th>Setor</th><th>Área</th>${OP.risco ? "<th>Risco: atenção alta + muito alta</th>" : ""}<th>Zonas do plano de manejo</th><th>Pista mais próxima</th><th>Air Tractor (pista ≥ 25 × 1.000 m até 17 km)</th><th>Heliponto / pouso</th><th>Ponto de água</th><th>Fogo 2013–2025</th></tr></thead><tbody id="opTab"></tbody></table></div>
+    <div style="overflow:auto;margin-top:10px"><table class="op-set"><thead><tr><th>Setor</th><th>Área</th>${OP.risco ? "<th>Risco: atenção alta + muito alta</th>" : ""}<th>Zonas do plano de manejo</th><th>Pistas em até 50 km</th><th>Heliponto / pouso</th><th>Ponto de água</th><th>Fogo 2013–2025</th></tr></thead><tbody id="opTab"></tbody></table></div>
   </fieldset>
 
   <fieldset class="op-sec"><legend>3 · Cenários</legend>
@@ -354,10 +354,12 @@ async function carregarResumo(){
   OP.resumo = Object.fromEntries((data || []).map(r => [r.id, r])); tabelaSetores(); painelLado();
 }
 function resumoTxt(r){
-  if (!r) return {pista:"…", at:"…", heli:"…", agua:"…", fogo:"…", zonas:"…"};
-  const p = r.pista, at = r.pista_at802, h = r.heliponto, a = r.agua;
-  return {pista: p ? `${esc(p.nome)} · ${fmtKm(p.km)}${p.comprimento_m ? ` · ${p.comprimento_m} × ${p.largura_m || "?"} m` : ""}` : "nenhuma cadastrada",
-    at: at ? `<span class="ok">sim</span> · ${esc(at.nome)} (${fmtKm(at.km)})` : `<span class="nao">não</span> · nenhuma pista conhecida atende`,
+  if (!r) return {pista:"…", pistas:"…", heli:"…", agua:"…", fogo:"…", zonas:"…"};
+  const p = r.pista, L = r.pistas_50km || [], n = r.n_pistas_50km || 0, h = r.heliponto, a = r.agua;
+  const umaPista = x => `${esc(x.nome)} · ${fmtKm(x.km)}${x.comprimento_m ? ` · ${x.comprimento_m} × ${x.largura_m || "?"} m` : ""}${x.superficie ? " · " + esc(x.superficie) : ""}`;
+  return {pista: p ? umaPista(p) : "nenhuma cadastrada",
+    pistas: n ? `<b>${n}</b> pista${n === 1 ? "" : "s"}: ${L.slice(0, 3).map(umaPista).join("; ")}${n > 3 ? `; e mais ${n - 3}` : ""}`
+             : `nenhuma em 50 km${p ? ` · mais próxima: ${umaPista(p)}` : ""}`,
     heli: h ? `${esc(h.nome)} · ${fmtKm(h.km)}` : "nenhum cadastrado", agua: a ? `${esc(a.nome)} · ${fmtKm(a.km)}` : "nenhum cadastrado no módulo 2",
     fogo: `${r.ocorrencias} ocorrência${r.ocorrencias === 1 ? "" : "s"}${r.queimado_ha ? ` · ${fmtHa(r.queimado_ha)} queimados` : ""}`, zonas: r.zonas ? esc(r.zonas) : "—"};
 }
@@ -365,8 +367,8 @@ function tabelaSetores(){
   const tb = $("#opTab"); if (!tb) return;
   tb.innerHTML = OP.setores.length ? OP.setores.map((s, i) => { const t = resumoTxt(OP.resumo[s.id]);
     return `<tr data-s="${s.id}" class="${OP.sel === s.id ? "sel" : ""}"><td><span class="op-cor" style="background:${corSetor(i)}"></span><b>${esc(s.nome)}</b></td><td>${fmtHa(s.area_ha)}</td>${OP.risco ? `<td style="white-space:nowrap">${barraRisco(riscoSetor(s))}</td>` : ""}
-      <td>${t.zonas}</td><td>${t.pista}</td><td>${t.at}</td><td>${t.heli}</td><td>${t.agua}</td><td>${t.fogo}</td></tr>`; }).join("")
-    : `<tr><td colspan="${OP.risco ? 9 : 8}" class="dica" style="cursor:default">Nenhum setor cadastrado.${OP.ed ? " Desenhe, importe ou use o zoneamento." : ""}</td></tr>`;
+      <td>${t.zonas}</td><td>${t.pistas}</td><td>${t.heli}</td><td>${t.agua}</td><td>${t.fogo}</td></tr>`; }).join("")
+    : `<tr><td colspan="${OP.risco ? 8 : 7}" class="dica" style="cursor:default">Nenhum setor cadastrado.${OP.ed ? " Desenhe, importe ou use o zoneamento." : ""}</td></tr>`;
   $$("tr[data-s]", tb).forEach(tr => tr.onclick = () => selecionar(+tr.dataset.s));
 }
 
@@ -383,7 +385,7 @@ function painelLado(){
   if (!s){
     el.innerHTML = `<div class="op-ed"><b>${OP.setores.length} setor${OP.setores.length === 1 ? "" : "es"}</b>
       <p class="dica" style="margin:6px 0 0">${OP.setores.length ? "Clique num setor no mapa ou na tabela para ver os detalhes" + (OP.ed ? " e editar." : ".") : OP.ed ? "Comece desenhando, importando um arquivo ou usando o zoneamento do plano de manejo." : "A UC ainda não cadastrou setores."}</p>
-      <p class="dica" style="margin:8px 0 0">O que entra em cada setor: como chegar, onde pegar água, ponto de apoio e parceiro de referência. A pista e o heliponto mais próximos e o histórico de fogo são calculados pelo Colibri.</p></div>`;
+      <p class="dica" style="margin:8px 0 0">O que entra em cada setor: como chegar, onde pegar água, ponto de apoio e parceiro de referência. As pistas em até 50 km, o heliponto mais próximo e o histórico de fogo são calculados pelo Colibri.</p></div>`;
     return;
   }
   const d = OP.ed ? "" : "disabled", t = resumoTxt(OP.resumo[s.id]);
@@ -395,7 +397,7 @@ function painelLado(){
     <label>Ponto de apoio e parceiro de referência</label><input data-s="apoio" value="${esc(s.apoio || "")}" ${d}>
     <label>Observações</label><textarea data-s="obs" style="min-height:40px" ${d}>${esc(s.obs || "")}</textarea>
     <div class="op-res"><b>${fmtHa(s.area_ha)}</b> · ${esc(ORIGEM[s.origem] || s.origem)}<br>
-      ${OP.risco ? `Mapa de risco: ${riscoTxt(riscoSetor(s))}<br>` : ""}Zonas do plano de manejo: ${t.zonas}<br>Pista mais próxima: ${t.pista}<br>Air Tractor até 17 km: ${t.at}<br>Heliponto / pouso: ${t.heli}<br>Ponto de água: ${t.agua}<br>Fogo 2013–2025 (BDG): ${t.fogo}</div>
+      ${OP.risco ? `Mapa de risco: ${riscoTxt(riscoSetor(s))}<br>` : ""}Zonas do plano de manejo: ${t.zonas}<br>Pistas em até 50 km: ${t.pistas}<br>Heliponto / pouso: ${t.heli}<br>Ponto de água: ${t.agua}<br>Fogo 2013–2025 (BDG): ${t.fogo}</div>
     ${OP.ed ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn primario" id="opSetSalvar">Salvar setor</button>
       <button type="button" class="btn" id="opSetAjustar">Ajustar desenho</button><button type="button" class="btn" id="opSetRedes">Redesenhar</button>
       <button type="button" class="btn" id="opSetExcluir" style="color:var(--erro)">Excluir</button></div>` : ""}
@@ -603,8 +605,8 @@ function imprimir(){
     <p><b>Passe:</b> UC e setor; coordenada (graus, minutos e segundos); hora em que o foco foi visto; o que se sabe do fogo, do acesso e de quem já está no local.
       <b>Até a chegada do CBMMG, ou quando ele não vai, quem comanda é o gerente ou o responsável pela UC.</b></p>
     <h2>Setores</h2>${figuraSVG()}
-    <table><thead><tr><th>Setor</th>${OP.risco ? "<th>Mapa de risco</th>" : ""}<th>Acesso</th><th>Água</th><th>Apoio</th><th>Pista mais próxima</th><th>Air Tractor até 17 km</th><th>Heliponto</th></tr></thead><tbody>
-      ${OP.setores.map(s => { const t = resumoTxt(OP.resumo[s.id]); return `<tr><td><b>${esc(s.nome)}</b><br>${fmtHa(s.area_ha)}</td>${OP.risco ? `<td>${riscoTxt(riscoSetor(s))}</td>` : ""}<td>${esc(s.acesso || "")}</td><td>${esc(s.agua || "")}${OP.resumo[s.id]?.agua ? "<br>" + t.agua : ""}</td><td>${esc(s.apoio || "")}</td><td>${t.pista}</td><td>${t.at}</td><td>${t.heli}</td></tr>`; }).join("") || `<tr><td colspan="${OP.risco ? 8 : 7}">Setores ainda não cadastrados.</td></tr>`}</tbody></table>
+    <table><thead><tr><th>Setor</th>${OP.risco ? "<th>Mapa de risco</th>" : ""}<th>Acesso</th><th>Água</th><th>Apoio</th><th>Pistas em até 50 km</th><th>Heliponto</th></tr></thead><tbody>
+      ${OP.setores.map(s => { const t = resumoTxt(OP.resumo[s.id]); return `<tr><td><b>${esc(s.nome)}</b><br>${fmtHa(s.area_ha)}</td>${OP.risco ? `<td>${riscoTxt(riscoSetor(s))}</td>` : ""}<td>${esc(s.acesso || "")}</td><td>${esc(s.agua || "")}${OP.resumo[s.id]?.agua ? "<br>" + t.agua : ""}</td><td>${esc(s.apoio || "")}</td><td>${t.pistas}</td><td>${t.heli}</td></tr>`; }).join("") || `<tr><td colspan="${OP.risco ? 7 : 6}">Setores ainda não cadastrados.</td></tr>`}</tbody></table>
     <h2 class="quebra">15. Plano operacional de combate — ${esc(nome)}</h2>
     <p class="sub">Parte comum (${esc(VERSAO)}). Base: ${esc(BASE)}.</p>
     <ol>${FLUXO.map(([t, d]) => `<li><b>${t}.</b> ${d}</li>`).join("")}</ol>

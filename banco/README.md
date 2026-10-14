@@ -68,6 +68,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 45_zoneamento_uc.sql         Zoneamento das UCs (plano de manejo, referência): tabela uc_zoneamento (zona, sigla, fonte, geom, area_ha), carga zoneamento_carregar() só Previncêndio, geo_zoneamento() para o Geo Colibri e zona_no_ponto() para o RI. Carga inicial: 14 UCs do IDE-Sisema (arquivo no pacote privado; dado público)
 46_plano_operacional.sql     Módulo 7: uc_setor (setores operacionais, auditoria), uc_operacional (cenários, comando, prontidão, pós, revisão com o CBMMG), setores_resumo(), setores_geo(), setor_salvar() (security invoker), setor_no_ponto(), zoneamento_uc(). Em produção: 46 (tabelas) + 46b (funções)
 47_setor_unir_partes.sql     setor_salvar funde as partes encostadas (quadrantes ou zonas juntados num setor só); origem "quadrantes" (do mapa de risco)
+48_setores_pistas_50km.sql   setores_resumo: sai o critério do Air Tractor (até 17 km, em desuso); entram as pistas num raio de 50 km (pistas_50km, n_pistas_50km), só informativas
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
