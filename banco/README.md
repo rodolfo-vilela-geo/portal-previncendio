@@ -66,6 +66,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 43_plano_operacional_base.sql Base do plano operacional: unidade do CBMMG da área no cadastro da UC (cbmmg_unidade, cbmmg_contatos) e informações do acionamento no RI (setor, linha de fogo, acesso, apoio logístico, em risco, CBMMG acionado)
 44_ri_acionamento_simples.sql RI: saem linha_fogo, acesso, apoio_logistico e em_risco (o protocolo deve mudar); ficam cbmmg_acionado e setor
 45_zoneamento_uc.sql         Zoneamento das UCs (plano de manejo, referência): tabela uc_zoneamento (zona, sigla, fonte, geom, area_ha), carga zoneamento_carregar() só Previncêndio, geo_zoneamento() para o Geo Colibri e zona_no_ponto() para o RI. Carga inicial: 14 UCs do IDE-Sisema (arquivo no pacote privado; dado público)
+46_plano_operacional.sql     Módulo 7: uc_setor (setores operacionais, auditoria), uc_operacional (cenários, comando, prontidão, pós, revisão com o CBMMG), setores_resumo(), setores_geo(), setor_salvar() (security invoker), setor_no_ponto(), zoneamento_uc(). Em produção: 46 (tabelas) + 46b (funções)
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador

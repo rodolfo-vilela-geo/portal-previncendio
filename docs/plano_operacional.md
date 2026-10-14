@@ -65,6 +65,14 @@ Duas camadas:
 - Carga inicial: 14 UCs do IDE-Sisema (`ide_2021_mg_zon*_uc_*_pol`): Cachoeira das Andorinhas, São José (APA), Vargem das Flores, Água Limpa, Mar de Espanha, Tripuí, Serra das Araras, Veredas do Acari, Libélulas da Serra de São José, Botumirim, Nova Baden, Serra Negra da Mantiqueira, Serra do Sobrado, Serra Verde — 70 zonas. Acentuação corrigida (arquivos em UTF-8 declarados como ISO-8859-1); siglas só quando vêm no arquivo e sem repetição; geometria simplificada ~2 m sem perda de área.
 - Problemas dos arquivos do IDE: Nova Baden e Serra Verde vinham com latitude e longitude trocadas (corrigido); mesmo assim ficam 40–60 m a sudoeste do limite oficial (sobreposição 94% e 88%) — deixado como publicado. As áreas digitadas nas tabelas de atributos de alguns arquivos não batem com o desenho (vale o desenho).
 
+## Módulo 7 construído (14/10/2026, migração 46)
+
+- **Parte comum** no código (`modulo_operacional.js`: `BASE`, `VERSAO`, `FLUXO`, `CENARIOS`, `POS`) — muda num lugar só quando os protocolos mudarem.
+- **Setores operacionais** (`uc_setor`): desenhados, importados (KML, KMZ, GeoJSON, Shapefile .zip — `geo_entrada.js`) ou copiados do zoneamento. `setores_resumo()` calcula: pista mais próxima, pista para Air Tractor (≥ 25 × 1.000 m a até 17 km, sem "não" no cadastro aéreo), heliponto/área de pouso mais próximo, ponto de água da UC (módulo 2), zonas do plano de manejo (> 5% do setor), ocorrências 2013–2025 (ponto do ROI **ou** polígono do BDG) e área queimada. Gravação por `setor_salvar()` (security invoker → vale `pode_editar_uc`).
+- **Cenários** (6), **comando** por porte (5 funções; comando pré-preenchido com o gerente no pequeno e "comando unificado com o CBMMG" no grande), **prontidão**, **pós-incêndio**, **revisão com o CBMMG** (`uc_operacional`).
+- **Impressão**: ficha de acionamento de uma página (telefones, quem comanda, figura e tabela dos setores) + seção 15 completa.
+- **RI**: "Setor da UC" lista os setores da UC (`uc_setor`) e é preenchido pela coordenada (`setor_no_ponto`), com aviso se o informado for diferente.
+
 ## Pendências
 
 - Telefone da coordenação do CBMMG (a definir com o CBMMG).

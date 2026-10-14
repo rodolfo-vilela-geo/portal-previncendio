@@ -420,7 +420,7 @@ function htmlCabecalho(r){
     <div class="cbmmg-uc dica" data-cbmmg hidden></div>
     <div class="grade">
       <div><label>CBMMG acionado?</label><select name="cbmmg_acionado"><option value=""></option><option value="sim" ${r.cbmmg_acionado===true?"selected":""}>Sim</option><option value="nao" ${r.cbmmg_acionado===false?"selected":""}>Não</option></select></div>
-      <div style="grid-column:span 2"><label>Setor da UC</label><input name="setor" value="${esc(r.setor||"")}" placeholder="região, setor ou trilha"></div>
+      <div style="grid-column:span 2"><label>Setor da UC</label><input name="setor" value="${esc(r.setor||"")}" list="setoresUC" placeholder="escolha um setor da UC ou escreva"><datalist id="setoresUC"></datalist></div>
     </div>
     <div class="dica" data-zona style="margin-top:6px"></div>
   </fieldset>
@@ -460,11 +460,20 @@ function ligarUC(el){
   s.addEventListener("change", f); f();
   // zona do plano de manejo onde cai a coordenada (camada de referência)
   const zEl = el.querySelector("[data-zona]"), la = el.querySelector('[name="lat"]'), lo = el.querySelector('[name="lon"]');
+  const setEl = el.querySelector('[name="setor"]'), dl = el.querySelector("#setoresUC");
+  const setores = async () => { if (!dl) return; dl.innerHTML = "";
+    if (!s.value) return; const {data} = await sb.from("uc_setor").select("nome").eq("nome_uc", s.value).order("ordem", {nullsFirst:false}).order("nome");
+    dl.innerHTML = (data || []).map(x => `<option value="${esc(x.nome)}">`).join(""); };
   const zona = async () => { if (!zEl) return; const a = Coord.ler(la, lerCoord), b = Coord.ler(lo, lerCoord);
     if (a == null || b == null || Number.isNaN(a) || Number.isNaN(b)){ zEl.textContent = ""; return; }
-    const {data} = await sb.rpc("zona_no_ponto", {p_lat: a, p_lon: b});
-    zEl.innerHTML = (data || []).length ? "Zoneamento do plano de manejo: " + data.map(z => `<b>${esc(z.zona)}</b> (${esc(z.nome_uc)})`).join(" · ") : ""; };
-  if (la && lo){ la.addEventListener("change", zona); lo.addEventListener("change", zona); zona(); }
+    const [{data}, {data: st}] = await Promise.all([sb.rpc("zona_no_ponto", {p_lat: a, p_lon: b}),
+      s.value ? sb.rpc("setor_no_ponto", {p_lat: a, p_lon: b, p_nome_uc: s.value}) : Promise.resolve({data: []})]);
+    const sug = (st || [])[0];
+    if (sug && setEl && !setEl.value.trim()){ setEl.value = sug.nome; }
+    zEl.innerHTML = [sug ? `Setor da coordenada: <b>${esc(sug.nome)}</b>${setEl && setEl.value.trim() && setEl.value.trim() !== sug.nome ? ` <span style="color:var(--alerta)">(diferente do informado)</span>` : ""}` : "",
+      (data || []).length ? "Zoneamento do plano de manejo: " + data.map(z => `<b>${esc(z.zona)}</b> (${esc(z.nome_uc)})`).join(" · ") : ""].filter(Boolean).join("<br>"); };
+  s.addEventListener("change", () => { setores(); zona(); }); setores();
+  if (la && lo){ la.addEventListener("change", zona); lo.addEventListener("change", zona); setEl?.addEventListener("change", zona); zona(); }
 }
 function agoraLocal(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
 function htmlEvento(ultimo, primeiro=false){
