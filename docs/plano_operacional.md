@@ -55,7 +55,7 @@ Duas camadas:
 ## Feito em 13/10/2026 (migração 43)
 
 - Cadastro da UC (módulo 1): bloco "Corpo de Bombeiros (CBMMG) da área" — `uc_cadastro.cbmmg_unidade` e `cbmmg_contatos`.
-- RI da Sala: bloco "Informações do acionamento" — `ri.cbmmg_acionado`, `setor`, `linha_fogo`, `acesso`, `apoio_logistico`, `em_risco`; mostra o CBMMG da área ao escolher a UC; sai no PDF do RI.
+- RI da Sala: bloco "Acionamento" — `ri.cbmmg_acionado` e `setor`; mostra o CBMMG da área ao escolher a UC; sai no PDF do RI. (14/10/2026: linha de fogo, acesso, apoio logístico e populações/estruturas em risco foram retirados — migração 44 — porque o protocolo deve mudar em breve. O setor terá cadastro próprio, vindo do zoneamento da UC. O ROI não foi alterado.)
 - Coordenadas em graus, minutos e segundos (`coord.js`) no cadastro e módulos da UC, no RI, no apoio aéreo e nas fichas de ponto do Geo Colibri (o ROI já usava). O banco continua em decimal; o valor exato é preservado quando o campo não é mexido.
 
 ## Pendências

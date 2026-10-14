@@ -64,6 +64,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 41_identificacao_uc.sql     roi, ri e uc_limite com FK para uc(nome_uc) on update cascade; uc ganha cod_uc (UC-001…, fixo, sequência para as novas), nome_oficial (IDE-Sisema com acentos), cod_ide (id_uc_ do IDE) e variantes. A chave continua nome_uc. Em produção: 41a (estrutura) + 41b (dados)
 42_correcao_nomes_uc.sql    "Mata de Krambeck" → "Mata do Krambeck" (cascata) e nome oficial "Pico da Ibituruna"; antigas grafias em variantes
 43_plano_operacional_base.sql Base do plano operacional: unidade do CBMMG da área no cadastro da UC (cbmmg_unidade, cbmmg_contatos) e informações do acionamento no RI (setor, linha de fogo, acesso, apoio logístico, em risco, CBMMG acionado)
+44_ri_acionamento_simples.sql RI: saem linha_fogo, acesso, apoio_logistico e em_risco (o protocolo deve mudar); ficam cbmmg_acionado e setor
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador

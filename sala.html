@@ -416,17 +416,12 @@ function htmlCabecalho(r){
       ${r.ri ? `<div class="largo"><label>Responsável pelo fechamento do RI</label><input name="fechado_por" value="${esc(r.fechado_por||"")}" readonly class="travado" placeholder="preenchido pelo botão “Fechar RI”, com o nome do login" title="Preenchido pelo botão Fechar RI com o nome de quem está logado"></div>` : ""}
     </div></fieldset>
   </div>
-  <fieldset class="acion"><legend>Informações do acionamento <span class="dica" style="font-weight:400">(Protocolo Conjunto 03/2026 — passar ao CBMMG e manter atualizado)</span></legend>
-    <div class="cbmmg-uc dica" data-cbmmg></div>
+  <fieldset class="acion"><legend>Acionamento</legend>
+    <div class="cbmmg-uc dica" data-cbmmg hidden></div>
     <div class="grade">
       <div><label>CBMMG acionado?</label><select name="cbmmg_acionado"><option value=""></option><option value="sim" ${r.cbmmg_acionado===true?"selected":""}>Sim</option><option value="nao" ${r.cbmmg_acionado===false?"selected":""}>Não</option></select></div>
-      <div><label>Setor da UC</label><input name="setor" value="${esc(r.setor||"")}" placeholder="região, setor ou trilha"></div>
-      <div class="largo"><label>Linha de fogo</label><input name="linha_fogo" value="${esc(r.linha_fogo||"")}" placeholder="ex.: cerca de 500 m, duas frentes"></div>
-      <div class="largo" style="grid-column:span 2"><label>Acesso ao local (veículos e pessoas)</label><input name="acesso" value="${esc(r.acesso||"")}" placeholder="estradas, trilhas, se precisa de 4x4, tempo de caminhada"></div>
-      <div class="largo" style="grid-column:span 2"><label>Apoio logístico disponível</label><input name="apoio_logistico" value="${esc(r.apoio_logistico||"")}" placeholder="pontos de apoio, equipamentos, veículos traçados, água"></div>
-      <div class="largo" style="grid-column:1/-1"><label>Populações e estruturas em risco</label><input name="em_risco" value="${esc(r.em_risco||"")}" placeholder="moradias, linhas de transmissão, escolas, nascentes, áreas de valor ambiental"></div>
+      <div style="grid-column:span 2"><label>Setor da UC</label><input name="setor" value="${esc(r.setor||"")}" placeholder="região, setor ou trilha"></div>
     </div>
-    <p class="dica" style="margin:6px 0 0">O pessoal empenhado vai na aba “Recursos empenhados”.</p>
   </fieldset>
   <div class="grade"><div class="largo"><label>Observações</label><input name="obs" value="${esc(r.obs||"")}"></div></div>
   <datalist id="sugInformante">${sugestoesInformante(r.nome_uc).map(v => `<option value="${esc(v)}">`).join("")}</datalist>`;
@@ -444,8 +439,7 @@ function lerCabecalho(el){
     dat_ini_comb: txt(g("dat_ini_comb").value), hr_ini_comb: txt(g("hr_ini_comb").value), informante_ini_comb: txt(g("informante_ini_comb").value),
     dat_final: txt(g("dat_final").value), hr_final: txt(g("hr_final").value), informante_final: txt(g("informante_final").value),
     lat: lat!==null ? +lat.toFixed(6) : null, lon: lon!==null ? +lon.toFixed(6) : null, obs: txt(g("obs").value),
-    setor: txt(g("setor").value), linha_fogo: txt(g("linha_fogo").value), acesso: txt(g("acesso").value),
-    apoio_logistico: txt(g("apoio_logistico").value), em_risco: txt(g("em_risco").value),
+    setor: txt(g("setor").value),
     cbmmg_acionado: g("cbmmg_acionado").value === "sim" ? true : g("cbmmg_acionado").value === "nao" ? false : null};
   if (g("status")) o.status = g("status").value;
   const dh = (d, h) => d ? d + "T" + (h || "00:00") : null;
@@ -459,7 +453,7 @@ function ligarUC(el){
   const s = el.querySelector('[name="nome_uc"]'), mun = el.querySelector('[name="municipio"]'), base = el.querySelector('[name="base_op"]');
   const f = () => { const u = UCS[s.value]; el.querySelector("#munsUC").innerHTML = (u?.municipios||[]).map(m=>`<option value="${esc(m)}">`).join("");
     if (u && !mun.value && u.municipios?.length) mun.value = u.municipios[0]; if (u?.base_op && !el.dataset.editando) base.value = u.base_op;
-    const cb = el.querySelector("[data-cbmmg]"); if (cb) cb.innerHTML = !u ? "" : u.cbmmg_unidade || u.cbmmg_contatos?.length
+    const cb = el.querySelector("[data-cbmmg]"); if (cb) cb.hidden = !u; if (cb) cb.innerHTML = !u ? "" : u.cbmmg_unidade || u.cbmmg_contatos?.length
       ? `CBMMG da área: <b>${esc(u.cbmmg_unidade || "—")}</b>${u.cbmmg_contatos?.length ? " · " + u.cbmmg_contatos.map(x => esc(x.valor + (x.obs ? ` (${x.obs})` : ""))).join(" · ") : ""} · ou 193`
       : `CBMMG: 193 ou a coordenação do CBMMG (unidade da área ainda não cadastrada no módulo 1 da UC).`; };
   s.addEventListener("change", f); f();
@@ -698,9 +692,8 @@ async function pdfRI(r, evs){
   <div class="num">${r.ri}/${r.ano}</div><div class="uc">${esc(rotuloUC(r.nome_uc).toUpperCase())}</div>
   <table><tr><th>CATEGORIA</th><th>MUNICÍPIO</th><th>UR IEF</th><th>COORDENADAS DO INCÊNDIO</th><th>LOCAL</th></tr>
     <tr class="c"><td>${PI}</td><td>${esc(r.municipio||"")}</td><td>${esc(reg?.ufbio||"")}</td><td>${r.lat!=null ? `Lat. ${dms(r.lat,"S")}<br>Long. ${dms(r.lon,"W")}` : ""}</td><td>${esc(r.local||"")}</td></tr></table>
-  ${[r.setor, r.linha_fogo, r.acesso, r.apoio_logistico, r.em_risco].some(Boolean) || r.cbmmg_acionado != null ? `<table><tr><td colspan="2" class="sec">INFORMAÇÕES DO ACIONAMENTO</td></tr>
-    ${[["CBMMG acionado", r.cbmmg_acionado == null ? "" : r.cbmmg_acionado ? "Sim" : "Não"], ["Setor da UC", r.setor], ["Linha de fogo", r.linha_fogo], ["Acesso", r.acesso],
-       ["Apoio logístico", r.apoio_logistico], ["Populações e estruturas em risco", r.em_risco]].filter(([, v]) => v).map(([k, v]) => `<tr><th style="width:32%;text-align:left">${k}</th><td>${esc(v)}</td></tr>`).join("")}</table>` : ""}
+  ${r.setor || r.cbmmg_acionado != null ? `<table><tr><td colspan="2" class="sec">ACIONAMENTO</td></tr>
+    ${[["CBMMG acionado", r.cbmmg_acionado == null ? "" : r.cbmmg_acionado ? "Sim" : "Não"], ["Setor da UC", r.setor]].filter(([, v]) => v).map(([k, v]) => `<tr><th style="width:32%;text-align:left">${k}</th><td>${esc(v)}</td></tr>`).join("")}</table>` : ""}
   <table><tr><td colspan="4" class="sec">DETECÇÃO DO INCÊNDIO</td></tr>
     <tr><th style="width:15%">DATA</th><td>${fmtD(r.dat_detec)}</td><th style="width:15%">HORA</th><td>${hh(r.hr_detec)}</td></tr>
     <tr><th>FORMA</th><td colspan="3">${formas.map(([t,k]) => `<span class="cx">(${fdl.includes(k) ? "X" : "&nbsp;&nbsp;"}) ${t.toUpperCase()}</span>`).join(" ")}
