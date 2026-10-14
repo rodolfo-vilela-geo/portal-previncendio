@@ -73,6 +73,12 @@ Duas camadas:
 - **Impressão**: ficha de acionamento de uma página (telefones, quem comanda, figura e tabela dos setores) + seção 15 completa.
 - **RI**: "Setor da UC" lista os setores da UC (`uc_setor`) e é preenchido pela coordenada (`setor_no_ponto`), com aviso se o informado for diferente.
 
+## Mapa de risco no módulo 7 (14/10/2026, migração 47)
+
+- Nas UCs com mapa de risco (`uc_risco`), o mapa de risco é o fundo para desenhar os setores (camada ligável), com as marcações da última conferência da UC na mesma versão (`uc_risco_revisao`).
+- Cada setor ganha o resumo do risco, calculado no navegador pelas células do mapa (centro da célula dentro do setor): % em atenção alta + muito alta, motivos principais, % que já queimou e marcações da UC dentro do setor. Aparece na tabela, no painel do setor e na impressão. Conferido: quadrante D5 da Serra do Cabral = 85% nos dois módulos.
+- Opção "Usar os quadrantes do risco" (5 × 5 km, mesmos da seção 14): marcar na lista ou no mapa e juntar os vizinhos; `setor_salvar` funde as partes encostadas (`st_unaryunion`). Origem do setor: `quadrantes`.
+
 ## Pendências
 
 - Telefone da coordenação do CBMMG (a definir com o CBMMG).

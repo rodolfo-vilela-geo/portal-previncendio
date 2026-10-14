@@ -29,7 +29,12 @@ const FUNCOES = ["Comando", "Operações (combate)", "Logística (água, aliment
 const POS = "Rescaldo e vigilância até não haver risco de reignição; comunicar a extinção à Sala de Situação (fecha o RI); medir a área queimada e fazer o ROI no Colibri em até 10 dias corridos; avisar o CBMMG no mesmo dia quando o IEF atuou sozinho; reunião de avaliação com a equipe.";
 const CORES = ["#e8590c", "#1c7ed6", "#2f9e44", "#ae3ec9", "#f59f00", "#0c8599", "#d6336c", "#5c940d", "#7048e8", "#c92a2a"];
 const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-const ORIGEM = {desenhado:"desenhado no Colibri", importado:"importado de arquivo", zoneamento:"copiado do zoneamento"};
+const ORIGEM = {desenhado:"desenhado no Colibri", importado:"importado de arquivo", zoneamento:"copiado do zoneamento", quadrantes:"quadrantes do mapa de risco"};
+// marcações da conferência do mapa de risco (módulo 6) — mesmos tipos e cores
+const MARCA = {inicio:["adverso","Início frequente de incêndios"], combustivel:["adverso","Muito combustível acumulado"], acesso_pessoas:["adverso","Acesso de pessoas"],
+  dificil:["adverso","Difícil acesso para o combate"], sensivel:["adverso","Área sensível a proteger"], aceiro:["favoravel","Aceiro ou barreira natural"],
+  agua:["favoravel","Ponto de água"], vigia:["favoravel","Vigilância"], apoio:["favoravel","Apoio de parceiro ou brigada"], outro:["outro","Outro"]};
+const COR_G = {adverso:"#c92a2a", favoravel:"#2b8a3e", outro:"#495057"};
 const AEREO_PISTA = new Set(["aerodromo_publico","aerodromo_privado","aerodromo_militar","pista_nao_registrada"]);
 
 let OP = null, mapaO = null;
@@ -75,6 +80,8 @@ function estilo(){
   .op-rot{background:transparent;border:0;box-shadow:none;color:#fff;font-weight:700;font-size:11.5px;text-shadow:0 0 3px #000,0 0 2px #000,0 0 1px #000;white-space:nowrap}
   .op-rot::before{display:none}
   .op-vert{width:11px;height:11px;background:#fff;border:2px solid #e8590c;border-radius:50%;box-sizing:border-box}
+  .rk-quad{background:transparent;border:0;box-shadow:none;color:#fff;font-weight:700;font-size:11px;text-shadow:0 0 3px #000,0 0 2px #000}
+  .rk-quad::before{display:none}
   </style>`);
 }
 
@@ -83,16 +90,19 @@ window.abrirModuloOperacional = async function(nome){
   estilo();
   const box = $("#mod-conteudo"), ed = podeEditar(nome);
   box.innerHTML = `<div class="dica" style="padding:20px">Carregando o plano operacional…</div>`;
-  const [r1, r2, r3, r4, r5] = await Promise.all([
+  const [r1, r2, r3, r4, r5, rR, rV] = await Promise.all([
     sb.from("uc_operacional").select("*").eq("nome_uc", nome).maybeSingle(),
     sb.rpc("setores_geo", {p_nome_uc: nome}),
     sb.rpc("zoneamento_uc", {p_nome_uc: nome}),
     sb.from("uc_cadastro").select("gerente_nome,gerente_contatos,responsaveis,meses_criticos,meses_obs,cbmmg_unidade,cbmmg_contatos").eq("nome_uc", nome).maybeSingle(),
-    sb.from("auditoria").select("*").in("tabela", ["uc_operacional", "uc_setor"]).eq("chave", nome).order("quando", {ascending:false}).limit(60)]);
+    sb.from("auditoria").select("*").in("tabela", ["uc_operacional", "uc_setor"]).eq("chave", nome).order("quando", {ascending:false}).limit(60),
+    sb.from("uc_risco").select("versao,dados").eq("nome_uc", nome).maybeSingle(),
+    sb.from("uc_risco_revisao").select("versao,marcacoes,atualizado_em").eq("nome_uc", nome).order("atualizado_em", {ascending:false}).limit(1)]);
   const erro = [r1, r2, r3, r4].find(r => r.error);
   if (erro) return box.innerHTML = `<div class="dica" style="color:var(--erro);padding:20px">${esc(erro.error.message)}</div>`;
   OP = {nome, ed, op: Object.assign(vazio(), r1.data || {}), novo: !r1.data, setores: r2.data || [], resumo: {}, zon: r3.data || [], cad: r4.data || {},
-        hist: r5.data || [], aereo: [], sel: null, des: null, imp: null};
+        hist: r5.data || [], aereo: [], sel: null, des: null, imp: null, risco: rR.data || null, marcas: []};
+  if (OP.risco){ const rv = (rV.data || [])[0]; OP.marcas = rv && rv.versao === OP.risco.versao ? (rv.marcacoes || []) : []; prepararRisco(); }
   OP.op.comando = Object.assign({pequeno: [], grande: []}, OP.op.comando || {});
   if (!OP.op.comando.pequeno.length) OP.op.comando.pequeno = FUNCOES.map(f => ({funcao: f, responsavel: f === "Comando" ? (OP.cad.gerente_nome ? OP.cad.gerente_nome + " (gerente)" : "Gerente ou responsável pela UC") : "", contato: ""}));
   if (!OP.op.comando.grande.length) OP.op.comando.grande = FUNCOES.map(f => ({funcao: f, responsavel: f === "Comando" ? "Comando unificado com o CBMMG (a UC integra o posto de comando)" : "", contato: ""}));
@@ -131,14 +141,16 @@ function desenhar(){
       <div>
         ${ed ? `<div class="op-barra"><button type="button" class="btn" id="opDesenhar">+ Desenhar setor</button>
           <button type="button" class="btn" id="opImportar">Importar arquivo</button><input type="file" id="opArq" accept=".kml,.kmz,.geojson,.json,.zip" hidden>
-          ${OP.zon.length ? `<button type="button" class="btn" id="opZon">Usar o zoneamento</button>` : ""}</div>` : ""}
+          ${OP.zon.length ? `<button type="button" class="btn" id="opZon">Usar o zoneamento</button>` : ""}
+          ${OP.risco ? `<button type="button" class="btn" id="opQuad">Usar os quadrantes do risco</button>` : ""}</div>` : ""}
         <div id="opDes"></div>
         <div id="mapaOp"></div>
-        <p class="dica" style="margin:6px 0 0">Verde: limite da UC. ✈ pistas e helipontos do cadastro de apoio aéreo. ${OP.zon.length ? "O zoneamento do plano de manejo pode ser ligado no seletor de camadas." : "Esta UC não tem zoneamento cadastrado."}</p>
+        ${OP.risco ? `<div class="rk-leg" style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;margin-top:6px">${[4, 3, 2, 1, 0].map(k => `<span><i style="display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid #0002;background:${window.RiscoMapa.COR[k]}"></i>${window.RiscoMapa.NOME[k]}</span>`).join("")}<span>· mapa de risco versão ${esc(OP.risco.versao)} (módulo 6)</span></div>` : ""}
+        <p class="dica" style="margin:6px 0 0">${OP.risco ? "Desenhe os setores olhando o mapa de risco (ligue e desligue no seletor de camadas, no canto do mapa). Bolinhas vermelhas e verdes: marcações da UC na conferência do mapa de risco. " : ""}Verde: limite da UC. ✈ pistas e helipontos do cadastro de apoio aéreo. ${OP.zon.length ? "O zoneamento do plano de manejo pode ser ligado no seletor de camadas." : "Esta UC não tem zoneamento cadastrado."}</p>
       </div>
       <div><div id="opLado"></div></div>
     </div>
-    <div style="overflow:auto;margin-top:10px"><table class="op-set"><thead><tr><th>Setor</th><th>Área</th><th>Zonas do plano de manejo</th><th>Pista mais próxima</th><th>Air Tractor (pista ≥ 25 × 1.000 m até 17 km)</th><th>Heliponto / pouso</th><th>Ponto de água</th><th>Fogo 2013–2025</th></tr></thead><tbody id="opTab"></tbody></table></div>
+    <div style="overflow:auto;margin-top:10px"><table class="op-set"><thead><tr><th>Setor</th><th>Área</th>${OP.risco ? "<th>Risco: atenção alta + muito alta</th>" : ""}<th>Zonas do plano de manejo</th><th>Pista mais próxima</th><th>Air Tractor (pista ≥ 25 × 1.000 m até 17 km)</th><th>Heliponto / pouso</th><th>Ponto de água</th><th>Fogo 2013–2025</th></tr></thead><tbody id="opTab"></tbody></table></div>
   </fieldset>
 
   <fieldset class="op-sec"><legend>3 · Cenários</legend>
@@ -194,6 +206,7 @@ function desenhar(){
     $("#opImportar").onclick = () => $("#opArq").click();
     $("#opArq").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) importar(f); };
     $("#opZon") && ($("#opZon").onclick = painelZoneamento);
+    $("#opQuad") && ($("#opQuad").onclick = painelQuadrantes);
   }
   $("#opImprimir").onclick = imprimir;
   montarMapa();
@@ -253,10 +266,17 @@ function montarMapa(){
   OP.lim = f ? L.geoJSON(f, {style:{color:"#7CFC00", weight:2.5, fill:false}, interactive:false}).addTo(mapaO) : null;
   OP.zonCam = L.geoJSON({type:"FeatureCollection", features: OP.zon.map(z => ({type:"Feature", geometry:z.geom, properties:{zona:z.zona}}))},
     {style:{color:"#ffe066", weight:1, dashArray:"4 3", fillColor:"#ffe066", fillOpacity:.12}, onEachFeature:(ft, l) => l.bindTooltip(esc(ft.properties.zona), {sticky:true})});
+  const extras = {};
+  if (OP.risco){
+    const C = window.RiscoMapa.camada(OP.risco); OP.rC = C; C.camada.addTo(mapaO); extras["Mapa de risco"] = C.camada;
+    OP.camMarcas = L.layerGroup(OP.marcas.map(m => L.marker([m.lat, m.lon], {icon: L.divIcon({className:"", html:`<div style="width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #000a;background:${COR_G[MARCA[m.tipo]?.[0] || "outro"]}"></div>`, iconSize:[14, 14], iconAnchor:[7, 7]})})
+      .bindTooltip(`<b>${esc(MARCA[m.tipo]?.[1] || m.tipo)}</b>${m.nota ? "<br>" + esc(m.nota) : ""}`))).addTo(mapaO);
+    extras["Marcações da UC (mapa de risco)"] = OP.camMarcas;
+  }
   OP.camSet = L.featureGroup().addTo(mapaO);
   OP.camAereo = L.layerGroup().addTo(mapaO);
   OP.camDes = L.layerGroup().addTo(mapaO);
-  L.control.layers({"Satélite": sat, "Mapa": ruas}, Object.assign({"Setores": OP.camSet}, OP.lim ? {"Limite da UC": OP.lim} : {}, OP.zon.length ? {"Zoneamento (plano de manejo)": OP.zonCam} : {}, {"Apoio aéreo": OP.camAereo}), {collapsed:true}).addTo(mapaO);
+  L.control.layers({"Satélite": sat, "Mapa": ruas}, Object.assign({"Setores": OP.camSet}, extras, OP.lim ? {"Limite da UC": OP.lim} : {}, OP.zon.length ? {"Zoneamento (plano de manejo)": OP.zonCam} : {}, {"Apoio aéreo": OP.camAereo}), {collapsed:true}).addTo(mapaO);
   pintarSetores();
   enquadrar();
   mapaO.on("click", e => { if (OP.des) addVertice(e.latlng); });
@@ -273,7 +293,7 @@ function pintarSetores(){
   OP.setores.forEach((s, i) => {
     if (OP.des?.id === s.id || OP.ajuste?.id === s.id) return;
     const sel = OP.sel === s.id, c = corSetor(i);
-    const l = L.geoJSON(s.geom, {style:{color: sel ? "#ffd43b" : c, weight: sel ? 3.5 : 2, fillColor: c, fillOpacity: sel ? .32 : .2}})
+    const l = L.geoJSON(s.geom, {style:{color: sel ? "#ffd43b" : c, weight: sel ? 3.5 : 2.4, fillColor: c, fillOpacity: OP.risco ? (sel ? .18 : .06) : (sel ? .32 : .2)}})
       .on("click", ev => { if (OP.des) return; L.DomEvent.stop(ev); selecionar(s.id); });
     l.bindTooltip(esc(s.nome), {permanent:true, direction:"center", className:"op-rot"});
     OP.camSet.addLayer(l);
@@ -286,6 +306,45 @@ async function carregarAereo(){
   OP.aereo = data || []; OP.camAereo.clearLayers();
   OP.aereo.forEach(r => L.marker([+r.lat, +r.lon], {icon: iconeMapa(window.iconeAereo ? iconeAereo(r.tipo) : "pista", {tam: 22}), title: r.nome})
     .bindTooltip(`<b>${esc(r.nome)}</b>${AEREO_PISTA.has(r.tipo) && r.comprimento_m ? `<br>${r.comprimento_m} × ${r.largura_m || "?"} m${r.superficie ? " · " + esc(r.superficie) : ""}` : ""}`).addTo(OP.camAereo));
+}
+/* ---------- mapa de risco (módulo 6) dentro dos setores ---------- */
+function prepararRisco(){
+  const RM = window.RiscoMapa, R = OP.risco; if (!RM || !R?.dados?.cel) { OP.risco = null; return; }
+  const g = R.dados.grade, c = R.dados.cel, n = c.id.length, lat = new Float64Array(n), lon = new Float64Array(n);
+  for (let i = 0; i < n; i++){ const [x, y] = RM.centro(c.id[i], g.lado_m), [la, lo] = RM.utmParaLL(x, y, g.zona, g.sul); lat[i] = la; lon[i] = lo; }
+  OP.rc = {lat, lon, n}; OP.rcache = new Map();
+}
+function dentroAnel(x, y, r){ let d = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++){ const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) d = !d; } return d; }
+function caixa(geom){ let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; geom.coordinates.forEach(p => p[0].forEach(([x, y]) => { if (x < a) a = x; if (y < b) b = y; if (x > c) c = x; if (y > d) d = y; })); return [a, b, c, d]; }
+function dentroGeom(x, y, geom, bb){ if (x < bb[0] || x > bb[2] || y < bb[1] || y > bb[3]) return false; return geom.coordinates.some(p => dentroAnel(x, y, p[0]) && !p.slice(1).some(h => dentroAnel(x, y, h))); }
+// resumo do risco no setor: % em atenção alta e muito alta, classes, motivos e marcações da UC
+function riscoSetor(s){
+  if (!OP.risco) return null;
+  const chave = s.id + ":" + s.atualizado_em; if (OP.rcache.has(chave)) return OP.rcache.get(chave);
+  const R = OP.risco, c = R.dados.cel, bb = caixa(s.geom), cl = [0, 0, 0, 0, 0], mot = new Map(); let tot = 0, queimou = 0;
+  for (let i = 0; i < OP.rc.n; i++){
+    if (!dentroGeom(OP.rc.lon[i], OP.rc.lat[i], s.geom, bb)) continue;
+    tot++; cl[c.c[i]]++; if (c.a[i]) queimou++;
+    if (c.c[i] >= 3) (c.m[i] || "").split(",").filter(Boolean).forEach(k => mot.set(+k, (mot.get(+k) || 0) + 1));
+  }
+  const marcas = OP.marcas.filter(m => dentroGeom(m.lon, m.lat, s.geom, bb));
+  const r = tot ? {tot, cl, atencao: (cl[3] + cl[4]) / tot, queimou: queimou / tot,
+    motivos: [...mot.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => (R.dados.motivos || [])[k]).filter(Boolean), marcas} : {tot: 0, marcas};
+  OP.rcache.set(chave, r); return r;
+}
+const pctR = v => Math.round(v * 100) + "%";
+function barraRisco(r){
+  if (!r) return "";
+  if (!r.tot) return `<span class="dica">fora do mapa de risco</span>`;
+  const RM = window.RiscoMapa;
+  return `<span style="display:inline-flex;height:9px;width:90px;border-radius:3px;overflow:hidden;border:1px solid #0002;vertical-align:-1px">${[4, 3, 2, 1, 0].map(k => r.cl[k] ? `<span style="flex:${r.cl[k]};background:${RM.COR[k]}"></span>` : "").join("")}</span> <b style="color:${r.atencao >= .3 ? RM.COR[4] : r.atencao >= .15 ? RM.COR[3] : "inherit"}">${pctR(r.atencao)}</b>`;
+}
+function riscoTxt(r){
+  if (!r) return null;
+  if (!r.tot) return "o setor fica fora da área do mapa de risco";
+  const mm = new Map(); r.marcas.forEach(m => mm.set(m.tipo, (mm.get(m.tipo) || 0) + 1));
+  return `${pctR(r.atencao)} da área em atenção alta ou muito alta${r.motivos.length ? " — " + esc(r.motivos.join("; ")) : ""}; ${pctR(r.queimou)} já queimou (2013–2025)`
+    + (r.marcas.length ? `<br>Marcações da UC: ${[...mm].map(([k, n]) => `${esc(MARCA[k]?.[1] || k)}${n > 1 ? " (" + n + ")" : ""}`).join("; ")}` : "");
 }
 async function carregarResumo(){
   if (!OP.setores.length){ OP.resumo = {}; tabelaSetores(); return; }
@@ -304,9 +363,9 @@ function resumoTxt(r){
 function tabelaSetores(){
   const tb = $("#opTab"); if (!tb) return;
   tb.innerHTML = OP.setores.length ? OP.setores.map((s, i) => { const t = resumoTxt(OP.resumo[s.id]);
-    return `<tr data-s="${s.id}" class="${OP.sel === s.id ? "sel" : ""}"><td><span class="op-cor" style="background:${corSetor(i)}"></span><b>${esc(s.nome)}</b></td><td>${fmtHa(s.area_ha)}</td>
+    return `<tr data-s="${s.id}" class="${OP.sel === s.id ? "sel" : ""}"><td><span class="op-cor" style="background:${corSetor(i)}"></span><b>${esc(s.nome)}</b></td><td>${fmtHa(s.area_ha)}</td>${OP.risco ? `<td style="white-space:nowrap">${barraRisco(riscoSetor(s))}</td>` : ""}
       <td>${t.zonas}</td><td>${t.pista}</td><td>${t.at}</td><td>${t.heli}</td><td>${t.agua}</td><td>${t.fogo}</td></tr>`; }).join("")
-    : `<tr><td colspan="8" class="dica" style="cursor:default">Nenhum setor cadastrado.${OP.ed ? " Desenhe, importe ou use o zoneamento." : ""}</td></tr>`;
+    : `<tr><td colspan="${OP.risco ? 9 : 8}" class="dica" style="cursor:default">Nenhum setor cadastrado.${OP.ed ? " Desenhe, importe ou use o zoneamento." : ""}</td></tr>`;
   $$("tr[data-s]", tb).forEach(tr => tr.onclick = () => selecionar(+tr.dataset.s));
 }
 
@@ -335,7 +394,7 @@ function painelLado(){
     <label>Ponto de apoio e parceiro de referência</label><input data-s="apoio" value="${esc(s.apoio || "")}" ${d}>
     <label>Observações</label><textarea data-s="obs" style="min-height:40px" ${d}>${esc(s.obs || "")}</textarea>
     <div class="op-res"><b>${fmtHa(s.area_ha)}</b> · ${esc(ORIGEM[s.origem] || s.origem)}<br>
-      Zonas do plano de manejo: ${t.zonas}<br>Pista mais próxima: ${t.pista}<br>Air Tractor até 17 km: ${t.at}<br>Heliponto / pouso: ${t.heli}<br>Ponto de água: ${t.agua}<br>Fogo 2013–2025 (BDG): ${t.fogo}</div>
+      ${OP.risco ? `Mapa de risco: ${riscoTxt(riscoSetor(s))}<br>` : ""}Zonas do plano de manejo: ${t.zonas}<br>Pista mais próxima: ${t.pista}<br>Air Tractor até 17 km: ${t.at}<br>Heliponto / pouso: ${t.heli}<br>Ponto de água: ${t.agua}<br>Fogo 2013–2025 (BDG): ${t.fogo}</div>
     ${OP.ed ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn primario" id="opSetSalvar">Salvar setor</button>
       <button type="button" class="btn" id="opSetAjustar">Ajustar desenho</button><button type="button" class="btn" id="opSetRedes">Redesenhar</button>
       <button type="button" class="btn" id="opSetExcluir" style="color:var(--erro)">Excluir</button></div>` : ""}
@@ -451,18 +510,37 @@ function painelZoneamento(){
   OP.imp = {fonte: "zoneamento do plano de manejo", origem: "zoneamento", zon: true, itens: OP.zon.map(z => ({nome: z.zona, ok: false, geom: z.geom, area_ha: z.area_ha}))};
   pintarSetores(); tabelaSetores(); painelLado();
 }
+function painelQuadrantes(){
+  const RM = window.RiscoMapa, R = OP.risco, g = R.dados.grade, resumo = new Map(RM.porQuadrante(R).map(q => [q.n, q]));
+  const dens = (a, b, n = 6) => Array.from({length: n}, (_, k) => [a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]);   // lados com pontos intermediários (UTM → grau não é reto)
+  const ordem = q => { const m = /^([A-Z])(\d+)$/.exec(q.n); return m ? (+m[2]) * 100 + m[1].charCodeAt(0) : 0; };
+  const itens = [...(R.dados.quadrantes || [])].filter(q => resumo.has(q.n)).sort((a, b) => ordem(a) - ordem(b)).map(q => {
+    const cant = [[q.x0, q.y0], [q.x1, q.y0], [q.x1, q.y1], [q.x0, q.y1]], anel = [];
+    for (let k = 0; k < 4; k++) anel.push(...dens(cant[k], cant[(k + 1) % 4]));
+    anel.push(anel[0]);
+    const r = resumo.get(q.n);
+    return {nome: "Quadrante " + q.n, ok: false, geom: {type:"MultiPolygon", coordinates:[[anel.map(([x, y]) => { const [la, lo] = RM.utmParaLL(x, y, g.zona, g.sul); return [+lo.toFixed(6), +la.toFixed(6)]; })]]},
+            info: `${pctR(r.atencao)} em atenção alta`};
+  });
+  OP.sel = null;
+  OP.imp = {fonte: "quadrantes do mapa de risco", origem: "quadrantes", zon: true, quad: true, itens};
+  pintarSetores(); tabelaSetores(); painelLado();
+}
 function painelImportacao(){
   const I = OP.imp, el = $("#opLado");
-  el.innerHTML = `<div class="op-ed"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${I.zon ? "Usar o zoneamento" : "Importar " + esc(I.fonte)}</b><button type="button" class="btn peq" id="opImpCanc">Cancelar</button></div>
-    <p class="dica" style="margin:6px 0">${I.zon ? "Marque as zonas que viram setores. Elas continuam no zoneamento; o setor é uma cópia que pode ser renomeada e ajustada." : `${I.itens.length} polígono(s). Marque os que viram setores e confira os nomes.`}${I.trocado ? " <b>O arquivo vinha com latitude e longitude trocadas — corrigido.</b>" : ""}</p>
+  el.innerHTML = `<div class="op-ed"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${I.quad ? "Usar os quadrantes do risco" : I.zon ? "Usar o zoneamento" : "Importar " + esc(I.fonte)}</b><button type="button" class="btn peq" id="opImpCanc">Cancelar</button></div>
+    <p class="dica" style="margin:6px 0">${I.quad ? "Marque os quadrantes de 5 × 5 km que viram setores. Para um setor maior, marque vários vizinhos e junte num só. O setor pode passar do limite da UC (entorno)." : I.zon ? "Marque as zonas que viram setores. Elas continuam no zoneamento; o setor é uma cópia que pode ser renomeada e ajustada." : `${I.itens.length} polígono(s). Marque os que viram setores e confira os nomes.`}${I.trocado ? " <b>O arquivo vinha com latitude e longitude trocadas — corrigido.</b>" : ""}</p>
     <div class="op-imp">${I.itens.map((x, i) => `<div class="lin"><input type="checkbox" data-imp-ok="${i}" ${x.ok ? "checked" : ""} style="width:auto"><span class="op-cor" style="background:${CORES[i % CORES.length]}"></span>
-      <input type="text" data-imp-nome="${i}" value="${esc(x.nome)}"><span class="dica" style="text-align:right">${x.area_ha != null ? fmtHa(x.area_ha) : ""}</span></div>`).join("")}</div>
-    ${I.zon ? `<label style="display:flex;gap:6px;align-items:center;font-weight:400;font-size:12.5px;margin-top:8px"><input type="checkbox" id="opJuntar" style="width:auto"> Juntar as zonas marcadas num setor só</label>
+      <input type="text" data-imp-nome="${i}" value="${esc(x.nome)}"><span class="dica" style="text-align:right">${x.info || (x.area_ha != null ? fmtHa(x.area_ha) : "")}</span></div>`).join("")}</div>
+    ${I.zon ? `<label style="display:flex;gap:6px;align-items:center;font-weight:400;font-size:12.5px;margin-top:8px"><input type="checkbox" id="opJuntar" style="width:auto"> Juntar ${I.quad ? "os quadrantes marcados" : "as zonas marcadas"} num setor só</label>
       <input id="opJuntarNome" placeholder="Nome do setor (se juntar)" style="margin-top:4px">` : ""}
+    ${I.quad ? `<p class="dica" style="margin:6px 0 0">Dica: clique num quadrante do mapa para marcá-lo.</p>` : ""}
     <div style="margin-top:10px"><button type="button" class="btn primario" id="opImpOk">Criar setores</button></div></div>`;
   OP.camDes.clearLayers();
-  I.itens.forEach((x, i) => L.geoJSON(x.geom, {style:{color: CORES[i % CORES.length], weight:2, dashArray:"6 4", fillOpacity: x.ok ? .25 : .05}, interactive:false}).addTo(OP.camDes));
-  try{ mapaO.fitBounds(OP.camDes.getBounds(), {padding:[20, 20]}); }catch(_){}
+  I.itens.forEach((x, i) => L.geoJSON(x.geom, {style:{color: I.quad ? (x.ok ? "#ffd43b" : "#ffffff") : CORES[i % CORES.length], weight: I.quad ? (x.ok ? 3 : 1) : 2, dashArray:"6 4",
+      fillColor: I.quad ? "#ffd43b" : CORES[i % CORES.length], fillOpacity: x.ok ? .25 : I.quad ? 0 : .05}, interactive: !!I.quad})
+    .on("click", ev => { L.DomEvent.stop(ev); x.ok = !x.ok; painelImportacao(); }).addTo(OP.camDes));
+  if (!I._enq){ I._enq = true; try{ mapaO.fitBounds(OP.camDes.getBounds(), {padding:[20, 20]}); }catch(_){} }
   $$("[data-imp-ok]").forEach(c => c.onchange = () => { I.itens[+c.dataset.impOk].ok = c.checked; painelImportacao(); });
   $$("[data-imp-nome]").forEach(c => c.oninput = () => { I.itens[+c.dataset.impNome].nome = c.value; });
   $("#opImpCanc").onclick = () => { OP.imp = null; OP.camDes.clearLayers(); painelLado(); enquadrar(); };
@@ -524,8 +602,8 @@ function imprimir(){
     <p><b>Passe:</b> UC e setor; coordenada (graus, minutos e segundos); hora em que o foco foi visto; o que se sabe do fogo, do acesso e de quem já está no local.
       <b>Até a chegada do CBMMG, ou quando ele não vai, quem comanda é o gerente ou o responsável pela UC.</b></p>
     <h2>Setores</h2>${figuraSVG()}
-    <table><thead><tr><th>Setor</th><th>Acesso</th><th>Água</th><th>Apoio</th><th>Pista mais próxima</th><th>Air Tractor até 17 km</th><th>Heliponto</th></tr></thead><tbody>
-      ${OP.setores.map(s => { const t = resumoTxt(OP.resumo[s.id]); return `<tr><td><b>${esc(s.nome)}</b><br>${fmtHa(s.area_ha)}</td><td>${esc(s.acesso || "")}</td><td>${esc(s.agua || "")}${OP.resumo[s.id]?.agua ? "<br>" + t.agua : ""}</td><td>${esc(s.apoio || "")}</td><td>${t.pista}</td><td>${t.at}</td><td>${t.heli}</td></tr>`; }).join("") || `<tr><td colspan="7">Setores ainda não cadastrados.</td></tr>`}</tbody></table>
+    <table><thead><tr><th>Setor</th>${OP.risco ? "<th>Mapa de risco</th>" : ""}<th>Acesso</th><th>Água</th><th>Apoio</th><th>Pista mais próxima</th><th>Air Tractor até 17 km</th><th>Heliponto</th></tr></thead><tbody>
+      ${OP.setores.map(s => { const t = resumoTxt(OP.resumo[s.id]); return `<tr><td><b>${esc(s.nome)}</b><br>${fmtHa(s.area_ha)}</td>${OP.risco ? `<td>${riscoTxt(riscoSetor(s))}</td>` : ""}<td>${esc(s.acesso || "")}</td><td>${esc(s.agua || "")}${OP.resumo[s.id]?.agua ? "<br>" + t.agua : ""}</td><td>${esc(s.apoio || "")}</td><td>${t.pista}</td><td>${t.at}</td><td>${t.heli}</td></tr>`; }).join("") || `<tr><td colspan="${OP.risco ? 8 : 7}">Setores ainda não cadastrados.</td></tr>`}</tbody></table>
     <h2 class="quebra">15. Plano operacional de combate — ${esc(nome)}</h2>
     <p class="sub">Parte comum (${esc(VERSAO)}). Base: ${esc(BASE)}.</p>
     <ol>${FLUXO.map(([t, d]) => `<li><b>${t}.</b> ${d}</li>`).join("")}</ol>
