@@ -14,6 +14,7 @@
 <script src="coord.js?v=20261013a"></script>
 <script src="medir.js?v=20261008d"></script>
 <script src="geo_entrada.js?v=20261014a"></script>
+<script src="geo_saida.js?v=20261008b"></script>
 <style>
   :root{
     color-scheme: dark;
@@ -207,7 +208,7 @@
     #painel,.base,#coord,#abrirPainel,#aviso,.leaflet-control-container,#ficha .cab .x,.acoes-f,.nao-imprimir,#msg{display:none!important}
     #app{position:static;display:block}
     main{height:auto}
-    #mapa{height:90mm;border:1px solid #999;margin-bottom:6mm}
+    #mapa{width:180mm!important;height:95mm!important;border:1px solid #999;margin-bottom:6mm}
     #ficha{position:static;width:auto;box-shadow:none;border:0;background:#fff;color:#000}
     #fichaCorpo{overflow:visible}
     #ficha *{color:#000!important;border-color:#bbb!important}
@@ -215,6 +216,8 @@
     .barras div i{background:#e8590c!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
     .linha-tempo .a i{print-color-adjust:exact;-webkit-print-color-adjust:exact}
   }
+  /* antes de imprimir o mapa assume o tamanho da folha (180 × 95 mm) para enquadrar o imóvel */
+  body.imprimindo #mapa{position:fixed;left:0;top:0;width:680px;height:359px;z-index:3000}
   @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
 </style>
 </head>
@@ -383,7 +386,7 @@ const ORIGEM = {car:["CAR", "car"], importado:["importado", "imp"], desenhado:["
 const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"], DIAS = ["dom","seg","ter","qua","qui","sex","sáb"];
 
 let perfil = null, mapa = null, UCS = [], LIM = null, ucAtual = null, IMOVEIS = [], camLim = null, camImoveis = null, camFicha = null, camPrev = null;
-let fichaId = null, fichaDados = null, nRank = 60;
+let fichaId = null, fichaDados = null, fichaLimites = null, nRank = 60;
 
 /* ======================= cores ======================= */
 const ESC_ANOS = [[1, "#ffe08a", "1"], [2, "#ffb347", "2"], [3, "#ff8a3d", "3–4"], [5, "#ef4b2a", "5–7"], [8, "#a5122a", "8 ou mais"]];
@@ -736,6 +739,7 @@ function desenharFichaMapa(d, enquadrar){
   (d.pontos_ri || []).forEach(r => L.circleMarker([r.lat, r.lon], {pane:"pontos", radius:6, color:"#ff5a1f", weight:2.5, fillColor:"#2a1a0e", fillOpacity:1})
     .bindTooltip(`RI ${esc(r.ri)}/${r.ano} · ${fmtD(r.dat_detec)} · ${esc(r.status || "")}`).addTo(camFicha));
   const contorno = L.geoJSON(d.imovel.geom, {pane:"ficha", interactive:false, style:{color:"#ffffff", weight:3, fillOpacity:0}}).addTo(camFicha);
+  fichaLimites = contorno.getBounds();
   camFicha.addTo(mapa);
   if (enquadrar){
     const larg = $("#ficha").offsetWidth, cheia = larg >= mapa.getContainer().offsetWidth - 10;
@@ -859,6 +863,8 @@ function montarFicha(d){
     <div class="sec"><h3>Ações</h3><div class="acoes-f">
       <button type="button" class="btn" data-exp="geojson">Baixar GeoJSON</button>
       <button type="button" class="btn" data-exp="kml">Baixar KML</button>
+      <button type="button" class="btn" data-exp="shp">Baixar Shapefile</button>
+      <button type="button" class="btn" data-exp="gpkg">Baixar GeoPackage</button>
       <button type="button" class="btn" data-exp="csv">Ocorrências em CSV</button>
       <button type="button" class="btn" id="fImprimir">Imprimir</button>
       <button type="button" class="btn" id="fEditar">${im.origem === "car" ? "Dar um nome" : "Editar"}</button>
@@ -874,7 +880,7 @@ function montarFicha(d){
   $("#copiarCod")?.addEventListener("click", () => navigator.clipboard?.writeText(im.cod_car).then(() => msg("Código copiado.")));
   $$("#fichaCorpo .rank [data-im]").forEach(b => b.onclick = () => abrirImovel(+b.dataset.im));
   $$("[data-exp]").forEach(b => b.onclick = () => exportar(b.dataset.exp));
-  $("#fImprimir").onclick = () => window.print();
+  $("#fImprimir").onclick = imprimir;
   $("#fEditar").onclick = () => { $("#fEdicao").hidden = !$("#fEdicao").hidden; };
   $("#edSalvar").onclick = async () => {
     const {error} = await sb.from("imovel").update({nome: $("#edNome").value.trim() || null, obs: $("#edObs").value.trim() || null}).eq("id", im.id);
@@ -906,7 +912,38 @@ async function salvarNota(){
   msg("Anotação salva."); abrirImovel(fichaId, false);
 }
 
+/* impressão: o mapa toma o tamanho que terá na folha e enquadra o imóvel */
+let vistaAntes = null;
+function prepararImpressao(){
+  if (!fichaLimites || document.body.classList.contains("imprimindo")) return;
+  vistaAntes = {c: mapa.getCenter(), z: mapa.getZoom()};
+  document.body.classList.add("imprimindo"); mapa.invalidateSize({animate:false});
+  mapa.fitBounds(fichaLimites, {padding:[18, 18], maxZoom:16, animate:false});
+}
+function depoisImpressao(){
+  if (!document.body.classList.contains("imprimindo")) return;
+  document.body.classList.remove("imprimindo"); mapa.invalidateSize({animate:false});
+  if (vistaAntes) mapa.setView(vistaAntes.c, vistaAntes.z, {animate:false});
+}
+async function imprimir(){
+  msg("Preparando o mapa para impressão…");
+  prepararImpressao();
+  await new Promise(ok => { let feito = false; const fim = () => { if (!feito){ feito = true; ok(); } };
+    baseAtual?.l.once("load", fim); setTimeout(fim, 2500); });
+  await dorme(300);
+  window.print();
+}
+window.addEventListener("beforeprint", prepararImpressao);
+window.addEventListener("afterprint", depoisImpressao);
+
 /* exportação da ficha */
+function soPoligonos(g){
+  if (!g) return null;
+  if (g.type === "Polygon") return {type:"MultiPolygon", coordinates:[g.coordinates]};
+  if (g.type === "MultiPolygon") return g;
+  if (g.type === "GeometryCollection"){ const c = g.geometries.map(soPoligonos).filter(Boolean).flatMap(x => x.coordinates); return c.length ? {type:"MultiPolygon", coordinates:c} : null; }
+  return null;
+}
 function baixar(nome, txt, mime){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], {type: mime})); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 const xml = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function kmlGeom(g){
@@ -917,6 +954,18 @@ function kmlGeom(g){
   if (g.type === "MultiPolygon") return `<MultiGeometry>${g.coordinates.map(pol).join("")}</MultiGeometry>`;
   if (g.type === "GeometryCollection") return `<MultiGeometry>${g.geometries.map(kmlGeom).join("")}</MultiGeometry>`;
   return "";
+}
+async function exportarSIG(fmt, nome, pIm, oc){
+  const d = fichaDados;
+  const camadas = [
+    {nome:"Imóvel", feicoes:[{geometry: soPoligonos(d.imovel.geom), props: pIm}]},
+    {nome:"Áreas queimadas no imóvel", feicoes: d.fogo.map((f, k) => ({geometry: soPoligonos(f.geom_dentro), props: oc[k]})).filter(x => x.geometry)},
+    {nome:"Início das ocorrências", feicoes: d.fogo.map((f, k) => f.lat != null && f.lon != null ? {geometry:{type:"Point", coordinates:[+f.lon, +f.lat]}, props: oc[k]} : null).filter(Boolean)}
+  ].filter(c => c.feicoes.length);
+  try{
+    if (fmt === "shp") baixar(nome + "_shp.zip", GeoSaida.shapefileZip(camadas), "application/zip");
+    else baixar(nome + ".gpkg", await GeoSaida.geopackage(camadas), "application/geopackage+sqlite3");
+  }catch(e){ msg(e.message || String(e), "erro"); }
 }
 function exportar(fmt){
   const d = fichaDados; if (!d) return;
@@ -931,6 +980,7 @@ function exportar(fmt){
   }
   const feats = [{type:"Feature", geometry: im.geom, properties: pIm}, ...d.fogo.filter(f => f.geom_dentro).map((f, k) => ({type:"Feature", geometry: f.geom_dentro, properties: {tipo:"area_queimada_no_imovel", ...oc[k]}}))];
   if (fmt === "geojson") return baixar(nome + ".geojson", JSON.stringify({type:"FeatureCollection", features: feats}), "application/geo+json");
+  if (fmt === "shp" || fmt === "gpkg") return exportarSIG(fmt, nome, pIm, oc);
   const kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${xml(nome)}</name>
 <Style id="im"><LineStyle><color>ffffffff</color><width>3</width></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
 <Style id="aq"><LineStyle><color>ff1f5aff</color><width>1</width></LineStyle><PolyStyle><color>661f5aff</color></PolyStyle></Style>
