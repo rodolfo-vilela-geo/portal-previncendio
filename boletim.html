@@ -198,7 +198,7 @@
       <div id="mapa" role="region" aria-label="Mapa das Unidades de Conservação estaduais de Minas Gerais"></div>
       <div class="base-sel" role="group" aria-label="Mapa de fundo"><button data-base="sat" aria-pressed="true">Satélite</button><button data-base="mapa" aria-pressed="false">Mapa</button></div>
       <button class="rec-sel" id="recSel" aria-pressed="true" title="Mostrar ou esconder os recursos em campo ao lado de cada incêndio">Recursos</button>
-      <div class="legenda-mapa"><div><i style="background:#ff3b30"></i>UC com incêndio em andamento</div><div><i style="background:#6fd34a"></i>Demais UCs estaduais</div><div><span class="lf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.8 3.2 4.8 5.2 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.3 1.2-3.5 1.3-5.5 1.3 1 2 2.2 2.5 2.4.3-2.2 0-4.6 1-6.9z"/></svg></span>Ponto do incêndio (quando informado)</div><div><span class="rtag-leg"><i style="background:#f2b705"></i><i style="background:#d32f2f"></i><i style="background:#546e7a"></i></span>Recursos em campo (aproxime o mapa para ver)</div></div>
+      <div class="legenda-mapa"><div><i style="background:#ff3b30"></i>UC com incêndio em andamento</div><div><i style="background:#6fd34a"></i>Demais UCs estaduais</div><div><span class="lf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.8 3.2 4.8 5.2 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.3 1.2-3.5 1.3-5.5 1.3 1 2 2.2 2.5 2.4.3-2.2 0-4.6 1-6.9z"/></svg></span>Ponto do incêndio (quando informado)</div><div><span class="rtag-leg"><i style="background:#f2b705"></i><i style="background:#ef6c00"></i><i style="background:#d32f2f"></i><i style="background:#546e7a"></i></span>Recursos em campo (aproxime o mapa para ver)</div></div>
     </div>
     <div class="card lista">
       <h2>Em andamento agora <span class="selo and" id="nAnd">0</span></h2>
@@ -275,7 +275,9 @@ const SVG = {
   drone:'<circle cx="5" cy="5" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="M9 9h6v6H9z"/><path d="M6.3 6.3l3.4 3.4-1 1-3.4-3.4zM17.7 6.3l1 1-3.4 3.4-1-1zM6.3 17.7l-1-1 3.4-3.4 1 1zM17.7 17.7l-3.4-3.4 1-1 3.4 3.4z"/>'
 };
 const GRUPOS = [
-  {k:"brig", um:"brigadista", var:"brigadistas", cor:"#f2b705", tinta:"#3a2c00", ico:"pessoa", campos:{comb_ftp:"FTP", comb_sm:"CFM", comb_par:"parceiros", comb_vol:"voluntários"}},
+  {k:"ftp",  um:"brigadista FTP", var:"brigadistas FTP", curto:"brigadistas FTP", cor:"#f2b705", tinta:"#3a2c00", ico:"pessoa", campos:{comb_ftp:""}},
+  {k:"cfm",  um:"brigadista CFM", var:"brigadistas CFM", curto:"brigadistas CFM", cor:"#ef6c00", tinta:"#fff", ico:"pessoa", campos:{comb_sm:""}},
+  {k:"par",  um:"parceiro ou voluntário", var:"parceiros e voluntários", curto:"parceiros", cor:"#8d6e63", tinta:"#fff", ico:"pessoa", campos:{comb_par:"parceiros", comb_vol:"voluntários"}},
   {k:"bm",   um:"bombeiro CBMMG", var:"bombeiros CBMMG", curto:"CBMMG", cor:"#d32f2f", tinta:"#fff", ico:"pessoa", campos:{comb_bm:""}},
   {k:"ief",  um:"servidor IEF", var:"servidores IEF", curto:"IEF", cor:"#2e7d32", tinta:"#fff", ico:"pessoa", campos:{comb_uc:""}},
   {k:"out",  um:"PM ou outro", var:"PM e outros", cor:"#7e57c2", tinta:"#fff", ico:"pessoa", campos:{comb_pm:"PM", comb_out:"outros"}},
