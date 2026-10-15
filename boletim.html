@@ -108,7 +108,6 @@
   .leaflet-popup-content .selo.and{color:#c62828;background:#fdecea} .leaflet-popup-content .selo.deb{color:#2e6b1a;background:#e3f0dc}
   .leaflet-tooltip{font:600 12px system-ui,sans-serif}
   /* ponto do incêndio (coordenada informada no RI) */
-  .fogo-pt{position:relative}
   .fogo-pt b{position:absolute;inset:0;border-radius:50%;background:#e0301e;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);display:grid;place-items:center}
   .fogo-pt b svg{width:15px;height:15px;fill:#fff}
   .fogo-pt::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:rgba(255,59,48,.45);animation:pulsoFogo 1.8s ease-out infinite}
@@ -116,6 +115,20 @@
   @media (prefers-reduced-motion:reduce){ .fogo-pt::before{animation:none;opacity:.5} }
   .legenda-mapa .lf{display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;background:#e0301e;border:1.5px solid #fff;margin-right:6px;vertical-align:-2px}
   .legenda-mapa .lf svg{width:9px;height:9px;fill:#fff}
+  /* etiqueta de recursos ao lado do incêndio: de longe só os ícones; de perto (zoom >= 9) com os números */
+  .rtag-ic{background:none;border:0}
+  .rtag{position:absolute;left:0;top:0;transform:translate(17px,-50%);display:flex;gap:3px;align-items:center;white-space:nowrap;
+        background:rgba(20,22,18,.86);border-radius:99px;padding:2px 6px 2px 3px;box-shadow:0 1px 4px rgba(0,0,0,.45);color:#fff;font:700 11.5px system-ui,sans-serif;pointer-events:auto;cursor:pointer}
+  .rtag.uc{transform:translate(-50%,-50%);border:1.5px dashed rgba(255,255,255,.7)}
+  .rtag span{display:inline-flex;align-items:center;gap:2px}
+  .rtag .ico{width:16px;height:16px} .rtag .ico svg{width:10px;height:10px}
+  .rtag b{font-variant-numeric:tabular-nums;margin-right:3px}
+  .longe .rtag b{display:none} .longe .rtag{gap:1px;padding:2px 3px} .longe .rtag .ico{width:12px;height:12px} .longe .rtag .ico svg{width:8px;height:8px}
+  .sem-rec .rtag-ic,.estado .rtag-ic{display:none}
+  .legenda-mapa .rtag-leg{display:inline-flex;gap:1px;background:#14160f;border-radius:99px;padding:2px 3px;margin-right:6px;vertical-align:-2px}
+  .legenda-mapa .rtag-leg i{width:9px;height:9px;border-radius:50%;margin:0}
+  .rec-sel{position:absolute;right:10px;top:48px;z-index:500;font:600 12px system-ui,sans-serif;border:0;border-radius:8px;padding:6px 10px;background:#fff;color:#333;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+  .rec-sel[aria-pressed=true]{background:#1f231a;color:#fff}
   .leaflet-popup-content .coord{margin-top:3px;font-variant-numeric:tabular-nums}
   .leaflet-popup-content .coord a{color:#c62828;font-weight:600;cursor:pointer}
   .leaflet-popup-content .semcoord{margin-top:3px;color:#8a5a00;font-style:italic}
@@ -184,7 +197,8 @@
     <div class="card mapa">
       <div id="mapa" role="region" aria-label="Mapa das Unidades de Conservação estaduais de Minas Gerais"></div>
       <div class="base-sel" role="group" aria-label="Mapa de fundo"><button data-base="sat" aria-pressed="true">Satélite</button><button data-base="mapa" aria-pressed="false">Mapa</button></div>
-      <div class="legenda-mapa"><div><i style="background:#ff3b30"></i>UC com incêndio em andamento</div><div><i style="background:#6fd34a"></i>Demais UCs estaduais</div><div><span class="lf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.8 3.2 4.8 5.2 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.3 1.2-3.5 1.3-5.5 1.3 1 2 2.2 2.5 2.4.3-2.2 0-4.6 1-6.9z"/></svg></span>Ponto do incêndio (quando informado)</div></div>
+      <button class="rec-sel" id="recSel" aria-pressed="true" title="Mostrar ou esconder os recursos em campo ao lado de cada incêndio">Recursos</button>
+      <div class="legenda-mapa"><div><i style="background:#ff3b30"></i>UC com incêndio em andamento</div><div><i style="background:#6fd34a"></i>Demais UCs estaduais</div><div><span class="lf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.8 3.2 4.8 5.2 4.8 10a4.8 4.8 0 0 1-9.6 0c0-2.3 1.2-3.5 1.3-5.5 1.3 1 2 2.2 2.5 2.4.3-2.2 0-4.6 1-6.9z"/></svg></span>Ponto do incêndio (quando informado)</div><div><span class="rtag-leg"><i style="background:#f2b705"></i><i style="background:#d32f2f"></i><i style="background:#546e7a"></i></span>Recursos em campo (aproxime o mapa para ver)</div></div>
     </div>
     <div class="card lista">
       <h2>Em andamento agora <span class="selo and" id="nAnd">0</span></h2>
@@ -334,6 +348,13 @@ async function iniciarMapa(){
   mapa.createPane("mascara"); mapa.getPane("mascara").style.zIndex = 350;
   mapa.createPane("fogo"); mapa.getPane("fogo").style.zIndex = 640;
   // link "ver o ponto" dentro dos popups das UCs
+  // visão do estado: só os pontos; zoom 8: ícones; zoom 9 em diante: ícones com números
+  const zoomRec = () => { const z = mapa.getZoom(); $("#mapa").classList.toggle("longe", z < 9); $("#mapa").classList.toggle("estado", z < 8); };
+  mapa.on("zoomend", zoomRec); zoomRec();
+  let verRec = true; try{ verRec = localStorage.getItem("boletim_rec") !== "0"; }catch(e){}
+  const aplicaRec = () => { $("#mapa").classList.toggle("sem-rec", !verRec); $("#recSel").setAttribute("aria-pressed", verRec); };
+  $("#recSel").onclick = () => { verRec = !verRec; aplicaRec(); try{ localStorage.setItem("boletim_rec", verRec ? "1" : "0"); }catch(e){} };
+  aplicaRec();
   mapa.on("popupopen", e => e.popup.getElement()?.querySelectorAll("[data-ver-ri]").forEach(a => a.onclick = () => focarRI(a.dataset.verRi)));
   let b = "sat"; try{ b = localStorage.getItem("boletim_base") || "sat"; }catch(e){}
   trocarBase(b);
@@ -379,6 +400,23 @@ function pintarPontos(){
       <div class="coord">Coordenada: ${Coord.par(r.lat, r.lon)}</div>
       ${blocoRecursos(r) || `<div class="rec">Recursos ainda não informados.</div>`}</div>`, {maxWidth:340});
     pontos[r.ri] = m; camadaFogo.addLayer(m);
+  });
+  // etiquetas de recursos: no ponto do incêndio ou, sem coordenada, no centro da UC
+  const porUCsem = {};
+  D.ris.filter(r => r.status === "andamento").forEach(r => {
+    const tem = GRUPOS.filter(g => contaGrupo(r.rec, g));
+    if (!tem.length) return;
+    let ll, naUC = false;
+    if (temCoord(r)) ll = [+r.lat, +r.lon];
+    else if (camadas[r.nome_uc]) { ll = camadas[r.nome_uc].getBounds().getCenter(); naUC = true; }
+    else return;
+    const i = naUC ? (porUCsem[r.nome_uc] = (porUCsem[r.nome_uc] ?? -1) + 1) : 0;
+    const html = `<div class="rtag${naUC ? " uc" : ""}" style="margin-top:${i*24}px" title="RI ${esc(r.ri)}${naUC ? " · sem coordenada: no centro da UC" : ""}">` +
+      tem.map(g => `<span>${ico(g)}<b>${contaGrupo(r.rec, g)}</b></span>`).join("") + `</div>`;
+    const t = L.marker(ll, {pane:"fogo", keyboard:false, zIndexOffset:-100,
+      icon: L.divIcon({className:"rtag-ic", html, iconSize:[0,0], iconAnchor:[0,0]})});
+    t.on("click", () => pontos[r.ri] ? focarRI(r.ri) : focarUC(r.nome_uc));
+    camadaFogo.addLayer(t);
   });
   camadaFogo.addTo(mapa);
 }
