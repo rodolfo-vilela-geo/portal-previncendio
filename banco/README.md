@@ -70,6 +70,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 47_setor_unir_partes.sql     setor_salvar funde as partes encostadas (quadrantes ou zonas juntados num setor só); origem "quadrantes" (do mapa de risco)
 48_setores_pistas_50km.sql   setores_resumo: sai o critério do Air Tractor (até 17 km, em desuso); entram as pistas num raio de 50 km (pistas_50km, n_pistas_50km), só informativas
 49_boletim_coordenada.sql    boletim_publico: devolve lat/lon (4 casas) só das ocorrências em andamento, para o ponto do incêndio no mapa do boletim
+50_boletim_semana_area.sql   boletim_publico: media_semanal (53 semanas, blocos de 7 dias desde 1º/jan) e area_anos (área queimada por ano somando os ROIs; ano corrente parcial)
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
