@@ -268,7 +268,7 @@ const GRUPOS = [
   {k:"vc",   um:"veículo", var:"veículos", cor:"#546e7a", tinta:"#fff", ico:"carro", campos:{vc_4x4:"4x4", vc_4x2:"4x2", vc_moto:"moto", vc_trator:"trator", vc_out:"outros"}},
   {k:"pipa", um:"caminhão-pipa", var:"caminhões-pipa", curto:"pipas", cor:"#00838f", tinta:"#fff", ico:"pipa", campos:{vc_pipa:""}},
   {k:"heli", um:"helicóptero", var:"helicópteros", cor:"#1565c0", tinta:"#fff", ico:"heli", campos:{a_helicop:""}},
-  {k:"at",   um:"Air Tractor", var:"Air Tractors", cor:"#1565c0", tinta:"#fff", ico:"aviao", campos:{a_air_tr:""}},
+  {k:"at",   um:"Air Tractor", var:"Air Tractors", cor:"#f2b705", tinta:"#3a2c00", ico:"aviao", campos:{a_air_tr:""}},
   {k:"drone",um:"drone", var:"drones", cor:"#1565c0", tinta:"#fff", ico:"drone", campos:{a_drone:""}}
 ];
 const ico = g => `<span class="ico" style="--c:${g.cor};--t:${g.tinta}"><svg viewBox="0 0 24 24" aria-hidden="true">${SVG[g.ico]}</svg></span>`;
@@ -287,7 +287,7 @@ function blocoRecursos(r, aberto){
   return c + (t ? `<details${aberto ? " open" : ""}><summary>Detalhe por instituição</summary><div class="rec">${t}</div></details>` : "");
 }
 // resumo do que está em campo agora; aeronaves num quadro só, com o detalhe por tipo
-const AEREO = ["heli","at","drone"];
+const AEREO = ["heli","drone"];   // Air Tractor fica em quadro próprio (amarelo, cor oficial)
 function agora(and){
   const tot = GRUPOS.map(g => [g, and.reduce((s,r) => s + contaGrupo(r.rec, g), 0)]).filter(([,n]) => n);
   const nome = (g,n) => n > 1 ? (g.curto||g.var) : (g.curto||g.um);
