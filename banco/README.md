@@ -69,6 +69,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 46_plano_operacional.sql     Módulo 7: uc_setor (setores operacionais, auditoria), uc_operacional (cenários, comando, prontidão, pós, revisão com o CBMMG), setores_resumo(), setores_geo(), setor_salvar() (security invoker), setor_no_ponto(), zoneamento_uc(). Em produção: 46 (tabelas) + 46b (funções)
 47_setor_unir_partes.sql     setor_salvar funde as partes encostadas (quadrantes ou zonas juntados num setor só); origem "quadrantes" (do mapa de risco)
 48_setores_pistas_50km.sql   setores_resumo: sai o critério do Air Tractor (até 17 km, em desuso); entram as pistas num raio de 50 km (pistas_50km, n_pistas_50km), só informativas
+49_boletim_coordenada.sql    boletim_publico: devolve lat/lon (4 casas) só das ocorrências em andamento, para o ponto do incêndio no mapa do boletim
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
@@ -107,7 +108,7 @@ Quase toda no banco, em SQL padrão — por isso a migração é viável:
 - **Classes do BDG** (tempo de resposta, duração, classe de área, dia da semana): visão `vw_bdg` (01).
 - **Prazos dos ROIs**: `vw_prazos` (10b).
 - **Trâmite da Sala Técnica** (etapa, pendências, prazos de ROI e REDS): `vw_tramite` (21).
-- **Boletim público**: `boletim_publico()` (11/12) — não expõe descrições, informantes nem coordenadas.
+- **Boletim público**: `boletim_publico()` (11/12/49) — não expõe descrições nem informantes; coordenada só das ocorrências em andamento (49).
 - **Consolidação das atuações** (turnos, horas-homem, recursos por instituição): `vw_atuacao_dia` (12).
 - **Permissões**: `is_equipe()`, `is_usuario()`, `is_gpcif()`, `is_admin()`, `pode_editar_uc()` + políticas RLS em cada tabela.
 - **Histórico de alterações**: gatilho genérico `tg_auditoria()` e tabela `auditoria` (14).

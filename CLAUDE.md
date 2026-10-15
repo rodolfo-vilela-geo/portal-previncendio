@@ -32,7 +32,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | `tecnica.html` | Sala Técnica (prazos, cobranças, SEI/PC/CAINF) |
 | `bdg.html` | Polígonos do BDG (cicatrizes, polígonos ausentes) |
 | `smc.html` | Ligação com o SMC (Sistema de Mapeamento de Cicatrizes, app no GEE); só abre logado (o endereço do app entra depois do login) |
-| `boletim.html`, `painel.html` | Boletim e painel públicos (sem dados pessoais) |
+| `boletim.html`, `painel.html` | Boletim e painel públicos (sem dados pessoais). O boletim mostra o ponto do incêndio em andamento quando o RI tem coordenada (migração 49) |
 | `painel_uc.html` | Painel da UC (indicadores, mapa; inclui a camada de risco) |
 | `ucs.html` + `pipcif_modulos.js` + `modulos_uc.js` | Cadastro da UC em módulos (1 Cadastro, 2 Infraestrutura, 3 Recursos, 4 Rede de apoio, 5 Atividades preventivas, 6 Mapa de risco, 7 Plano operacional) |
 | `modulo_operacional.js` + `geo_entrada.js` | Módulo 7: parte comum (protocolos, no código: `FLUXO`, `CENARIOS`, `BASE`, `VERSAO`), setores operacionais (`uc_setor`, desenhar/importar/zoneamento), cenários, comando, prontidão, pós-incêndio, revisão com o CBMMG (`uc_operacional`), impressão da ficha de acionamento + seção 15. `geo_entrada.js` lê polígonos de KML/KMZ/GeoJSON/Shapefile .zip (corrige eixos trocados) |
