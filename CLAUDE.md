@@ -13,7 +13,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 
 1. **Repositório público: nada de dado pessoal aqui.** Nada de conteúdo de PIPCIF, nomes, telefones, e-mails, REDS, descrições de ROI, JSONs exportados, planilhas do BDG. `banco/` guarda só estrutura (e dados públicos: limites das UCs do IDE-Sisema, municípios do IBGE).
 2. Dados sensíveis ficam no banco, protegidos por RLS (só usuários logados). Nada de arquivo estático com dados internos.
-7. **Só o Painel de ocorrências (`painel.html`) e o Boletim da FTP (`boletim.html`) são públicos.** Todas as outras páginas exigem login (as que não têm tela de login própria usam `exige_login.js`, que manda para `index.html?entrar=1&volta=...`). O anônimo não grava nada no banco e só executa `painel_dados` e `boletim_publico` (migração 33). Página ou função nova: restrita por padrão.
+7. **Só o Painel de ocorrências (`painel.html`) e o Painel Informativo da Força Tarefa (`boletim.html`, antigo "Boletim da FTP") são públicos.** Todas as outras páginas exigem login (as que não têm tela de login própria usam `exige_login.js`, que manda para `index.html?entrar=1&volta=...`). O anônimo não grava nada no banco e só executa `painel_dados` e `boletim_publico` (migração 33). Página ou função nova: restrita por padrão.
 3. Conversores de PIPCIF, exportações JSON e shapefiles do BDG ficam **fora** do repositório (pacote privado do Rodolfo — veja "Backup").
 4. Histórico de fogo do mapa de risco: **somente BDG 2013–2025**. Não usar MapBiomas Fogo (metodologia diferente). MapBiomas uso e cobertura pode.
 5. Diferença entre Sala e UC no ROI/RI: vale a UC ("porque é quem esteve no campo").
@@ -32,7 +32,7 @@ Leia este arquivo inteiro antes de mexer no projeto. Ele é a "receita do bolo":
 | `tecnica.html` | Sala Técnica (prazos, cobranças, SEI/PC/CAINF) |
 | `bdg.html` | Polígonos do BDG (cicatrizes, polígonos ausentes) |
 | `smc.html` | Ligação com o SMC (Sistema de Mapeamento de Cicatrizes, app no GEE); só abre logado (o endereço do app entra depois do login) |
-| `boletim.html`, `painel.html` | Boletim e painel públicos (sem dados pessoais). O boletim mostra o ponto do incêndio em andamento quando o RI tem coordenada (migração 49) |
+| `boletim.html`, `painel.html` | Painel Informativo da Força Tarefa (nome na interface desde 15/10/2026; o arquivo continua `boletim.html`) e painel histórico, públicos (sem dados pessoais). O Painel Informativo mostra o ponto do incêndio em andamento quando o RI tem coordenada (migração 49) |
 | `painel_uc.html` | Painel da UC (indicadores, mapa; inclui a camada de risco) |
 | `ucs.html` + `pipcif_modulos.js` + `modulos_uc.js` | Cadastro da UC em módulos (1 Cadastro, 2 Infraestrutura, 3 Recursos, 4 Rede de apoio, 5 Atividades preventivas, 6 Mapa de risco, 7 Plano operacional) |
 | `modulo_operacional.js` + `geo_entrada.js` | Módulo 7: parte comum (protocolos, no código: `FLUXO`, `CENARIOS`, `BASE`, `VERSAO`), setores operacionais (`uc_setor`, desenhar/importar/zoneamento), cenários, comando, prontidão, pós-incêndio, revisão com o CBMMG (`uc_operacional`), impressão da ficha de acionamento + seção 15. `geo_entrada.js` lê polígonos de KML/KMZ/GeoJSON/Shapefile .zip (corrige eixos trocados) |
