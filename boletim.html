@@ -60,6 +60,9 @@
   .tile .sub{font-size:12px;color:var(--text-muted)}
   .tile.and{border-left:4px solid var(--and)} .tile.and .val{color:var(--and)}
   .tile.deb{border-left:4px solid var(--deb)}
+  .tile.area{border-left:4px solid var(--a-int)}
+  .tile .val small{font-size:15px;font-weight:600;color:var(--text-secondary);letter-spacing:0}
+  .tile .tag-parcial{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--s2026);border:1px solid var(--s2026);border-radius:99px;padding:0 5px;margin-left:2px;vertical-align:1px}
 
   .card{background:var(--surface-1);border:1px solid var(--linha);border-radius:var(--raio);padding:14px;min-width:0}
   .card h2{margin:0;font-size:15px;display:flex;gap:8px;align-items:center}
@@ -215,8 +218,9 @@
     <div class="tile and"><div class="rot">Em andamento agora</div><div class="val" id="kAnd">–</div><div class="sub" id="kAndSub"></div></div>
     <div class="tile deb"><div class="rot">Debelados no ano</div><div class="val" id="kDeb">–</div><div class="sub" id="kDebSub"></div></div>
     <div class="tile"><div class="rot">Ocorrências em <span id="kAnoRot"></span></div><div class="val" id="kTotal">–</div><div class="sub" id="kTotalSub"></div></div>
-    <div class="tile"><div class="rot">Média anual <span id="kMediaRot"></span></div><div class="val" id="kMedia">–</div><div class="sub">ROIs do histórico (BDG)</div></div>
-    <div class="tile"><div class="rot">UCs com ocorrência no ano</div><div class="val" id="kUCs">–</div><div class="sub" id="kUCsSub"></div></div>
+    <div class="tile"><div class="rot">Média anual de ocorrências <span id="kMediaRot"></span></div><div class="val" id="kMedia">–</div><div class="sub">ROIs do histórico (BDG)</div></div>
+    <div class="tile area"><div class="rot">Área queimada em <span class="kAnoA"></span> <span class="tag-parcial">parcial</span></div><div class="val" id="kArea">–</div><div class="sub" id="kAreaSub"></div></div>
+    <div class="tile area"><div class="rot">Área queimada média <span id="kAreaMedRot"></span></div><div class="val" id="kAreaMed">–</div><div class="sub" id="kAreaMedSub"></div></div>
   </div>
 
   <div class="topo-mapa">
@@ -515,7 +519,16 @@ function desenhar(){
   const esperado = (D.media_mensal||[]).slice(0, mesAtual+1).reduce((s,v)=>s+v,0);
   $("#kTotalSub").textContent = esperado ? `média histórica até ${MESES[mesAtual].toLowerCase()}: ${fmtN(Math.round(esperado))}` : "";
   $("#kMediaRot").textContent = hA ? `(${hA})` : ""; $("#kMedia").textContent = fmtN(Math.round(D.media_anual||0));
-  $("#kUCs").textContent = Object.keys(porUC).length; $("#kUCsSub").textContent = GEO ? `das ${GEO.features.length} UCs estaduais no mapa` : "";
+  // área queimada (soma dos ROIs): ano corrente parcial e média histórica
+  const AA = D.area_anos || [], totA = a => (+a.int||0) + (+a.ent||0), hAr = AA.filter(a => a.ano >= 2013 && a.ano < D.ano);
+  const curA = AA.find(a => a.ano === D.ano) || {int:0, ent:0, medidas:0};
+  const medA = hAr.length ? hAr.reduce((s,a) => s + totA(a), 0) / hAr.length : 0, medInt = hAr.length ? hAr.reduce((s,a) => s + (+a.int||0), 0) / hAr.length : 0;
+  $$(".kAnoA").forEach(e => e.textContent = D.ano);
+  $("#kArea").innerHTML = `${fmtN(Math.round(totA(curA)))}<small> ha</small>`;
+  $("#kAreaSub").textContent = `${fmtN(curA.medidas||0)} de ${fmtN(R.length)} ocorrências já medidas`;
+  $("#kAreaMedRot").textContent = hAr.length ? `(${hAr[0].ano}–${hAr[hAr.length-1].ano})` : "";
+  $("#kAreaMed").innerHTML = medA >= 1000 ? `${fmtN(medA/1000, 1)}<small> mil ha</small>` : `${fmtN(Math.round(medA))}<small> ha</small>`;
+  $("#kAreaMedSub").textContent = medA ? `por ano · ${fmtN(Math.round(100*medInt/medA))}% dentro das UCs` : "";
   // lista em andamento
   $("#nAnd").textContent = and.length;
   const semLimite = n => GEO && !GEO.features.some(f => f.properties.nome_uc === n);
