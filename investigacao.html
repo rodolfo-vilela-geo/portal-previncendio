@@ -107,6 +107,7 @@
   .faixa-anos i{display:block;border-radius:1px;background:#ffffff14}
   .faixa-anos i.on{background:var(--brasa)}
   .mais{width:100%;margin-top:6px}
+  .aviso-uc{display:block;font-size:11.5px;font-weight:700;color:var(--ambar);margin-top:2px}
 
   /* camadas */
   details.cams>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;font:600 14.5px Sora,sans-serif}
@@ -636,9 +637,11 @@ async function acompanharCAR(id){
 async function carregarImoveis(){
   if (!ucAtual) return;
   const z = mapa.getZoom();
-  const {data, error} = await sb.rpc("geo_imoveis", {p_uc: ucAtual, p_tol: 0.00003});
+  const [{data, error}, av] = await Promise.all([sb.rpc("geo_imoveis", {p_uc: ucAtual, p_tol: 0.00003}), sb.rpc("imovel_avisos_uc", {p_uc: ucAtual})]);
   if (error) return msg("Imóveis: " + error.message, "erro");
   IMOVEIS = data || [];
+  const coinc = new Map((av.data || []).map(a => [a.id, a.uc_coincide]));
+  IMOVEIS.forEach(i => { if (coinc.has(i.id)) i.uc_coincide = coinc.get(i.id); });
   desenharImoveis(); resumoUC(); nRank = 60; listarRanking();
 }
 const visivel = i => $("#comCancel").checked || !["CA", "SU"].includes(i.car_status);
@@ -660,7 +663,7 @@ function desenharImoveis(){
               dashArray: p.origem === "car" ? null : "5 4", fillColor: c || "#000", fillOpacity: c ? .42 : 0}; },
     onEachFeature: (f, l) => {
       const p = f.properties;
-      l.bindTooltip(`<b>${esc(nomeImovel(p))}</b><br>${esc(p.municipio || "")} · ${fmtHa(p.area_ha)}<br>${p.anos ? `fogo em ${p.anos} ano${p.anos > 1 ? "s" : ""} (${p.anos_lista.join(", ")})` : "sem fogo no BDG"}`, {sticky:true});
+      l.bindTooltip(`<b>${esc(nomeImovel(p))}</b>${p.uc_coincide ? `<br><span style="color:#b26b00">coincide com o limite da UC ${esc(p.uc_coincide)}</span>` : ""}<br>${esc(p.municipio || "")} · ${fmtHa(p.area_ha)}<br>${p.anos ? `fogo em ${p.anos} ano${p.anos > 1 ? "s" : ""} (${p.anos_lista.join(", ")})` : "sem fogo no BDG"}`, {sticky:true});
       l.on("click", ev => { if (window.Medir?.ativo()) return; L.DomEvent.stop(ev); abrirImovel(p.id); });
     }
   });
@@ -671,7 +674,7 @@ function itemRank(i, pos){
   const c = corAnos(i.anos) || "#3a4b42";
   return `<button type="button" data-im="${i.id}" class="${i.id === fichaId ? "sel" : ""}"><span class="pos">${pos ?? ""}</span><span style="min-width:0">
     <span class="nm" style="display:block">${esc(nomeImovel(i))}</span><span class="sub" style="display:block">${esc([i.municipio, fmtHa(i.area_ha), i.origem !== "car" ? ORIGEM[i.origem][0] : "", i.car_status && i.car_status !== "AT" ? "CAR " + (STATUS_CAR[i.car_status] || i.car_status) : ""].filter(Boolean).join(" · "))}</span>
-    ${faixaMini(i.anos_lista)}</span><span class="anos" style="background:${c};color:${i.anos ? "#1a0d05" : "var(--liquen)"}" title="anos com fogo">${i.anos}</span></button>`;
+    ${i.uc_coincide ? `<span class="aviso-uc" title="Provavelmente a própria UC inscrita no CAR">coincide com o limite da UC ${esc(i.uc_coincide)}</span>` : ""}${faixaMini(i.anos_lista)}</span><span class="anos" style="background:${c};color:${i.anos ? "#1a0d05" : "var(--liquen)"}" title="anos com fogo">${i.anos}</span></button>`;
 }
 function listarRanking(){
   const q = $("#filtro").value.trim().toLowerCase();
@@ -777,6 +780,7 @@ function montarFicha(d){
 
   // alertas
   const al = [];
+  if (d.uc_coincide) al.push([`<b>Coincide com o limite da UC ${esc(d.uc_coincide)}</b> — provavelmente a própria UC inscrita no CAR. O fogo deste imóvel é, na prática, o da UC; confira a inscrição no SICAR.`, ""]);
   if (+d.monitorado_pct < 99) al.push([`Só ${fmtN(d.monitorado_pct, 1)}% do imóvel está dentro de UC ou zona de amortecimento, onde o BDG tem as áreas queimadas mapeadas. Fogo na parte de fora pode não aparecer aqui.`, ""]);
   if (d.sobreposicoes?.length) al.push([`O limite se sobrepõe a ${d.sobreposicoes.length} outro${d.sobreposicoes.length > 1 ? "s" : ""} imóve${d.sobreposicoes.length > 1 ? "is" : "l"} (veja abaixo). A mesma área queimada pode aparecer nos dois.`, ""]);
   if (["CA", "SU"].includes(im.car_status)) al.push([`CAR ${STATUS_CAR[im.car_status]} no SICAR.`, ""]);
