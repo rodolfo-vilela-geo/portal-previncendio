@@ -204,7 +204,7 @@
     <a href="index.html" class="logo" title="Colibri"><img src="img/logo_portal_selo.png" alt="Colibri"></a>
     <div>
       <div class="inst"><a href="index.html">← Colibri</a> · Sala de Situação · IEF-MG</div>
-      <h1>Painel Informativo da Força Tarefa Previncêndio <span id="tAno"></span></h1>
+      <h1>Painel Informativo da Força Tarefa Previncêndio</h1>
       <div class="atual" id="atual">Carregando…</div>
     </div>
   </div>
@@ -505,7 +505,7 @@ function desenhar(){
   const R = D.ris, and = R.filter(r=>r.status==="andamento"), deb = R.filter(r=>r.status==="debelado");
   porUC = {}; R.forEach(r => { const s = porUC[r.nome_uc] ||= {and:[], todas:[]}; s.todas.push(r); if (r.status==="andamento") s.and.push(r); });
   const hA = D.anos_historico ? `${D.anos_historico.ini}–${D.anos_historico.fim}` : "";
-  $("#tAno").textContent = D.ano;
+
   $("#atual").textContent = `Atualizado em ${new Date(D.gerado_em).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}`;
   // indicadores
   const ucsAnd = Object.values(porUC).filter(s=>s.and.length).length, pes = and.reduce((s,r)=>s+pessoas(r),0);
