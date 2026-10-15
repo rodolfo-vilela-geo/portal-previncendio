@@ -208,6 +208,7 @@
       <li><a href="#pipcif">Cadastro das UCs</a></li>
       <li><a href="#mapa-colibri">Geo Colibri</a></li>
       <li><a href="#apoio-aereo">Apoio aéreo</a></li>
+      <li><a href="#investigacao">Análise de Incêndio Florestal</a></li>
       <li><a href="#admin">Administração</a></li>
       <li><a href="#faq">Perguntas frequentes</a></li>
     </ol>
@@ -452,6 +453,23 @@
         <li>Ao importar um PIPCIF (ou cadastrar uma pista ou heliponto no módulo 2), o Colibri liga o ponto ao cadastro sozinho: pista a até 2 km de um lugar já cadastrado, heliponto a até 300 m, ou com o mesmo nome. O nome usado pela UC vira “outro nome”. Se não achar, cria o lugar como <b>a conferir</b> — eles aparecem no botão de revisão.</li>
         <li>Lugar que deixou de ser usado: mude a situação para <b>Inativo</b> (some do mapa e das listas). Excluir só é possível quando nenhuma UC aponta para ele.</li>
       </ol>
+    </section>
+
+    <section id="investigacao">
+      <h2>Análise de Incêndio Florestal</h2>
+      <p class="quem">Quem usa: Previncêndio e Sala Técnica · <a href="investigacao.html">abrir a análise</a> (página inicial, seção Monitoramento e Investigação)</p>
+      <p>Mostra em quais imóveis rurais o fogo volta, ano após ano. O Colibri busca os imóveis do CAR em volta da UC direto no SICAR, cruza cada um com as áreas queimadas do BDG (2013 em diante) e monta a ficha do imóvel com as ocorrências que o atingiram: ano, data e hora da detecção, causa, agente, área queimada dentro do imóvel e se o fogo começou dentro ou fora dele. Como associa incêndios a propriedades, o módulo é restrito: gerentes de UC e o público não o veem.</p>
+      <ol class="passos">
+        <li>Escolha a UC. Na primeira vez, clique em <b>Buscar CAR</b>. A busca cobre a UC, a zona de amortecimento e uma faixa de 3, 5 ou 10 km além dela, e leva de alguns segundos a poucos minutos. Pode continuar usando a página enquanto isso.</li>
+        <li>De tempos em tempos, clique em <b>Atualizar CAR</b>: imóveis novos entram, retificados têm o limite trocado e o limite antigo fica guardado (aparece tracejado na ficha). Nada é apagado.</li>
+        <li>A lista <b>Imóveis por recorrência</b> põe no topo quem queimou em mais anos. A faixa de quadradinhos mostra os anos com fogo (de 2013 até hoje). No mapa, a cor segue o número de anos com fogo; dá para colorir também pelo último ano com fogo ou pela maior parte do imóvel queimada num ano.</li>
+        <li>Clique num imóvel (na lista ou no mapa) para abrir a <b>ficha</b>: dados do CAR, fogo ano a ano (com a % do imóvel atingida), padrões encontrados (meses, horários, fim de semana, causa mais registrada, início dentro ou fora), gráficos, a tabela das ocorrências, RIs a até 1 km e imóveis sobrepostos.</li>
+        <li>Use as <b>anotações</b> para registrar o que a investigação apurou (proprietário identificado, vistoria, encaminhamento, processo SEI). Elas ficam no banco, visíveis só para o Previncêndio e a Sala Técnica.</li>
+        <li>Imóvel que não está no CAR (ou que no campo é diferente): <b>Importar limite</b> (KML, KMZ, GeoJSON ou Shapefile .zip) ou <b>Desenhar no mapa</b> com a ferramenta de medir área. O imóvel entra com as mesmas contas. Importados e desenhados podem ser editados e excluídos; os do CAR, não (só recebem um nome).</li>
+        <li>Na ficha: <b>Baixar GeoJSON ou KML</b> (imóvel e áreas queimadas dentro dele), <b>Ocorrências em CSV</b> e <b>Imprimir</b>.</li>
+      </ol>
+      <p><b>Cuidados na leitura.</b> O BDG mapeia as áreas queimadas nas UCs e no entorno; a ficha avisa quando parte do imóvel fica fora dessa área (fogo ali pode não ter sido mapeado). O CAR é declarado pelo próprio dono e tem sobreposições: a mesma cicatriz pode cair em dois imóveis, e a ficha mostra isso. Recorrência indica onde olhar com mais atenção; não prova autoria.</p>
+      <p>Camadas que ajudam a investigação: áreas queimadas do BDG por ano, pontos das ocorrências (ROI e RI), Inventário Florestal, zoneamento das UCs, rodovias, ferrovias e municípios.</p>
     </section>
 
     <section id="admin">

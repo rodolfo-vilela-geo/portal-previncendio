@@ -71,6 +71,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 48_setores_pistas_50km.sql   setores_resumo: sai o critério do Air Tractor (até 17 km, em desuso); entram as pistas num raio de 50 km (pistas_50km, n_pistas_50km), só informativas
 49_boletim_coordenada.sql    boletim_publico: devolve lat/lon (4 casas) só das ocorrências em andamento, para o ponto do incêndio no mapa do boletim
 50_boletim_semana_area.sql   boletim_publico: media_semanal (53 semanas, blocos de 7 dias desde 1º/jan) e area_anos (área queimada por ano somando os ROIs; ano corrente parcial)
+51_investigacao.sql          Análise de Incêndio Florestal: imovel (CAR/importado/desenhado), imovel_versao, imovel_fogo (gatilhos com area_queimada), imovel_nota, car_busca/car_pedido; car_buscar/car_processar (SICAR WFS via pg_net), geo_imoveis, imovel_ficha, imovel_incluir, car_situacao, car_resumo. Só is_tecnica()
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
