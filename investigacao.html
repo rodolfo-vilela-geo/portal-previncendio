@@ -448,6 +448,9 @@ const CAM = [
   {id:"limites", nome:"UCs e zonas de amortecimento", on:true},
   {id:"imoveis", nome:"Imóveis rurais", nota:"CAR, importados e desenhados · da UC escolhida", on:true, leg:true},
   {id:"queimadas", nome:"Áreas queimadas (BDG)", nota:"2013 em diante · aparecem ao aproximar", on:true},
+  {id:"uc_federal", nome:"UCs federais", nota:"IDE-Sisema · baixado ao ligar", ide:"ide_2010_mg_unidades_conservacao_federais_pol", cor:"#4dabf7"},
+  {id:"uc_municipal", nome:"UCs municipais", nota:"IDE-Sisema · baixado ao ligar", ide:"ide_2010_mg_unidades_conservacao_municipais_pol", cor:"#da77f2"},
+  {id:"rppn", nome:"RPPNs", nota:"IDE-Sisema · federais e estaduais · baixado ao ligar", ide:"ide_2010_mg_reservas_particulares_patrimonio_natural_pol", cor:"#63e6be"},
   {id:"ocorr", nome:"Ocorrências (ROI e RI)", nota:"ponto de cada ocorrência, cor pelo ano"},
   {id:"vegetacao", nome:"Inventário Florestal de MG", nota:"aparece ao aproximar bastante"},
   {id:"zoneamento", nome:"Zoneamento das UCs", nota:"plano de manejo"},
@@ -457,7 +460,7 @@ const CAM = [
 ];
 const C = Object.fromEntries(CAM.map(c => [c.id, c]));
 function montarCamadas(){
-  $("#camadas").innerHTML = CAM.map(c => `<label class="cam"><input type="checkbox" data-cam="${c.id}" ${c.on ? "checked" : ""}><span>${esc(c.nome)}${c.nota ? `<small>${esc(c.nota)}</small>` : ""}</span></label>${c.leg ? `<div class="leg" id="legImoveis"></div>` : ""}`).join("");
+  $("#camadas").innerHTML = CAM.map(c => `<label class="cam"><input type="checkbox" data-cam="${c.id}" ${c.on ? "checked" : ""}><span>${c.cor ? `<i style="display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;background:${c.cor}"></i>` : ""}${esc(c.nome)}${c.nota ? `<small>${esc(c.nota)}</small>` : ""}</span></label>${c.leg ? `<div class="leg" id="legImoveis"></div>` : ""}`).join("");
   $$("[data-cam]").forEach(i => i.onchange = () => ligar(i.dataset.cam, i.checked));
   desenharLegenda();
 }
@@ -466,6 +469,22 @@ const ref = {};
 async function ligar(id, on){
   const c = C[id]; c.on = on;
   try{
+    if (c.ide){   // camada pública do IDE-Sisema, lida direto do GeoServer (WFS) quando ligada
+      if (on){
+        if (!c.layer){
+          msg(`Baixando ${c.nome} do IDE-Sisema…`);
+          const url = `https://geoserver.meioambiente.mg.gov.br/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=IDE:${c.ide}&outputFormat=application/json&srsName=EPSG:4674`;
+          const r = await fetch(url); if (!r.ok) throw new Error("o IDE-Sisema não respondeu (" + r.status + "). Tente mais tarde.");
+          const gj = await r.json(), cor = c.cor;
+          c.layer = L.geoJSON(gj, {pane:"limites", renderer: L.canvas({padding:.3}), style:{color:cor, weight:1.4, fillColor:cor, fillOpacity:.12},
+            onEachFeature: (f, l) => { const p = f.properties || {};
+              l.bindTooltip(`<b>${esc(p.nome_uc || "")}</b><br>${esc([p.categoria, p.esfera, p.grupo].filter(Boolean).join(" · "))}${p.org_gestor ? "<br>" + esc(p.org_gestor) : ""}${p.ato_legal || p.cria_ato ? "<br>" + esc(p.ato_legal || p.cria_ato) : ""}${p.municipios ? "<br>" + esc(p.municipios) : ""}`, {sticky:true}); }});
+          msg(`${c.nome}: ${fmtN(gj.features?.length)} áreas.`);
+        }
+        c.layer.addTo(mapa);
+      } else if (c.layer) mapa.removeLayer(c.layer);
+      return;
+    }
     if (id === "mg"){
       if (on){ c.layer ||= L.geoJSON(await fetch("dados/mg.geojson").then(r => r.json()), {pane:"limites", interactive:false, style:{color:"#f4f1e6", weight:2.2, opacity:.9, fillOpacity:0}}); c.layer.addTo(mapa); }
       else if (c.layer) mapa.removeLayer(c.layer);
