@@ -663,12 +663,20 @@ async function acompanharCAR(id){
 async function carregarImoveis(){
   if (!ucAtual) return;
   const z = mapa.getZoom();
-  const [{data, error}, av] = await Promise.all([sb.rpc("geo_imoveis", {p_uc: ucAtual, p_tol: 0.00003}), sb.rpc("imovel_avisos_uc", {p_uc: ucAtual})]);
-  if (error) return msg("Imóveis: " + error.message, "erro");
+  const uc = ucAtual;
+  $("#rank").innerHTML = `<p class="nota">Carregando os imóveis…</p>`; $("#nRank").textContent = "";
+  const {data, error} = await sb.rpc("geo_imoveis", {p_uc: uc, p_tol: 0.00003});
+  if (uc !== ucAtual) return;
+  if (error){ $("#rank").innerHTML = `<p class="nota">Não foi possível carregar os imóveis: ${esc(error.message)}</p>`; return msg("Imóveis: " + error.message, "erro"); }
   IMOVEIS = data || [];
-  const coinc = new Map((av.data || []).map(a => [a.id, a.uc_coincide]));
-  IMOVEIS.forEach(i => { if (coinc.has(i.id)) i.uc_coincide = coinc.get(i.id); });
   desenharImoveis(); resumoUC(); nRank = 60; listarRanking();
+  // aviso de imóvel que coincide com o limite de uma UC (vem depois, sem segurar a lista)
+  sb.rpc("imovel_avisos_uc", {p_uc: uc}).then(({data: av}) => {
+    if (uc !== ucAtual || !av?.length) return;
+    const coinc = new Map(av.map(a => [a.id, a.uc_coincide]));
+    IMOVEIS.forEach(i => { if (coinc.has(i.id)) i.uc_coincide = coinc.get(i.id); });
+    desenharImoveis(); listarRanking();
+  });
 }
 const visivel = i => $("#comCancel").checked || !["CA", "SU"].includes(i.car_status);
 function resumoUC(){
