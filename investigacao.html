@@ -665,10 +665,17 @@ async function carregarImoveis(){
   const z = mapa.getZoom();
   const uc = ucAtual;
   $("#rank").innerHTML = `<p class="nota">Carregando os imóveis…</p>`; $("#nRank").textContent = "";
-  const {data, error} = await sb.rpc("geo_imoveis", {p_uc: uc, p_tol: 0.00003});
-  if (uc !== ucAtual) return;
-  if (error){ $("#rank").innerHTML = `<p class="nota">Não foi possível carregar os imóveis: ${esc(error.message)}</p>`; return msg("Imóveis: " + error.message, "erro"); }
-  IMOVEIS = data || [];
+  // o servidor entrega no máximo 1.000 linhas por pedido: busca em páginas até acabar
+  const PAG = 1000; let todos = [];
+  for (let de = 0; ; de += PAG){
+    const {data, error} = await sb.rpc("geo_imoveis", {p_uc: uc, p_tol: 0.00003}).order("id").range(de, de + PAG - 1);
+    if (uc !== ucAtual) return;
+    if (error){ $("#rank").innerHTML = `<p class="nota">Não foi possível carregar os imóveis: ${esc(error.message)}</p>`; return msg("Imóveis: " + error.message, "erro"); }
+    todos = todos.concat(data || []);
+    if (!data || data.length < PAG) break;
+    $("#rank").innerHTML = `<p class="nota">Carregando os imóveis… ${fmtN(todos.length)} até agora</p>`;
+  }
+  IMOVEIS = todos;
   desenharImoveis(); resumoUC(); nRank = 60; listarRanking();
   // aviso de imóvel que coincide com o limite de uma UC (vem depois, sem segurar a lista)
   sb.rpc("imovel_avisos_uc", {p_uc: uc}).then(({data: av}) => {
