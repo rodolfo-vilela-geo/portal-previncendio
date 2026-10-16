@@ -476,7 +476,7 @@ async function ligar(id, on){
           const url = `https://geoserver.meioambiente.mg.gov.br/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=IDE:${c.ide}&outputFormat=application/json&srsName=EPSG:4674`;
           const r = await fetch(url); if (!r.ok) throw new Error("o IDE-Sisema não respondeu (" + r.status + "). Tente mais tarde.");
           const gj = await r.json(), cor = c.cor;
-          c.layer = L.geoJSON(gj, {pane:"limites", renderer: L.canvas({padding:.3}), style:{color:cor, weight:1.4, fillColor:cor, fillOpacity:.12},
+          c.layer = L.geoJSON(gj, {pane:"limites", renderer: L.canvas({padding:.3, pane:"limites"}), style:{color:cor, weight:1.4, fillColor:cor, fillOpacity:.12},
             onEachFeature: (f, l) => { const p = f.properties || {};
               l.bindTooltip(`<b>${esc(p.nome_uc || "")}</b><br>${esc([p.categoria, p.esfera, p.grupo].filter(Boolean).join(" · "))}${p.org_gestor ? "<br>" + esc(p.org_gestor) : ""}${p.ato_legal || p.cria_ato ? "<br>" + esc(p.ato_legal || p.cria_ato) : ""}${p.municipios ? "<br>" + esc(p.municipios) : ""}`, {sticky:true}); }});
           msg(`${c.nome}: ${fmtN(gj.features?.length)} áreas.`);
@@ -509,7 +509,7 @@ async function ligar(id, on){
     }
     if (id === "ocorr"){
       if (on){ if (!c.layer){ const {data, error} = await sb.rpc("geo_ocorrencias", {p_ano_ini: ANO0, p_ano_fim: 2100}); if (error) throw error;
-          const rend = L.canvas({padding:.3});
+          const rend = L.canvas({padding:.3, pane:"pontos"});
           c.layer = L.layerGroup((data || []).map(o => L.circleMarker([o[1], o[0]], {renderer:rend, pane:"pontos", radius:4.5, color:"#1a0d05", weight:1, fillColor:corAno(o[2]), fillOpacity:.95})
             .bindTooltip(`${o[3] ? "ROI " + esc(o[3]) : "RI " + esc(o[8]) + "/" + o[2]} · ${esc(o[4] || "")}${o[5] ? " · " + fmtHa(o[5]) : ""}`))); }
         c.layer.addTo(mapa); }
@@ -547,13 +547,25 @@ function atualizarCaixas(){
           if (error) msg("Inventário: " + error.message, "erro");
           C.vegetacao.layer.clearLayers();
           L.geoJSON({type:"FeatureCollection", features:(data || []).map(v => ({type:"Feature", geometry:v.g, properties:v}))},
-            {pane:"veg", renderer: L.canvas({padding:.2}), style: f => ({color:VEG_COR[f.properties.c], weight:.3, fillColor:VEG_COR[f.properties.c], fillOpacity:.5}),
+            {pane:"veg", renderer: L.canvas({padding:.2, pane:"veg"}), style: f => ({color:VEG_COR[f.properties.c], weight:.3, fillColor:VEG_COR[f.properties.c], fillOpacity:.5}),
              onEachFeature:(f, l) => l.bindTooltip(`${VEG_NOME[f.properties.c] || ""} · ${fmtHa(f.properties.ha)}`, {sticky:true})}).addTo(C.vegetacao.layer);
         }
       }
     }
     $("#aviso").textContent = avisos.join(" · "); $("#aviso").hidden = !avisos.length;
   }, 250);
+}
+
+/* ======================= UC sob o ponteiro ======================= */
+function noAnel(x, y, r){ let d = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++){ const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) d = !d; } return d; }
+const noPoligono = (x, y, p) => noAnel(x, y, p[0]) && !p.slice(1).some(h => noAnel(x, y, h));
+function areaAprox(g){ const pols = g.type === "Polygon" ? [g.coordinates] : g.coordinates; let s = 0;
+  pols.forEach(p => { const r = p[0]; for (let i = 0, j = r.length - 1; i < r.length; j = i++) s += (r[j][0] - r[i][0]) * (r[j][1] + r[i][1]); }); return Math.abs(s / 2); }
+function ucNoPonto(x, y){
+  const achadas = (LIM || []).filter(l => l.tipo === "uc" && l.geom && (l.geom.type === "Polygon" ? noPoligono(x, y, l.geom.coordinates) : l.geom.type === "MultiPolygon" && l.geom.coordinates.some(p => noPoligono(x, y, p))));
+  if (!achadas.length) return null;
+  achadas.forEach(l => l._a ??= areaAprox(l.geom));
+  return achadas.sort((a, b) => a._a - b._a)[0].nome_uc;
 }
 
 /* ======================= início ======================= */
@@ -568,6 +580,12 @@ async function iniciar(){
   trocarBase("sat");
   mapa.on("mousemove", e => { $("#coord").textContent = Coord.par(e.latlng.lat, e.latlng.lng); });
   mapa.on("moveend", atualizarCaixas);
+  // clique fora de imóvel: abre a UC sob o ponteiro (UCs sobrepostas: a menor, que é a mais específica)
+  mapa.on("click", e => {
+    if (window.Medir?.ativo() || !C.limites.on) return;
+    const uc = ucNoPonto(e.latlng.lng, e.latlng.lat);
+    if (uc && uc !== ucAtual) abrirUC(uc, false);
+  });
   window.Medir?.iniciar(mapa);
   montarCamadas();
   C.queimadas.layer = L.layerGroup().addTo(mapa); C.vegetacao.layer = L.layerGroup();
@@ -577,9 +595,8 @@ async function iniciar(){
   UCS = ucs || [];
   $("#listaUC").innerHTML = UCS.map(u => `<option value="${esc(u.nome_uc)}">${esc(CATS[u.categoria] || u.categoria || "")}</option>`).join("");
   LIM = lim.data || [];
-  camLim = L.geoJSON({type:"FeatureCollection", features: LIM.map(l => ({type:"Feature", geometry:l.geom, properties:l}))}, {pane:"limites",
+  camLim = L.geoJSON({type:"FeatureCollection", features: LIM.map(l => ({type:"Feature", geometry:l.geom, properties:l}))}, {pane:"limites", interactive:false,
     style: f => f.properties.tipo === "uc" ? {color:"#9bd46f", weight:1.8, fillColor:"#9bd46f", fillOpacity:.06} : {color:"#d7e8a8", weight:1.2, dashArray:"4 4", fillOpacity:0},
-    onEachFeature: (f, l) => { if (f.properties.tipo === "uc") l.on("click", ev => { if (window.Medir?.ativo()) return; L.DomEvent.stop(ev); if (f.properties.nome_uc !== ucAtual) abrirUC(f.properties.nome_uc); }); }
   }).addTo(mapa);
   atualizarCaixas();
   carregarResumo();
@@ -696,8 +713,8 @@ function resumoUC(){
 function nomeImovel(i){ return i.nome || (i.cod_car ? i.cod_car.replace(/^(MG-\d+-)(.{6}).*$/, "$1$2…") : "Imóvel " + i.id); }
 function desenharImoveis(){
   if (camImoveis) mapa.removeLayer(camImoveis);
-  const rend = L.canvas({padding:.3, tolerance:3});
-  camImoveis = L.geoJSON({type:"FeatureCollection", features: IMOVEIS.filter(visivel).map(i => ({type:"Feature", geometry:i.geom, properties:i}))}, {
+  const rend = L.canvas({padding:.3, tolerance:3, pane:"imoveis"});
+  camImoveis = L.geoJSON({type:"FeatureCollection", features: IMOVEIS.filter(visivel).sort((a, b) => (+b.area_ha || 0) - (+a.area_ha || 0)).map(i => ({type:"Feature", geometry:i.geom, properties:i}))}, {
     pane:"imoveis", renderer: rend,
     style: f => { const p = f.properties, c = corImovel(p), sel = p.id === fichaId;
       return {color: sel ? "#ffffff" : (c || (p.origem === "car" ? "#c7d0cb" : "#ffd166")), weight: sel ? 3 : (c ? 1.2 : .8), opacity: c ? .95 : .7,
