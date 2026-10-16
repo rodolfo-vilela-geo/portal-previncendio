@@ -444,6 +444,7 @@ const VEG_NOME = {1:"Floresta ombrófila", 2:"Floresta ombrófila", 3:"Floresta 
   6:"Fl. estacional decidual", 7:"Fl. estacional decidual", 8:"Campo", 9:"Campo rupestre", 10:"Campo cerrado", 11:"Cerrado", 12:"Cerradão", 13:"Vereda",
   14:"Eucalipto", 15:"Pinus", 16:"Água", 17:"Urbanização"};
 const CAM = [
+  {id:"mg", nome:"Minas Gerais", nota:"limite do estado", on:true},
   {id:"limites", nome:"UCs e zonas de amortecimento", on:true},
   {id:"imoveis", nome:"Imóveis rurais", nota:"CAR, importados e desenhados · da UC escolhida", on:true, leg:true},
   {id:"queimadas", nome:"Áreas queimadas (BDG)", nota:"2013 em diante · aparecem ao aproximar", on:true},
@@ -465,6 +466,11 @@ const ref = {};
 async function ligar(id, on){
   const c = C[id]; c.on = on;
   try{
+    if (id === "mg"){
+      if (on){ c.layer ||= L.geoJSON(await fetch("dados/mg.geojson").then(r => r.json()), {pane:"limites", interactive:false, style:{color:"#f4f1e6", weight:2.2, opacity:.9, fillOpacity:0}}); c.layer.addTo(mapa); }
+      else if (c.layer) mapa.removeLayer(c.layer);
+      return;
+    }
     if (id === "limites"){ on ? camLim?.addTo(mapa) : camLim && mapa.removeLayer(camLim); return; }
     if (id === "imoveis"){ on ? camImoveis?.addTo(mapa) : camImoveis && mapa.removeLayer(camImoveis); return; }
     if (id === "rodovias" || id === "ferrovias"){ ref.g ||= CamadasRef.adicionar(mapa, {addOverlay(){}}); on ? ref.g[id].addTo(mapa) : mapa.removeLayer(ref.g[id]); return; }
@@ -546,6 +552,7 @@ async function iniciar(){
   window.Medir?.iniciar(mapa);
   montarCamadas();
   C.queimadas.layer = L.layerGroup().addTo(mapa); C.vegetacao.layer = L.layerGroup();
+  ligar("mg", true);
 
   const [{data: ucs}, lim] = await Promise.all([sb.from("uc").select("nome_uc,categoria,ufbio").eq("ativo", true).order("nome_uc"), sb.rpc("geo_limites", {p_tol: 0.0004})]);
   UCS = ucs || [];
