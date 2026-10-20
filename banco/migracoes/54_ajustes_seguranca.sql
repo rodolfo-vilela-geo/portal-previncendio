@@ -34,17 +34,17 @@ end $$;
 --    cruzava a tabela inteira e passava de 8 s ao incluir/desenhar um imóvel)
 create or replace function imovel_fogo_calc(p_id bigint) returns void
 language plpgsql security definer set search_path = public as $$
-declare g geometry; ha numeric;
+declare v_geom geometry; v_ha numeric;
 begin
-  select geom, st_area(geom::geography) into g, ha from imovel where id = p_id;
+  select geom, st_area(geom::geography) into v_geom, v_ha from imovel where id = p_id;
   delete from imovel_fogo where imovel_id = p_id;
-  if g is null then return; end if;
+  if v_geom is null then return; end if;
   insert into imovel_fogo (imovel_id, area_queimada_id, cod_bdp, ano, area_ha, pct)
   select p_id, a.id, a.cod_bdp, coalesce((select r.ano from roi r where r.cod_bdp = a.cod_bdp limit 1), nullif(left(a.cod_bdp, 4), '')::int),
-         round((st_area(x.g::geography) / 10000)::numeric, 2),
-         round((100 * st_area(x.g::geography) / nullif(ha, 0))::numeric, 1)
+         round((st_area(x.corte::geography) / 10000)::numeric, 2),
+         round((100 * st_area(x.corte::geography) / nullif(v_ha, 0))::numeric, 1)
   from area_queimada a
-  cross join lateral (select st_intersection(st_makevalid(a.geom), g) g) x
-  where a.geom && g and st_intersects(a.geom, g) and not st_isempty(x.g) and st_area(x.g::geography) >= 100;
+  cross join lateral (select st_intersection(st_makevalid(a.geom), v_geom) corte) x
+  where a.geom && v_geom and st_intersects(a.geom, v_geom) and not st_isempty(x.corte) and st_area(x.corte::geography) >= 100;
 end $$;
 revoke execute on function imovel_fogo_calc(bigint) from public, anon, authenticated;
