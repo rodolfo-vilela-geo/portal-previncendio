@@ -123,7 +123,7 @@
 
 <header class="topo marca">
   <a href="index.html" class="logo" title="Colibri"><img src="img/logo_portal_selo.png" alt="Colibri"></a><div>
-  <div class="inst"><a href="index.html" style="color:#fff;text-decoration:none;opacity:.95">← Colibri</a> · Governo de Minas Gerais · IEF · DIUC</div>
+  <div class="inst"><a href="index.html" style="color:#fff;text-decoration:none;opacity:.95">← Colibri</a> · IEF · DIUC</div>
   <h1>Relatório de Ocorrência de Incêndio Florestal (ROI)</h1>
   </div>
 </header>
@@ -1433,7 +1433,7 @@ function montarRelatorio(){
   const municipioData = (r.municipio||"").split("/")[0].trim();
   const hoje = new Date().toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"});
   $("#relatorio").innerHTML = `
-    <div class="cab"><img src="img/logo_previncendio.png" alt="" style="height:17mm;width:auto"><div><b>Governo do Estado de Minas Gerais</b><br>Sistema Estadual de Meio Ambiente<br>Instituto Estadual de Florestas<br>Diretoria de Unidades de Conservação – DIUC<br>Gerência de Prevenção e Combate a Incêndios Florestais – Previncêndio</div></div>
+    <div class="cab"><img src="img/logo_previncendio.png" alt="" style="height:17mm;width:auto"><div><b>Sistema Estadual de Meio Ambiente</b><br>Instituto Estadual de Florestas<br>Diretoria de Unidades de Conservação – DIUC<br>Gerência de Prevenção e Combate a Incêndios Florestais – Previncêndio</div></div>
     <h3 class="uc">${v([CATEGORIAS[r.categoria] || r.categoria, r.nome_uc].filter(Boolean).join(" "))}</h3>
     <h4 class="tit">Relatório de Ocorrência de Incêndio Florestal nº ${v(nroi)}/${v(ano)}</h4>
     <table style="width:55%;margin-left:auto;margin-bottom:8px"><tr><td>Número REDS ou BOS</td><td>${v(r.reds_bos)}</td></tr>
