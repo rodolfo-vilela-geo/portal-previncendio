@@ -1,6 +1,6 @@
 // Páginas restritas: sem login, vai para a página inicial (diálogo de entrar) e volta para cá depois.
 // Uso: <script src="exige_login.js?v=..."></script> logo depois do supabase-js, no <head>.
-// Só o Painel de ocorrências (histórico) e o Painel Informativo da Força Tarefa (boletim.html) são públicos.
+// Só o Painel de ocorrências (histórico, painel.html) é público; o Painel Informativo (boletim.html) exige login desde 28/10/2026.
 (function(){
   document.documentElement.style.visibility = "hidden";          // nada aparece antes da conferência
   const volta = encodeURIComponent(location.pathname.split("/").pop() + location.search);

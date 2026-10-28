@@ -75,6 +75,7 @@ A "planta" do banco: tudo o que é preciso para recriar o sistema do zero, seja 
 52_imovel_coincide_uc.sql    Aviso de imóvel do CAR que coincide com o limite de uma UC (≥ 80% nos dois sentidos): imovel_coincide_uc, imovel_avisos_uc; imovel_ficha traz uc_coincide
 53_avisos_uc_rapido.sql      imovel_avisos_uc mais rápida (Serra do Papagaio, 7.180 imóveis: 8,6 s → 0,3 s)
 54_ajustes_seguranca.sql     Security Advisor: gatilhos sem EXECUTE pela API, search_path fixo; tg_imovel_antes e imovel_fogo_calc mais rápidos (incluir imóvel passava de 8 s). spatial_ref_sys (PostGIS) só o suporte do Supabase corrige. imovel_fogo_calc aplicada pelo SQL Editor
+55_boletim_restrito.sql      Painel Informativo da Força Tarefa só com login: anon perde EXECUTE em boletim_publico (provisório, 28/10/2026)
 ```
 
 Depois das migrações: carregar os dados (backup), criar o primeiro administrador
