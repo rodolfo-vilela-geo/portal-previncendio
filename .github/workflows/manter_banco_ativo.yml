@@ -1,0 +1,24 @@
+# Mantém o banco do Supabase (plano gratuito) ativo: o projeto é pausado depois de 7 dias sem uso.
+# A cada 2 dias faz uma leitura pública (a mesma do Painel de ocorrências) com a chave pública (anon),
+# que já está nas páginas do site — não precisa de segredo. Não grava nada no banco.
+# Também dá para rodar na mão: aba Actions → "Manter banco ativo" → Run workflow.
+name: Manter banco ativo
+on:
+  schedule:
+    - cron: "17 11 */2 * *"   # a cada 2 dias, ~08:17 de Brasília
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Leitura no Supabase
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H "apikey: sb_publishable__Zr4dURPH97qiUMBrBdMMQ_4f6pNv39" \
+            -H "Content-Type: application/json" -d '{}' \
+            https://nhsjsttvxixgfqnweqos.supabase.co/rest/v1/rpc/painel_dados)
+          echo "Resposta do banco: $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::O banco não respondeu (HTTP $code). Ele pode estar pausado: entre em supabase.com e clique em Restore project."
+            exit 1
+          fi
