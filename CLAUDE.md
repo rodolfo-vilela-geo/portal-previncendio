@@ -99,5 +99,6 @@ Próximos (sem ordem fixa):
 ## Backup (responsabilidade do Rodolfo)
 
 - Código e estrutura: este repositório (GitHub).
+- Banco ativo: o plano gratuito pausa o projeto após 7 dias sem uso (aconteceu em 08/11/2026; restaurado pelo MCP com `restore_project`). `.github/workflows/manter_banco_ativo.yml` faz uma leitura pública (`painel_dados`) a cada 2 dias. O GitHub desliga tarefas agendadas de repositório público após 60 dias sem commit — se o repositório ficar parado, reative em Actions.
 - Dados: Supabase — exportar periodicamente (plano pago tem backup diário; no gratuito, fazer dump manual) e ter um segundo administrador nas contas GitHub e Supabase.
 - Pacote privado (conversores de PIPCIF, JSONs exportados, saídas do mapa de risco): guardado fora do GitHub pelo Rodolfo (`colibri_privado_AAAA-MM-DD.zip`).
